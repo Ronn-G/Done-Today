@@ -3,6 +3,21 @@
 Ứng dụng nhật ký công việc hằng ngày local-first cho Windows, xây dựng bằng
 Tauri 2, React, TypeScript, Vite, SQLite và Tailwind CSS.
 
+## Chức năng hiện có
+
+- Bảng chỉnh sửa trực tiếp với autosave, trạng thái lưu và thử lại khi lỗi.
+- Thêm, sửa, xóa, đổi trạng thái và sắp xếp dòng.
+- Điều hướng ngày trước/sau, chọn ngày và quay về hôm nay.
+- Route theo ngày, hỗ trợ back/forward và giữ ngày khi refresh.
+- Lịch sử tổng hợp, phân trang 20 ngày và mở lại ngày cũ để chỉnh sửa.
+- Light, dark và system theme.
+
+## Phím tắt
+
+- `Tab` / `Shift + Tab`: chuyển giữa các ô theo thứ tự chuẩn.
+- `Ctrl + Enter`: thêm dòng mới.
+- `Escape`: bỏ focus khỏi ô đang nhập mà không xóa nội dung.
+
 ## Yêu cầu môi trường
 
 - Node.js 20 trở lên và npm.
@@ -39,6 +54,7 @@ ngày đó chưa có dữ liệu.
 npm run typecheck
 npm run lint
 npm run test:run
+cargo test --manifest-path ./src-tauri/Cargo.toml
 ```
 
 ## Build

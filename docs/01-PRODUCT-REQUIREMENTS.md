@@ -57,8 +57,8 @@ Các giá trị hợp lệ:
 
 - `completed`: Hoàn thành.
 - `in_progress`: Đang làm.
-- `deferred`: Bị hoãn.
-- `cancelled`: Hủy.
+- `postponed`: Bị hoãn.
+- `cancelled`: Đã hủy.
 
 Quy tắc giao diện:
 
@@ -81,8 +81,8 @@ Mỗi dòng gồm:
 Chức năng:
 
 - Bấm vào một ngày để mở bảng ngày đó.
-- Tìm kiếm theo nội dung.
-- Sắp xếp mới nhất hoặc cũ nhất.
+- Phân trang, mặc định mới nhất trước.
+- Tìm kiếm và tùy chọn sắp xếp được để dành cho sprint sau.
 
 ## 4. Màn hình Settings
 

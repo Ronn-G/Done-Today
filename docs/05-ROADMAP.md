@@ -1,5 +1,9 @@
 # Roadmap
 
+> Ghi chú triển khai: các lượt phát triển sau foundation được tách chi tiết hơn.
+> CRUD/autosave và điều hướng/history hiện đã hoàn thành. Backup vẫn thuộc sprint
+> sau và chưa được triển khai.
+
 ## Sprint 0 — Foundation
 
 - Khởi tạo React, TypeScript, Vite và Tauri.
@@ -36,6 +40,8 @@
 - Nút Today.
 - Màn hình History.
 - Thống kê số việc và số hoàn thành theo ngày.
+
+Trạng thái: hoàn thành, bao gồm route theo ngày và phân trang lịch sử.
 
 ## Sprint 3 — Motivation UI
 

@@ -23,8 +23,8 @@ CREATE TABLE work_items (
   result TEXT NOT NULL DEFAULT '',
   next_action TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'in_progress'
-    CHECK (status IN ('completed', 'in_progress', 'deferred', 'cancelled')),
-  sort_order INTEGER NOT NULL DEFAULT 0,
+    CHECK (status IN ('completed', 'in_progress', 'postponed', 'cancelled')),
+  position INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (daily_log_id) REFERENCES daily_logs(id) ON DELETE CASCADE
@@ -60,7 +60,7 @@ Nếu triển khai tìm kiếm toàn văn, có thể bổ sung FTS5 ở sprint s
 - Dòng trống hoàn toàn không nên được lưu lâu dài.
 - Khi người dùng nhập vào dòng mới, chỉ tạo bản ghi khi có nội dung ở ít nhất một trong ba trường văn bản.
 - Khi xóa ngày, toàn bộ work item phải bị xóa theo cascade.
-- `sort_order` giữ nguyên thứ tự hiển thị.
+- `position` giữ nguyên thứ tự hiển thị và được chuẩn hóa trong transaction khi reorder.
 - ID dùng UUID.
 - Thời gian lưu theo ISO 8601.
 
@@ -84,7 +84,7 @@ Nếu triển khai tìm kiếm toàn văn, có thể bổ sung FTS5 ở sprint s
           "result": "...",
           "nextAction": "...",
           "status": "completed",
-          "sortOrder": 0,
+          "position": 0,
           "createdAt": "...",
           "updatedAt": "..."
         }
