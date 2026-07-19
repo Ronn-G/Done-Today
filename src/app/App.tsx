@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect -- async route loads intentionally initialize screen state */
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {CalendarDays,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,Settings,Trash2} from 'lucide-react';
+import {CalendarDays,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,Palette,Settings,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
 import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
+import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
 import type {DailyLog,DailyLogSummary,UpdateWorkItem,WorkItem,WorkStatus} from '../domain/journal/models';
 import {calculateStatistics,statusLabels} from '../domain/journal/statistics';
 import {TauriJournalRepository} from '../infrastructure/database/tauriJournalRepository';
@@ -11,6 +12,8 @@ import {applyThemePreferences,resolvePalette} from '../domain/theme/applyTheme';
 import type {ThemeMode,ThemePreferences} from '../domain/theme/models';
 import {defaultThemePreferences} from '../domain/theme/presets';
 import {ThemeSettings} from '../features/settings/ThemeSettings';
+import {FloatingThemeCustomizer,initialFloatingThemePanelState} from '../features/settings/FloatingThemeCustomizer';
+import type {ThemeCustomizerController} from '../features/settings/themeCustomizerController';
 import {addLocalDays,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
@@ -43,7 +46,11 @@ export function App(){
   const[route,setRoute]=useState<Route>(parseRoute);
   const[theme,setTheme]=useState<ThemeMode>(initialTheme);
   const[themePreferences,setThemePreferences]=useState<ThemePreferences>(defaultThemePreferences);
+  const[themeSaveState,setThemeSaveState]=useState<ThemeSaveState>('idle');
+  const[themeError,setThemeError]=useState<string|null>(null);
+  const[floatingThemePanel,setFloatingThemePanel]=useState(initialFloatingThemePanelState);
   const[systemDark,setSystemDark]=useState(()=>matchMedia('(prefers-color-scheme: dark)').matches);
+  const themeCoordinator=useMemo(()=>new ThemeSaveCoordinator<ThemePreferences>(value=>themeRepository.save(value),setThemeSaveState),[]);
   useEffect(()=>{
     if(!location.hash)navigate({page:'day',date:today()});
     const onHash=()=>setRoute(parseRoute());window.addEventListener('hashchange',onHash);
@@ -58,22 +65,29 @@ export function App(){
   const activePalette=resolvePalette(theme,systemDark);
   useEffect(()=>{document.documentElement.classList.toggle('dark',activePalette==='dark');applyThemePreferences(themePreferences,activePalette)},[activePalette,themePreferences]);
   useEffect(()=>{void themeRepository.load().then(saved=>{if(saved)setThemePreferences(saved)}).catch(()=>setThemePreferences(defaultThemePreferences()))},[]);
+  useEffect(()=>()=>{void themeCoordinator.flush().catch(()=>undefined);themeCoordinator.cancel()},[themeCoordinator]);
+  useEffect(()=>{const flush=()=>void themeCoordinator.flush().catch(()=>undefined);window.addEventListener('beforeunload',flush);return()=>window.removeEventListener('beforeunload',flush)},[themeCoordinator]);
+  const commitTheme=useCallback((next:ThemePreferences)=>{setThemePreferences(next);setThemeError(null);themeCoordinator.schedule(next)},[themeCoordinator]);
+  const flushTheme=useCallback(async()=>{try{await themeCoordinator.flush();setThemeError(null)}catch{setThemeError('Không thể lưu giao diện.');throw new Error('Không thể lưu giao diện.')}},[themeCoordinator]);
+  const resetTheme=useCallback(()=>{if(confirm('Khôi phục toàn bộ màu sáng, màu tối và độ bo góc về Done Today? Chế độ hiển thị được giữ nguyên.'))commitTheme(defaultThemePreferences())},[commitTheme]);
+  const themeController:ThemeCustomizerController={mode:theme,setMode:setTheme,preferences:themePreferences,setPreferences:setThemePreferences,activePalette,saveState:themeSaveState,error:themeError,commit:commitTheme,flush:flushTheme,retry:flushTheme,reset:resetTheme};
+  const openThemePanel=()=>setFloatingThemePanel(current=>{const next={...current,open:true};localStorage.setItem('done-today-floating-theme-panel',JSON.stringify(next));return next});
   return <div className="app-shell"><aside className="sidebar">
     <div className="brand"><span className="brand-mark"><CheckCircle2 size={20}/></span><span>Done Today</span></div>
     <nav><Nav active={route.page==='day'} onClick={()=>navigate({page:'day',date:today()})} icon={<CalendarDays size={18}/>}>Hôm nay</Nav>
       <Nav active={route.page==='history'} onClick={()=>navigate({page:'history'})} icon={<History size={18}/>}>Lịch sử</Nav></nav>
     <Nav active={route.page==='settings'} onClick={()=>navigate({page:'settings'})} icon={<Settings size={18}/>}>Cài đặt</Nav>
   </aside><main>
-    {route.page==='day'&&<DayEditor key={route.date} date={route.date}/>}
+    {route.page==='day'&&<DayEditor key={route.date} date={route.date} onOpenTheme={openThemePanel}/>}
     {route.page==='history'&&<HistoryPage/>}
-    {route.page==='settings'&&<SettingsPage theme={theme} setTheme={setTheme} preferences={themePreferences} setPreferences={setThemePreferences} activePalette={activePalette}/>}
-  </main></div>;
+    {route.page==='settings'&&<SettingsPage controller={themeController}/>}
+  </main>{route.page==='day'&&<FloatingThemeCustomizer controller={themeController} state={floatingThemePanel} setState={setFloatingThemePanel}/>}</div>;
 }
 function Nav({active,onClick,icon,children}:{active:boolean;onClick:()=>void;icon:React.ReactNode;children:React.ReactNode}){
   return <button className={`nav-item ${active?'active':''}`} onClick={onClick}>{icon}<span>{children}</span></button>;
 }
 
-function DayEditor({date}:{date:string}){
+function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const[log,setLog]=useState<DailyLog|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
@@ -127,6 +141,7 @@ function DayEditor({date}:{date:string}){
         <label className="date-picker"><span>{vietnameseDate(date)}</span><input aria-label="Chọn ngày" type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&go(event.target.value)}/></label>
         <button aria-label="Ngày sau" title="Ngày sau" onClick={()=>go(addLocalDays(date,1))}><ChevronRight size={18}/></button>
         {date!==today()&&<button className="today-button" onClick={()=>go(today())}>Hôm nay</button>}
+        <button aria-label="Tùy chỉnh giao diện" title="Tùy chỉnh giao diện" onClick={onOpenTheme}><Palette size={18}/></button>
       </div></header>
     <section className="stats" aria-label="Thống kê trong ngày"><Stat label="Tổng số việc" value={stats.total}/><Stat label="Hoàn thành" value={stats.completed}/>
       <div className="stat progress-stat"><span>Tỷ lệ hoàn thành</span><strong>{stats.percentage}%</strong><div className="progress" role="progressbar" aria-label="Tỷ lệ hoàn thành" aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section>
@@ -216,7 +231,7 @@ function HistoryPage(){
       {hasMore&&<button className="load-more" disabled={loadingMore} onClick={()=>void load(page+1,true)}>{loadingMore?'Đang tải…':'Tải thêm'}</button>}
     </div>}</div>;
 }
-function SettingsPage({theme,setTheme,preferences,setPreferences,activePalette}:{theme:ThemeMode;setTheme:(theme:ThemeMode)=>void;preferences:ThemePreferences;setPreferences:(value:ThemePreferences)=>void;activePalette:'light'|'dark'}){
+function SettingsPage({controller}:{controller:ThemeCustomizerController}){
   return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>
-    <ThemeSettings mode={theme} setMode={setTheme} preferences={preferences} setPreferences={setPreferences} activePalette={activePalette} repository={themeRepository}/></div>;
+    <ThemeSettings controller={controller}/></div>;
 }
