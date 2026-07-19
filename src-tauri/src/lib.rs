@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 const MIGRATION_V1: &str = include_str!("../migrations/001_initial.sql");
 const MIGRATION_V2: &str = include_str!("../migrations/002_app_settings.sql");
+const MIGRATION_V3: &str = include_str!("../migrations/003_work_categories.sql");
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
 const LEGACY_THEME_COLOR_COUNT: usize = 27;
@@ -94,8 +95,32 @@ struct WorkItem {
     next_action: String,
     status: String,
     position: i64,
+    category_id: Option<String>,
     created_at: String,
     updated_at: String,
+}
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkCategory {
+    id: String,
+    name: String,
+    color: String,
+    position: i64,
+    is_active: bool,
+    created_at: String,
+    updated_at: String,
+}
+#[derive(Debug, Deserialize)]
+struct CategoryInput {
+    name: String,
+    color: String,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CategoryUpdate {
+    name: String,
+    color: String,
+    is_active: bool,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -145,6 +170,7 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     )?;
     apply_migration(&transaction, 1, MIGRATION_V1)?;
     apply_migration(&transaction, 2, MIGRATION_V2)?;
+    apply_migration(&transaction, 3, MIGRATION_V3)?;
     transaction.commit()
 }
 
@@ -308,6 +334,7 @@ fn load_theme(connection: &Connection) -> AppResult<Option<serde_json::Value>> {
 }
 
 fn seed_development(connection: &mut Connection) -> rusqlite::Result<()> {
+    seed_categories(connection)?;
     if !cfg!(debug_assertions) {
         return Ok(());
     }
@@ -340,6 +367,23 @@ fn seed_development(connection: &mut Connection) -> rusqlite::Result<()> {
             now
         ],
     )?;
+    transaction.commit()
+}
+fn seed_categories(connection: &mut Connection) -> rusqlite::Result<()> {
+    let count: i64 =
+        connection.query_row("SELECT COUNT(*) FROM work_categories", [], |row| row.get(0))?;
+    if count > 0 {
+        return Ok(());
+    }
+    let transaction = connection.transaction()?;
+    let now = Utc::now().to_rfc3339();
+    for (position, name, color) in [
+        (0, "Công việc cơ quan", "#4F7CAC"),
+        (1, "Dự án cá nhân", "#7A6FA8"),
+        (2, "Học tập", "#4F8A65"),
+    ] {
+        transaction.execute("INSERT INTO work_categories(id,name,color,position,is_active,created_at,updated_at) VALUES(?1,?2,?3,?4,1,?5,?5)",params![Uuid::new_v4().to_string(),name,color,position,now])?;
+    }
     transaction.commit()
 }
 
@@ -413,14 +457,15 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkItem> {
         next_action: row.get(4)?,
         status: row.get(5)?,
         position: row.get(6)?,
-        created_at: row.get(7)?,
-        updated_at: row.get(8)?,
+        category_id: row.get(7)?,
+        created_at: row.get(8)?,
+        updated_at: row.get(9)?,
     })
 }
 fn find_item(connection: &Connection, id: &str) -> AppResult<WorkItem> {
     connection
         .query_row(
-            "SELECT id,daily_log_id,task,result,next_action,status,position,created_at,updated_at
+            "SELECT id,daily_log_id,task,result,next_action,status,position,category_id,created_at,updated_at
              FROM work_items WHERE id=?1",
             [id],
             row_to_item,
@@ -441,8 +486,9 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
         return Ok(None);
     };
     let mut statement = connection.prepare(
-        "SELECT id,daily_log_id,task,result,next_action,status,position,created_at,updated_at
-         FROM work_items WHERE daily_log_id=?1 ORDER BY position ASC,created_at ASC,id ASC",
+        "SELECT id,daily_log_id,task,result,next_action,status,position,category_id,created_at,updated_at
+         FROM work_items WHERE daily_log_id=?1
+         ORDER BY CASE WHEN status='completed' THEN 1 ELSE 0 END,position,created_at,id",
     )?;
     let items = statement
         .query_map([&id], row_to_item)?
@@ -455,21 +501,25 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
         items,
     }))
 }
-fn create_item(connection: &mut Connection, date: &str) -> AppResult<WorkItem> {
+fn create_item(
+    connection: &mut Connection,
+    date: &str,
+    category_id: Option<&str>,
+) -> AppResult<WorkItem> {
     let transaction = connection.transaction()?;
     let log_id = ensure_daily_log(&transaction, date)?;
     let position: i64 = transaction.query_row(
-        "SELECT COALESCE(MAX(position)+1,0) FROM work_items WHERE daily_log_id=?1",
-        [&log_id],
+        "SELECT COALESCE(MAX(position)+1,0) FROM work_items WHERE daily_log_id=?1 AND category_id IS ?2 AND status<>'completed'",
+        params![&log_id,category_id],
         |row| row.get(0),
     )?;
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
     transaction.execute(
         "INSERT INTO work_items
-         (id,daily_log_id,task,result,next_action,status,position,created_at,updated_at)
-         VALUES (?1,?2,'','','','in_progress',?3,?4,?4)",
-        params![id, log_id, position, now],
+         (id,daily_log_id,task,result,next_action,status,position,category_id,created_at,updated_at)
+         VALUES (?1,?2,'','','','in_progress',?3,?4,?5,?5)",
+        params![id, log_id, position, category_id, now],
     )?;
     transaction.commit()?;
     find_item(connection, &id)
@@ -479,9 +529,16 @@ fn update_item(connection: &Connection, mut input: UpdateWorkItem) -> AppResult<
     input.task = input.task.trim().to_string();
     input.result = input.result.trim().to_string();
     input.next_action = input.next_action.trim().to_string();
+    let current = find_item(connection, &input.id)?;
+    let crossing = (current.status == "completed") != (input.status == "completed");
+    let next_position = if crossing {
+        connection.query_row("SELECT COALESCE(MAX(position)+1,0) FROM work_items WHERE daily_log_id=?1 AND category_id IS ?2 AND (status='completed')=?3",params![current.daily_log_id,current.category_id,input.status=="completed"],|row|row.get(0))?
+    } else {
+        current.position
+    };
     let changed = connection.execute(
-        "UPDATE work_items SET task=?1,result=?2,next_action=?3,status=?4,updated_at=?5 WHERE id=?6",
-        params![input.task, input.result, input.next_action, input.status, Utc::now().to_rfc3339(), input.id],
+        "UPDATE work_items SET task=?1,result=?2,next_action=?3,status=?4,position=?5,updated_at=?6 WHERE id=?7",
+        params![input.task, input.result, input.next_action, input.status,next_position, Utc::now().to_rfc3339(), input.id],
     )?;
     if changed == 0 {
         return Err(AppError::not_found());
@@ -494,18 +551,169 @@ fn delete_item(connection: &Connection, id: &str) -> AppResult<()> {
     }
     Ok(())
 }
+fn validate_category(name: &str, color: &str) -> AppResult<(String, String)> {
+    let name = name.trim().to_string();
+    if name.is_empty() || name.chars().count() > 100 {
+        return Err(AppError::validation("Tên nhóm phải có từ 1 đến 100 ký tự."));
+    }
+    if color.len() != 7
+        || !color.starts_with('#')
+        || !color[1..].chars().all(|c| c.is_ascii_hexdigit())
+    {
+        return Err(AppError::validation("Màu nhóm phải dùng HEX #RRGGBB."));
+    }
+    Ok((name, color.to_uppercase()))
+}
+fn row_to_category(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkCategory> {
+    Ok(WorkCategory {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        color: row.get(2)?,
+        position: row.get(3)?,
+        is_active: row.get::<_, i64>(4)? == 1,
+        created_at: row.get(5)?,
+        updated_at: row.get(6)?,
+    })
+}
+fn list_categories(
+    connection: &Connection,
+    include_inactive: bool,
+) -> AppResult<Vec<WorkCategory>> {
+    let mut statement=connection.prepare("SELECT id,name,color,position,is_active,created_at,updated_at FROM work_categories WHERE is_active=1 OR ?1=1 ORDER BY position,created_at,id")?;
+    let categories = statement
+        .query_map([include_inactive], row_to_category)?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(categories)
+}
+fn find_category(connection: &Connection, id: &str) -> AppResult<WorkCategory> {
+    connection.query_row("SELECT id,name,color,position,is_active,created_at,updated_at FROM work_categories WHERE id=?1",[id],row_to_category).optional()?.ok_or_else(AppError::not_found)
+}
+fn create_category_record(
+    connection: &Connection,
+    input: CategoryInput,
+) -> AppResult<WorkCategory> {
+    let (name, color) = validate_category(&input.name, &input.color)?;
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    let position: i64 = connection.query_row(
+        "SELECT COALESCE(MAX(position)+1,0) FROM work_categories",
+        [],
+        |row| row.get(0),
+    )?;
+    connection.execute("INSERT INTO work_categories(id,name,color,position,is_active,created_at,updated_at)VALUES(?1,?2,?3,?4,1,?5,?5)",params![id,name,color,position,now])?;
+    find_category(connection, &id)
+}
+fn update_category_record(
+    connection: &Connection,
+    id: &str,
+    input: CategoryUpdate,
+) -> AppResult<WorkCategory> {
+    let (name, color) = validate_category(&input.name, &input.color)?;
+    if connection.execute(
+        "UPDATE work_categories SET name=?1,color=?2,is_active=?3,updated_at=?4 WHERE id=?5",
+        params![name, color, input.is_active, Utc::now().to_rfc3339(), id],
+    )? == 0
+    {
+        return Err(AppError::not_found());
+    }
+    find_category(connection, id)
+}
+fn set_category_active(
+    connection: &Connection,
+    id: &str,
+    is_active: bool,
+) -> AppResult<WorkCategory> {
+    if connection.execute(
+        "UPDATE work_categories SET is_active=?1,updated_at=?2 WHERE id=?3",
+        params![is_active, Utc::now().to_rfc3339(), id],
+    )? == 0
+    {
+        return Err(AppError::not_found());
+    }
+    find_category(connection, id)
+}
+fn reorder_category_records(
+    connection: &mut Connection,
+    ids: &[String],
+) -> AppResult<Vec<WorkCategory>> {
+    let transaction = connection.transaction()?;
+    let mut existing = transaction
+        .prepare("SELECT id FROM work_categories ORDER BY position,created_at,id")?
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<Vec<String>>>()?;
+    let mut supplied = ids.to_vec();
+    existing.sort();
+    supplied.sort();
+    supplied.dedup();
+    if existing != supplied {
+        return Err(AppError::validation("Danh sách sắp xếp nhóm không hợp lệ."));
+    }
+    for (position, id) in ids.iter().enumerate() {
+        transaction.execute(
+            "UPDATE work_categories SET position=?1,updated_at=?2 WHERE id=?3",
+            params![position as i64, Utc::now().to_rfc3339(), id],
+        )?;
+    }
+    transaction.commit()?;
+    list_categories(connection, true)
+}
+fn assign_item_category(
+    connection: &mut Connection,
+    item_id: &str,
+    category_id: Option<&str>,
+) -> AppResult<WorkItem> {
+    let transaction = connection.transaction()?;
+    if let Some(id) = category_id {
+        let exists: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM work_categories WHERE id=?1 AND is_active=1)",
+            [id],
+            |row| row.get(0),
+        )?;
+        if !exists {
+            return Err(AppError::not_found());
+        }
+    }
+    let (item_log, status): (String, String) = transaction
+        .query_row(
+            "SELECT daily_log_id,status FROM work_items WHERE id=?1",
+            [item_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?
+        .ok_or_else(AppError::not_found)?;
+    let position:i64=transaction.query_row("SELECT COALESCE(MAX(position)+1,0) FROM work_items WHERE daily_log_id=?1 AND category_id IS ?2 AND (status='completed')=?3",params![item_log,category_id,status=="completed"],|row|row.get(0))?;
+    transaction.execute(
+        "UPDATE work_items SET category_id=?1,position=?2,updated_at=?3 WHERE id=?4",
+        params![category_id, position, Utc::now().to_rfc3339(), item_id],
+    )?;
+    transaction.commit()?;
+    find_item(connection, item_id)
+}
 fn reorder_items(
     connection: &mut Connection,
     log_id: &str,
     ids: &[String],
 ) -> AppResult<Vec<WorkItem>> {
     let transaction = connection.transaction()?;
+    if ids.is_empty() {
+        return Err(AppError::validation(
+            "Danh sách sắp xếp không được để trống.",
+        ));
+    }
+    let (category_id, completed): (Option<String>, bool) = transaction
+        .query_row(
+            "SELECT category_id,status='completed' FROM work_items WHERE id=?1 AND daily_log_id=?2",
+            params![&ids[0], log_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?
+        .ok_or_else(AppError::not_found)?;
     let existing: Vec<String> = {
         let mut statement = transaction.prepare(
-            "SELECT id FROM work_items WHERE daily_log_id=?1 ORDER BY position,created_at,id",
+            "SELECT id FROM work_items WHERE daily_log_id=?1 AND category_id IS ?2 AND (status='completed')=?3 ORDER BY position,created_at,id",
         )?;
         let collected = statement
-            .query_map([log_id], |row| row.get(0))?
+            .query_map(params![log_id, category_id, completed], |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
         collected
     };
@@ -519,8 +727,8 @@ fn reorder_items(
     }
     for (position, id) in ids.iter().enumerate() {
         transaction.execute(
-            "UPDATE work_items SET position=?1,updated_at=?2 WHERE id=?3 AND daily_log_id=?4",
-            params![position as i64, Utc::now().to_rfc3339(), id, log_id],
+            "UPDATE work_items SET position=?1,updated_at=?2 WHERE id=?3 AND daily_log_id=?4 AND category_id IS ?5 AND (status='completed')=?6",
+            params![position as i64, Utc::now().to_rfc3339(), id, log_id,category_id,completed],
         )?;
     }
     transaction.commit()?;
@@ -601,8 +809,62 @@ fn get_daily_log(app: tauri::AppHandle, date: String) -> AppResult<Option<DailyL
     find_daily_log(&open_database(&database_path(&app)?)?, &date)
 }
 #[tauri::command]
-fn create_work_item(app: tauri::AppHandle, date: String) -> AppResult<WorkItem> {
-    create_item(&mut open_database(&database_path(&app)?)?, &date)
+fn create_work_item(
+    app: tauri::AppHandle,
+    date: String,
+    category_id: Option<String>,
+) -> AppResult<WorkItem> {
+    create_item(
+        &mut open_database(&database_path(&app)?)?,
+        &date,
+        category_id.as_deref(),
+    )
+}
+#[tauri::command]
+fn list_work_categories(
+    app: tauri::AppHandle,
+    include_inactive: bool,
+) -> AppResult<Vec<WorkCategory>> {
+    list_categories(&open_database(&database_path(&app)?)?, include_inactive)
+}
+#[tauri::command]
+fn create_work_category(app: tauri::AppHandle, input: CategoryInput) -> AppResult<WorkCategory> {
+    create_category_record(&open_database(&database_path(&app)?)?, input)
+}
+#[tauri::command]
+fn update_work_category(
+    app: tauri::AppHandle,
+    id: String,
+    input: CategoryUpdate,
+) -> AppResult<WorkCategory> {
+    update_category_record(&open_database(&database_path(&app)?)?, &id, input)
+}
+#[tauri::command]
+fn archive_work_category(
+    app: tauri::AppHandle,
+    id: String,
+    is_active: bool,
+) -> AppResult<WorkCategory> {
+    set_category_active(&open_database(&database_path(&app)?)?, &id, is_active)
+}
+#[tauri::command]
+fn reorder_work_categories(
+    app: tauri::AppHandle,
+    ordered_ids: Vec<String>,
+) -> AppResult<Vec<WorkCategory>> {
+    reorder_category_records(&mut open_database(&database_path(&app)?)?, &ordered_ids)
+}
+#[tauri::command]
+fn assign_work_item_category(
+    app: tauri::AppHandle,
+    item_id: String,
+    category_id: Option<String>,
+) -> AppResult<WorkItem> {
+    assign_item_category(
+        &mut open_database(&database_path(&app)?)?,
+        &item_id,
+        category_id.as_deref(),
+    )
 }
 #[tauri::command]
 fn update_work_item(app: tauri::AppHandle, input: UpdateWorkItem) -> AppResult<WorkItem> {
@@ -648,6 +910,12 @@ pub fn run() {
             initialize_database,
             get_daily_log,
             create_work_item,
+            list_work_categories,
+            create_work_category,
+            update_work_category,
+            archive_work_category,
+            reorder_work_categories,
+            assign_work_item_category,
             update_work_item,
             delete_work_item,
             reorder_work_items,
@@ -697,7 +965,7 @@ mod tests {
     }
     fn create_three(connection: &mut Connection, date: &str) -> Vec<WorkItem> {
         (0..3)
-            .map(|_| create_item(connection, date).unwrap())
+            .map(|_| create_item(connection, date, None).unwrap())
             .collect()
     }
     fn update(id: &str, task: &str, status: &str) -> UpdateWorkItem {
@@ -712,7 +980,7 @@ mod tests {
     #[test]
     fn migration_is_idempotent() {
         let mut db = memory();
-        create_item(&mut db, "2026-07-18").unwrap();
+        create_item(&mut db, "2026-07-18", None).unwrap();
         migrate(&mut db).unwrap();
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM work_items", [], |r| r
@@ -804,7 +1072,7 @@ mod tests {
     #[test]
     fn theme_validation_rejects_invalid_json_and_does_not_touch_journal() {
         let mut db = memory();
-        create_item(&mut db, "2026-07-19").unwrap();
+        create_item(&mut db, "2026-07-19", None).unwrap();
         let mut value = theme_value();
         value["lightColors"]["accent"] = serde_json::json!("var(--evil)");
         assert_eq!(save_theme(&db, &value).unwrap_err().code, "validation");
@@ -833,7 +1101,7 @@ mod tests {
                     0
                 ))
                 .unwrap(),
-            2
+            3
         );
         let error: AppError = rusqlite::Error::InvalidQuery.into();
         assert!(!error.message.to_lowercase().contains("sqlite"));
@@ -844,8 +1112,8 @@ mod tests {
     #[test]
     fn creates_log_once_and_default_item_at_end() {
         let mut db = memory();
-        let first = create_item(&mut db, "2026-07-18").unwrap();
-        let second = create_item(&mut db, "2026-07-18").unwrap();
+        let first = create_item(&mut db, "2026-07-18", None).unwrap();
+        let second = create_item(&mut db, "2026-07-18", None).unwrap();
         assert_eq!(first.status, "in_progress");
         assert_eq!(first.task, "");
         assert_eq!(second.position, 1);
@@ -859,7 +1127,7 @@ mod tests {
     #[test]
     fn updates_text_and_status() {
         let mut db = memory();
-        let item = create_item(&mut db, "2026-07-18").unwrap();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
         let saved = update_item(&db, update(&item.id, " Task ", "completed")).unwrap();
         assert_eq!(saved.task, "Task");
         assert_eq!(saved.result, "Result");
@@ -868,7 +1136,7 @@ mod tests {
     #[test]
     fn rejects_invalid_status_and_limits() {
         let mut db = memory();
-        let item = create_item(&mut db, "2026-07-18").unwrap();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
         assert_eq!(
             update_item(&db, update(&item.id, "x", "wrong"))
                 .unwrap_err()
@@ -885,7 +1153,7 @@ mod tests {
     #[test]
     fn deletes_item() {
         let mut db = memory();
-        let item = create_item(&mut db, "2026-07-18").unwrap();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
         delete_item(&db, &item.id).unwrap();
         assert!(find_daily_log(&db, "2026-07-18")
             .unwrap()
@@ -964,7 +1232,7 @@ mod tests {
     #[test]
     fn history_reflects_crud() {
         let mut db = memory();
-        let item = create_item(&mut db, "2026-07-18").unwrap();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
         update_item(&db, update(&item.id, "Done", "completed")).unwrap();
         assert_eq!(
             list_summaries(&db, 1, 20).unwrap().items[0].completed_items,
@@ -977,7 +1245,7 @@ mod tests {
     fn rejects_invalid_dates() {
         let mut db = memory();
         assert_eq!(
-            create_item(&mut db, "2026-02-31").unwrap_err().code,
+            create_item(&mut db, "2026-02-31", None).unwrap_err().code,
             "validation"
         );
         assert_eq!(find_daily_log(&db, "bad").unwrap_err().code, "validation");
@@ -993,5 +1261,130 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+    #[test]
+    fn migration_v3_preserves_old_items_with_null_category() {
+        let mut db = Connection::open_in_memory().unwrap();
+        {
+            let tx = db.transaction().unwrap();
+            tx.execute_batch("CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,applied_at TEXT NOT NULL);").unwrap();
+            apply_migration(&tx, 1, MIGRATION_V1).unwrap();
+            tx.commit().unwrap();
+        }
+        let now = Utc::now().to_rfc3339();
+        db.execute(
+            "INSERT INTO daily_logs VALUES('log','2026-07-19',?1,?1)",
+            [&now],
+        )
+        .unwrap();
+        db.execute("INSERT INTO work_items(id,daily_log_id,task,result,next_action,status,position,created_at,updated_at)VALUES('item','log','Old','','','in_progress',0,?1,?1)",[&now]).unwrap();
+        migrate(&mut db).unwrap();
+        assert_eq!(
+            db.query_row(
+                "SELECT category_id FROM work_items WHERE id='item'",
+                [],
+                |row| row.get::<_, Option<String>>(0)
+            )
+            .unwrap(),
+            None
+        );
+        assert_eq!(
+            db.query_row("SELECT MAX(version) FROM schema_migrations", [], |row| row
+                .get::<_, i64>(
+                0
+            ))
+            .unwrap(),
+            3
+        );
+    }
+    #[test]
+    fn category_seed_and_crud_are_stable() {
+        let mut db = memory();
+        seed_categories(&mut db).unwrap();
+        seed_categories(&mut db).unwrap();
+        assert_eq!(list_categories(&db, true).unwrap().len(), 3);
+        let created = create_category_record(
+            &db,
+            CategoryInput {
+                name: " Nhóm mới ".into(),
+                color: "#abcdef".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(created.name, "Nhóm mới");
+        assert_eq!(created.color, "#ABCDEF");
+        let updated = update_category_record(
+            &db,
+            &created.id,
+            CategoryUpdate {
+                name: "Đã đổi".into(),
+                color: "#112233".into(),
+                is_active: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.name, "Đã đổi");
+        assert!(
+            !set_category_active(&db, &created.id, false)
+                .unwrap()
+                .is_active
+        );
+    }
+    #[test]
+    fn category_validation_rejects_bad_values() {
+        let db = memory();
+        assert_eq!(
+            create_category_record(
+                &db,
+                CategoryInput {
+                    name: " ".into(),
+                    color: "#112233".into()
+                }
+            )
+            .unwrap_err()
+            .code,
+            "validation"
+        );
+        assert_eq!(
+            create_category_record(
+                &db,
+                CategoryInput {
+                    name: "Valid".into(),
+                    color: "red".into()
+                }
+            )
+            .unwrap_err()
+            .code,
+            "validation"
+        );
+    }
+    #[test]
+    fn assigning_category_preserves_content_and_supports_null() {
+        let mut db = memory();
+        seed_categories(&mut db).unwrap();
+        let category = list_categories(&db, true).unwrap().remove(0);
+        let item = create_item(&mut db, "2026-07-19", None).unwrap();
+        update_item(&db, update(&item.id, "Keep me", "in_progress")).unwrap();
+        let moved = assign_item_category(&mut db, &item.id, Some(&category.id)).unwrap();
+        assert_eq!(moved.task, "Keep me");
+        assert_eq!(moved.category_id, Some(category.id));
+        assert_eq!(
+            assign_item_category(&mut db, &item.id, None)
+                .unwrap()
+                .category_id,
+            None
+        );
+    }
+    #[test]
+    fn status_crossing_moves_to_end_of_destination_bucket() {
+        let mut db = memory();
+        let items = create_three(&mut db, "2026-07-19");
+        update_item(&db, update(&items[0].id, "First", "completed")).unwrap();
+        let second = update_item(&db, update(&items[1].id, "Second", "completed")).unwrap();
+        assert!(second.position > 0);
+        let restored = update_item(&db, update(&items[0].id, "First", "in_progress")).unwrap();
+        assert!(restored.position >= 3);
+        let ordered = find_daily_log(&db, "2026-07-19").unwrap().unwrap().items;
+        assert_ne!(ordered[0].status, "completed");
     }
 }

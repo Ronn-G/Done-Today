@@ -64,7 +64,12 @@ Nếu triển khai tìm kiếm toàn văn, có thể bổ sung FTS5 ở sprint s
 - ID dùng UUID.
 - Thời gian lưu theo ISO 8601.
 
-## 6. Backup format
+## 6. Nhóm công việc
+
+Migration 003 thêm `work_categories` và khóa ngoại nullable `work_items.category_id`. Xem
+`07-WORK-CATEGORIES.md` để biết constraints, archive, fallback và sorting semantics.
+
+## 7. Backup format
 
 ```json
 {

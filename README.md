@@ -1,5 +1,8 @@
 # Done Today
 
+Done Today hỗ trợ nhóm công việc trong bảng Hôm nay, thu gọn từng nhóm và tự đặt việc hoàn thành
+ở cuối nhóm mà không ảnh hưởng autosave hoặc dữ liệu cũ.
+
 Ứng dụng nhật ký công việc hằng ngày local-first cho Windows, xây dựng bằng
 Tauri 2, React, TypeScript, Vite, SQLite và Tailwind CSS.
 

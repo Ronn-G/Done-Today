@@ -1,10 +1,12 @@
 /* eslint-disable react-hooks/set-state-in-effect -- async route loads intentionally initialize screen state */
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {CalendarDays,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,Palette,Settings,Trash2} from 'lucide-react';
+import{createPortal}from'react-dom';
+import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Palette,Settings,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
 import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
 import type {DailyLog,DailyLogSummary,UpdateWorkItem,WorkItem,WorkStatus} from '../domain/journal/models';
+import{groupDailyItems,parseCollapsedCategoryState,type WorkCategory}from'../domain/journal/categories';
 import {calculateStatistics,statusLabels} from '../domain/journal/statistics';
 import {TauriJournalRepository} from '../infrastructure/database/tauriJournalRepository';
 import {TauriThemeRepository} from '../infrastructure/database/tauriThemeRepository';
@@ -14,6 +16,8 @@ import {defaultThemePreferences} from '../domain/theme/presets';
 import {ThemeSettings} from '../features/settings/ThemeSettings';
 import {FloatingThemeCustomizer,initialFloatingThemePanelState} from '../features/settings/FloatingThemeCustomizer';
 import type {ThemeCustomizerController} from '../features/settings/themeCustomizerController';
+import{CategorySettings}from'../features/settings/CategorySettings';
+import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
 import {addLocalDays,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
@@ -93,19 +97,22 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const[error,setError]=useState<string|null>(null);
   const[creating,setCreating]=useState(false);
   const[focusId,setFocusId]=useState<string|null>(null);
+  const[categories,setCategories]=useState<WorkCategory[]>([]);
+  const[collapsed,setCollapsed]=useState<string[]>([]);
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    try{await service.initialize();setLog(await service.getDailyLog(date))}
+    try{await service.initialize();const[nextLog,nextCategories]=await Promise.all([service.getDailyLog(date),service.listCategories(true)]);setLog(nextLog);setCategories(nextCategories);setCollapsed(parseCollapsedCategoryState(localStorage.getItem('done-today-collapsed-categories'),nextCategories.map(category=>category.id)).collapsedCategoryIds)}
     catch(reason){setError(friendlyError(reason))}
     finally{setLoading(false)}
   },[date]);
   useEffect(()=>{void load()},[load]);
   const items=useMemo(()=>log?.items??[],[log]);
   const stats=useMemo(()=>calculateStatistics(items),[items]);
-  const addItem=useCallback(async()=>{
+  const groups=useMemo(()=>groupDailyItems(items,categories),[items,categories]);
+  const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);
     try{
-      const item=await service.createWorkItem(date);
+      const item=await service.createWorkItem(date,categoryId);
       setLog(previous=>previous?{...previous,items:[...previous.items,item]}:{
         id:item.dailyLogId,logDate:date,createdAt:item.createdAt,updatedAt:item.updatedAt,items:[item],
       });
@@ -124,13 +131,14 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
     try{await service.deleteWorkItem(item.id);setLog(previous=>previous?{...previous,items:previous.items.filter(entry=>entry.id!==item.id)}:previous)}
     catch(reason){setError(friendlyError(reason))}
   };
-  const move=async(index:number,direction:-1|1)=>{
-    if(!log)return;const target=index+direction;if(target<0||target>=log.items.length)return;
-    const optimistic=[...log.items];[optimistic[index],optimistic[target]]=[optimistic[target],optimistic[index]];
-    const positioned=optimistic.map((item,position)=>({...item,position}));setLog({...log,items:positioned});
-    try{const saved=await service.reorderWorkItems(log.id,positioned.map(item=>item.id));setLog(current=>current?{...current,items:saved}:current)}
+  const move=async(bucket:WorkItem[],index:number,direction:-1|1)=>{
+    if(!log)return;const target=index+direction;if(target<0||target>=bucket.length)return;
+    const ordered=[...bucket];[ordered[index],ordered[target]]=[ordered[target],ordered[index]];
+    try{const saved=await service.reorderWorkItems(log.id,ordered.map(item=>item.id));setLog(current=>current?{...current,items:current.items.map(item=>saved.find(value=>value.id===item.id)??item)}:current)}
     catch(reason){setError(friendlyError(reason));void load()}
   };
+  const toggleGroup=(id:string|null)=>{const key=id??'__other__';setCollapsed(current=>{const next=current.includes(key)?current.filter(value=>value!==key):[...current,key];localStorage.setItem('done-today-collapsed-categories',JSON.stringify({schemaVersion:1,collapsedCategoryIds:next}));return next})};
+  const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(friendlyError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
     <header className="day-header"><div><p className="eyebrow">{date===today()?'Hôm nay':'Nhật ký theo ngày'}</p>
@@ -148,17 +156,17 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
     {error&&<div className="page-error">{error}<button onClick={()=>void load()}>Thử lại</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> Đang đọc dữ liệu…</div>:
       <div className="table-scroll"><table><thead><tr><th className="order-col">Thứ tự</th><th>Việc đã làm</th><th>Kết quả</th><th>Bước tiếp theo</th><th>Trạng thái</th><th className="action-col"><span className="sr-only">Hành động</span></th></tr></thead>
-      <tbody>{items.map((item,index)=><WorkRow key={item.id} item={item} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
-        onChange={updateLocal} onDelete={()=>void remove(item)} onMoveUp={()=>void move(index,-1)} onMoveDown={()=>void move(index,1)}
-        canMoveUp={index>0} canMoveDown={index<items.length-1}/>)}
+      <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<tr className="category-row" key={`header-${key}`}><th colSpan={6}><div className="category-header"><i style={group.color?{backgroundColor:group.color}:undefined}/><h2>{group.name}{!group.isActive&&<small> · Đã ẩn</small>}</h2><span>{group.completedItems}/{group.totalItems} hoàn thành</span><button aria-label={`Thêm việc vào ${group.name}`} onClick={()=>void addItem(group.id)}>+</button><button aria-label={`${hidden?'Mở rộng':'Thu gọn'} ${group.name}`} aria-expanded={!hidden} onClick={()=>toggleGroup(group.id)}>{hidden?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button></div></th></tr>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
+        dataIndex={index} onChange={updateLocal} onCategoryChange={categoryId=>changeCategory(item,categoryId)} onDelete={()=>void remove(item)} onMoveUp={()=>void move(bucket,bucketIndex,-1)} onMoveDown={()=>void move(bucket,bucketIndex,1)}
+        canMoveUp={bucketIndex>0} canMoveDown={bucketIndex<bucket.length-1}/>}))]})}
       {!items.length&&<tr><td colSpan={6} className="empty-cell">Chưa có việc nào. Nhấn “Thêm dòng” để bắt đầu.</td></tr>}</tbody></table></div>}</section>
-    <button className="add-row" onClick={()=>void addItem()} disabled={creating}>{creating?<LoaderCircle className="spin" size={16}/>:<>+ Thêm dòng</>}</button>
+    <label className="add-row-select"><span>Thêm dòng vào</span><select aria-label="Chọn nhóm cho dòng mới" onChange={event=>{if(event.target.value!=='')void addItem(event.target.value==='__other__'?null:event.target.value);event.target.value=''}} defaultValue=""><option value="" disabled>Chọn nhóm…</option>{categories.filter(category=>category.isActive).map(category=><option key={category.id} value={category.id}>{category.name}</option>)}<option value="__other__">Việc khác</option></select></label>
     <p className="shortcut-hint">Ctrl + Enter để thêm dòng · Thay đổi được tự động lưu</p>
   </div>;
 }
 
-function WorkRow({item,autoFocus,onFocused,onChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
-  item:WorkItem;autoFocus:boolean;onFocused:()=>void;onChange:(item:WorkItem)=>void;onDelete:()=>void;
+function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
+  item:WorkItem;categories:WorkCategory[];dataIndex:number;autoFocus:boolean;onFocused:()=>void;onChange:(item:WorkItem)=>void;onCategoryChange:(id:string|null)=>Promise<void>;onDelete:()=>void;
   onMoveUp:()=>void;onMoveDown:()=>void;canMoveUp:boolean;canMoveDown:boolean;
 }){
   const[state,setState]=useState<SaveState>('idle');
@@ -184,8 +192,9 @@ function WorkRow({item,autoFocus,onFocused,onChange,onDelete,onMoveUp,onMoveDown
   };
   const changeText=(field:'task'|'result'|'nextAction',value:string)=>schedule({...latest.current,[field]:value});
   const flush=()=>void coordinator.flush().catch(reason=>setError(friendlyError(reason)));
+  const flushBeforeAction=async()=>{try{await coordinator.flush()}catch(reason){setError(friendlyError(reason));throw reason}};
   const escape=(event:React.KeyboardEvent)=>{if(event.key==='Escape')(event.currentTarget as HTMLElement).blur()};
-  return <tr className="editable-row">
+  return <tr className="editable-row" data-group-index={dataIndex}>
     <td className="reorder-cell"><button aria-label="Di chuyển lên" title="Di chuyển lên" disabled={!canMoveUp} onClick={onMoveUp}><ChevronUp size={14}/></button><button aria-label="Di chuyển xuống" title="Di chuyển xuống" disabled={!canMoveDown} onClick={onMoveDown}><ChevronDown size={14}/></button></td>
     <td><textarea className="work-item-editor task-editor" aria-label="Việc đã làm" placeholder="Bạn đã làm gì?" value={item.task} maxLength={500} rows={2} autoFocus={autoFocus} onFocus={onFocused} onChange={e=>changeText('task',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
     <td><textarea className="work-item-editor result-editor" aria-label="Kết quả" placeholder="Kết quả ra sao?" value={item.result} maxLength={2000} rows={2} onChange={e=>changeText('result',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
@@ -193,8 +202,17 @@ function WorkRow({item,autoFocus,onFocused,onChange,onDelete,onMoveUp,onMoveDown
     <td><select aria-label="Trạng thái" className={`status-select ${item.status}`} value={item.status} onChange={e=>schedule({...latest.current,status:e.target.value as WorkStatus},true)}>
       {statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
       <SaveIndicator state={state} error={error} retry={flush}/></td>
-    <td className="row-actions"><button className="delete-button" aria-label="Xóa dòng" title="Xóa dòng" onClick={onDelete}><Trash2 size={16}/></button></td>
+    <td className="row-actions"><RowActionMenu item={item} categories={categories} flush={flushBeforeAction} onMove={onCategoryChange} onDelete={onDelete}/></td>
   </tr>;
+}
+function RowActionMenu({item,categories,flush,onMove,onDelete}:{item:WorkItem;categories:WorkCategory[];flush:()=>Promise<void>;onMove:(id:string|null)=>Promise<void>;onDelete:()=>void}){
+  const[open,setOpen]=useState(false);const[position,setPosition]=useState({left:0,top:0});const trigger=useRef<HTMLButtonElement>(null);const menu=useRef<HTMLDivElement>(null);
+  const close=useCallback(()=>{setOpen(false);requestAnimationFrame(()=>trigger.current?.focus())},[]);
+  useEffect(()=>{if(!open)return;const outside=(event:PointerEvent)=>{if(!menu.current?.contains(event.target as Node)&&!trigger.current?.contains(event.target as Node))close()};const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();close()}};window.addEventListener('pointerdown',outside);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',outside);window.removeEventListener('keydown',key)}},[open,close]);
+  const toggle=()=>{if(!open&&trigger.current){setPosition(positionRowActionMenu(trigger.current.getBoundingClientRect(),{width:innerWidth,height:innerHeight}))}setOpen(value=>!value)};
+  const move=async(categoryId:string|null)=>{try{await moveItemAfterFlush(categoryId,flush,onMove);close()}catch{return}};
+  const label=item.task.trim()||'chưa có tên';
+  return <><button ref={trigger} className="row-action-trigger" aria-label={`Hành động cho công việc ${label}`} title={`Hành động cho công việc ${label}`} aria-haspopup="menu" aria-expanded={open} onClick={toggle}><MoreHorizontal size={19}/></button>{open&&createPortal(<div ref={menu} className="row-action-menu" role="menu" aria-label={`Hành động cho công việc ${label}`} style={position}><strong>Chuyển sang nhóm</strong>{getRowActionDestinations(categories).map(category=><button role="menuitem" key={category.id} onClick={()=>void move(category.id)}>{item.categoryId===category.id?<Check size={15}/>:<span/>}{category.name}</button>)}<button role="menuitem" onClick={()=>void move(null)}>{item.categoryId===null?<Check size={15}/>:<span/>}Việc khác</button><hr/><button className="danger" role="menuitem" onClick={()=>{close();onDelete()}}><Trash2 size={15}/> Xóa công việc</button></div>,document.body)}</>;
 }
 function SaveIndicator({state,error,retry}:{state:SaveState;error:string|null;retry:()=>void}){
   if(state==='idle')return null;
@@ -233,5 +251,5 @@ function HistoryPage(){
 }
 function SettingsPage({controller}:{controller:ThemeCustomizerController}){
   return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>
-    <ThemeSettings controller={controller}/></div>;
+    <CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
 }

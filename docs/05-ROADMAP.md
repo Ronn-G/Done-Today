@@ -67,3 +67,11 @@ Trạng thái: hoàn thành, bao gồm route theo ngày và phân trang lịch s
 - Build installer.
 - Build portable ZIP.
 - Kiểm thử trên máy Windows sạch nếu có thể.
+
+## Sprint — Nhóm công việc
+
+- Quản lý nhóm, màu, archive và thứ tự.
+- Section nhóm trong bảng Hôm nay.
+- Completed bucket ở cuối từng nhóm và reorder trong bucket.
+
+Trạng thái: đã triển khai.

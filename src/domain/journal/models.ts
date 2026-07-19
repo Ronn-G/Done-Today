@@ -5,6 +5,7 @@ export type WorkStatus = z.infer<typeof workStatusSchema>;
 export const workItemSchema = z.object({
   id:z.string(), dailyLogId:z.string(), task:z.string().max(500), result:z.string().max(2000),
   nextAction:z.string().max(1000), status:workStatusSchema, position:z.number().int().nonnegative(),
+  categoryId:z.string().nullable(),
   createdAt:z.string(), updatedAt:z.string(),
 });
 export type WorkItem = z.infer<typeof workItemSchema>;

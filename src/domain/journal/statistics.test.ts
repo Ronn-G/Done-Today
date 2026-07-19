@@ -2,7 +2,7 @@ import { describe,expect,it } from 'vitest';
 import type { WorkItem } from './models';
 import { calculateStatistics,statusLabels } from './statistics';
 const item=(status:WorkItem['status']):WorkItem=>({
-  id:crypto.randomUUID(),dailyLogId:'log',task:'',result:'',nextAction:'',status,position:0,createdAt:'',updatedAt:'',
+  id:crypto.randomUUID(),dailyLogId:'log',task:'',result:'',nextAction:'',status,position:0,categoryId:null,createdAt:'',updatedAt:'',
 });
 describe('journal statistics',()=>{
   it('calculates totals and completion percentage',()=>{

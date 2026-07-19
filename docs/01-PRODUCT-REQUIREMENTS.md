@@ -51,6 +51,12 @@ Bảng phải hỗ trợ:
 - Enter ở ô cuối có thể tạo dòng mới.
 - Hiển thị trạng thái đang lưu, đã lưu hoặc lỗi lưu.
 
+### Nhóm công việc
+
+- Bảng được chia thành section theo nhóm do người dùng quản lý.
+- Việc hoàn thành nằm sau việc chưa hoàn thành trong từng nhóm.
+- Dữ liệu chưa phân nhóm nằm trong “Việc khác”.
+
 ## 2. Trạng thái công việc
 
 Các giá trị hợp lệ:
