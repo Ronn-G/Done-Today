@@ -117,6 +117,14 @@ Bao gồm:
 - Toàn bộ thao tác phải chạy trong transaction.
 - Nếu lỗi, database phải giữ nguyên.
 
+### Backup/restore an toàn
+
+- Preview là dry run dùng chung conflict planner với import.
+- Merge giữ cả hai record khi ID trùng nhưng nội dung khác.
+- Replace all có xác nhận rõ và rollback toàn bộ nếu lỗi.
+- Theme chỉ đổi trong Merge khi người dùng chọn.
+- Receipt cảnh báo file đã từng được nhập.
+
 ## 6. Trải nghiệm sử dụng
 
 - App mở nhanh.

@@ -71,6 +71,10 @@ Migration 003 thêm `work_categories` và khóa ngoại nullable `work_items.cat
 
 ## 7. Backup format
 
+Schema chính thức và semantics hiện hành nằm trong `08-BACKUP-RESTORE.md`. Migration 004 bổ sung
+`backup_import_receipts(id, checksum, imported_at, mode, source_exported_at, result_summary_json)` và
+index theo checksum. Receipt không thuộc payload backup.
+
 ```json
 {
   "format": "done-today-backup",

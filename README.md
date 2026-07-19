@@ -15,6 +15,11 @@ Tauri 2, React, TypeScript, Vite, SQLite và Tailwind CSS.
 - Lịch sử tổng hợp, phân trang 20 ngày và mở lại ngày cũ để chỉnh sửa.
 - Light, dark và system theme.
 
+## Sao lưu và khôi phục
+
+Settings hỗ trợ xuất JSON versioned, xem trước checksum/conflict và nhập bằng Merge hoặc Replace all
+trong transaction. Xem `docs/08-BACKUP-RESTORE.md` để biết định dạng và quy tắc an toàn.
+
 ## Phím tắt
 
 - `Tab` / `Shift + Tab`: chuyển giữa các ô theo thứ tự chuẩn.

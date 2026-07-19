@@ -17,6 +17,7 @@ import {ThemeSettings} from '../features/settings/ThemeSettings';
 import {FloatingThemeCustomizer,initialFloatingThemePanelState} from '../features/settings/FloatingThemeCustomizer';
 import type {ThemeCustomizerController} from '../features/settings/themeCustomizerController';
 import{CategorySettings}from'../features/settings/CategorySettings';
+import{BackupSettings}from'../features/backup/BackupSettings';
 import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
 import {addLocalDays,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
 
@@ -53,6 +54,7 @@ export function App(){
   const[themeSaveState,setThemeSaveState]=useState<ThemeSaveState>('idle');
   const[themeError,setThemeError]=useState<string|null>(null);
   const[floatingThemePanel,setFloatingThemePanel]=useState(initialFloatingThemePanelState);
+  const[dataRevision,setDataRevision]=useState(0);
   const[systemDark,setSystemDark]=useState(()=>matchMedia('(prefers-color-scheme: dark)').matches);
   const themeCoordinator=useMemo(()=>new ThemeSaveCoordinator<ThemePreferences>(value=>themeRepository.save(value),setThemeSaveState),[]);
   useEffect(()=>{
@@ -82,9 +84,9 @@ export function App(){
       <Nav active={route.page==='history'} onClick={()=>navigate({page:'history'})} icon={<History size={18}/>}>Lịch sử</Nav></nav>
     <Nav active={route.page==='settings'} onClick={()=>navigate({page:'settings'})} icon={<Settings size={18}/>}>Cài đặt</Nav>
   </aside><main>
-    {route.page==='day'&&<DayEditor key={route.date} date={route.date} onOpenTheme={openThemePanel}/>}
-    {route.page==='history'&&<HistoryPage/>}
-    {route.page==='settings'&&<SettingsPage controller={themeController}/>}
+    {route.page==='day'&&<DayEditor key={`${route.date}-${dataRevision}`} date={route.date} onOpenTheme={openThemePanel}/>}
+    {route.page==='history'&&<HistoryPage key={dataRevision}/>}
+    {route.page==='settings'&&<SettingsPage controller={themeController} onImported={()=>{setDataRevision(value=>value+1);void themeRepository.load().then(value=>setThemePreferences(value??defaultThemePreferences()));navigate({page:'day',date:today()})}}/>}
   </main>{route.page==='day'&&<FloatingThemeCustomizer controller={themeController} state={floatingThemePanel} setState={setFloatingThemePanel}/>}</div>;
 }
 function Nav({active,onClick,icon,children}:{active:boolean;onClick:()=>void;icon:React.ReactNode;children:React.ReactNode}){
@@ -249,7 +251,7 @@ function HistoryPage(){
       {hasMore&&<button className="load-more" disabled={loadingMore} onClick={()=>void load(page+1,true)}>{loadingMore?'Đang tải…':'Tải thêm'}</button>}
     </div>}</div>;
 }
-function SettingsPage({controller}:{controller:ThemeCustomizerController}){
+function SettingsPage({controller,onImported}:{controller:ThemeCustomizerController;onImported:()=>void}){
   return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>
-    <CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
+    <BackupSettings flushTheme={controller.flush} onImported={onImported}/><CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
 }

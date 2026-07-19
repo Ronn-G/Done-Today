@@ -4,6 +4,12 @@
 > CRUD/autosave và điều hướng/history hiện đã hoàn thành. Backup vẫn thuộc sprint
 > sau và chưa được triển khai.
 
+## Sprint Backup/Restore — hoàn thành
+
+- Backup JSON v1 có canonical SHA-256.
+- Export atomic, preview dry-run, Merge và Replace all trong transaction.
+- Receipt chống nhập nhầm lặp lại và UI xác nhận an toàn.
+
 ## Sprint 0 — Foundation
 
 - Khởi tạo React, TypeScript, Vite và Tauri.

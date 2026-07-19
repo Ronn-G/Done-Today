@@ -7,10 +7,12 @@ use std::{
 };
 use tauri::Manager;
 use uuid::Uuid;
+mod backup;
 
 const MIGRATION_V1: &str = include_str!("../migrations/001_initial.sql");
 const MIGRATION_V2: &str = include_str!("../migrations/002_app_settings.sql");
 const MIGRATION_V3: &str = include_str!("../migrations/003_work_categories.sql");
+const MIGRATION_V4: &str = include_str!("../migrations/004_backup_receipts.sql");
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
 const LEGACY_THEME_COLOR_COUNT: usize = 27;
@@ -171,6 +173,7 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     apply_migration(&transaction, 1, MIGRATION_V1)?;
     apply_migration(&transaction, 2, MIGRATION_V2)?;
     apply_migration(&transaction, 3, MIGRATION_V3)?;
+    apply_migration(&transaction, 4, MIGRATION_V4)?;
     transaction.commit()
 }
 
@@ -903,9 +906,37 @@ fn save_theme_preferences(app: tauri::AppHandle, preferences: serde_json::Value)
     save_theme(&open_database(&database_path(&app)?)?, &preferences)
 }
 
+#[tauri::command]
+fn export_backup(app: tauri::AppHandle, path: String) -> AppResult<backup::ExportResult> {
+    backup::export(&database_path(&app)?, Path::new(&path))
+}
+
+#[tauri::command]
+fn preview_backup(app: tauri::AppHandle, path: String) -> AppResult<backup::ImportPreview> {
+    backup::preview(&database_path(&app)?, Path::new(&path))
+}
+
+#[tauri::command]
+fn import_backup(
+    app: tauri::AppHandle,
+    path: String,
+    mode: backup::ImportMode,
+    apply_theme: bool,
+    confirm_reimport: bool,
+) -> AppResult<backup::ImportResult> {
+    backup::import(
+        &database_path(&app)?,
+        Path::new(&path),
+        mode,
+        apply_theme,
+        confirm_reimport,
+    )
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             initialize_database,
             get_daily_log,
@@ -921,7 +952,10 @@ pub fn run() {
             reorder_work_items,
             list_daily_log_summaries,
             get_theme_preferences,
-            save_theme_preferences
+            save_theme_preferences,
+            export_backup,
+            preview_backup,
+            import_backup
         ])
         .run(tauri::generate_context!())
         .expect("error while running Done Today");
@@ -1101,7 +1135,7 @@ mod tests {
                     0
                 ))
                 .unwrap(),
-            3
+            4
         );
         let error: AppError = rusqlite::Error::InvalidQuery.into();
         assert!(!error.message.to_lowercase().contains("sqlite"));
@@ -1294,7 +1328,7 @@ mod tests {
                 0
             ))
             .unwrap(),
-            3
+            4
         );
     }
     #[test]
