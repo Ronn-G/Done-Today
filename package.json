@@ -10,14 +10,17 @@
     "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
+    "i18n:lint": "vitest run src/i18n/resources.test.ts src/i18n/resourceValidation.test.ts",
     "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.7.2",
+    "i18next": "^26.3.6",
     "lucide-react": "^0.468.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.11",
     "zod": "^4.0.0"
   },
   "devDependencies": {

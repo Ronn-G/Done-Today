@@ -1,0 +1,1 @@
+export default {language:{label:'Ngôn ngữ',description:'Chọn ngôn ngữ hiển thị của ứng dụng.',option:{vi:'Tiếng Việt',en:'English'},status:{saving:'Đang lưu…',saved:'Đã lưu',error:'Không thể lưu ngôn ngữ. Hãy thử lại.'}}} as const;

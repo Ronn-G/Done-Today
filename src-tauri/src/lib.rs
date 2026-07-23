@@ -15,6 +15,7 @@ const MIGRATION_V3: &str = include_str!("../migrations/003_work_categories.sql")
 const MIGRATION_V4: &str = include_str!("../migrations/004_backup_receipts.sql");
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
+const LOCALE_KEY: &str = "localization.locale";
 const LEGACY_THEME_COLOR_COUNT: usize = 27;
 const THEME_COLOR_KEYS: [&str; 33] = [
     "pageBackground",
@@ -334,6 +335,28 @@ fn load_theme(connection: &Connection) -> AppResult<Option<serde_json::Value>> {
             Ok(value)
         })
         .transpose()
+}
+
+fn load_locale(connection: &Connection) -> AppResult<Option<String>> {
+    Ok(connection
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = ?1",
+            [LOCALE_KEY],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
+fn save_locale(connection: &Connection, locale: &str) -> AppResult<()> {
+    if !matches!(locale, "vi" | "en") {
+        return Err(AppError::validation("Ngôn ngữ không được hỗ trợ."));
+    }
+    connection.execute(
+        "INSERT INTO app_settings (key,value,updated_at) VALUES (?1,?2,?3)
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+        params![LOCALE_KEY, locale, Utc::now().to_rfc3339()],
+    )?;
+    Ok(())
 }
 
 fn seed_development(connection: &mut Connection) -> rusqlite::Result<()> {
@@ -907,6 +930,16 @@ fn save_theme_preferences(app: tauri::AppHandle, preferences: serde_json::Value)
 }
 
 #[tauri::command]
+fn get_locale_preference(app: tauri::AppHandle) -> AppResult<Option<String>> {
+    load_locale(&open_database(&database_path(&app)?)?)
+}
+
+#[tauri::command]
+fn save_locale_preference(app: tauri::AppHandle, locale: String) -> AppResult<()> {
+    save_locale(&open_database(&database_path(&app)?)?, &locale)
+}
+
+#[tauri::command]
 fn export_backup(app: tauri::AppHandle, path: String) -> AppResult<backup::ExportResult> {
     backup::export(&database_path(&app)?, Path::new(&path))
 }
@@ -953,6 +986,8 @@ pub fn run() {
             list_daily_log_summaries,
             get_theme_preferences,
             save_theme_preferences,
+            get_locale_preference,
+            save_locale_preference,
             export_backup,
             preview_backup,
             import_backup
@@ -1022,6 +1057,15 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+    #[test]
+    fn locale_setting_persists_and_rejects_unsupported_values() {
+        let db = memory();
+        assert_eq!(load_locale(&db).unwrap(), None);
+        save_locale(&db, "en").unwrap();
+        assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
+        assert!(save_locale(&db, "fr").is_err());
+        assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
     }
     #[test]
     fn failed_migration_rolls_back_schema_and_version() {

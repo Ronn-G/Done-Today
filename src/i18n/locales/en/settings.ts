@@ -1,0 +1,1 @@
+export default {language:{label:'Language',description:'Choose the language used by the app.',option:{vi:'Tiếng Việt',en:'English'},status:{saving:'Saving…',saved:'Saved',error:'We couldn’t save the language. Try again.'}}} as const;

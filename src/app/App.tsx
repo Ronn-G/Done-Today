@@ -18,6 +18,7 @@ import {FloatingThemeCustomizer,initialFloatingThemePanelState} from '../feature
 import type {ThemeCustomizerController} from '../features/settings/themeCustomizerController';
 import{CategorySettings}from'../features/settings/CategorySettings';
 import{BackupSettings}from'../features/backup/BackupSettings';
+import{LanguageSettings}from'../features/settings/LanguageSettings';
 import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
 import {addLocalDays,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
 
@@ -254,5 +255,5 @@ function HistoryPage(){
 }
 function SettingsPage({controller,onImported}:{controller:ThemeCustomizerController;onImported:()=>void}){
   return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>
-    <BackupSettings flushTheme={controller.flush} onImported={onImported}/><CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
+    <LanguageSettings/><BackupSettings flushTheme={controller.flush} onImported={onImported}/><CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
 }
