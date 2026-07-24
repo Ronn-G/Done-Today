@@ -1,9 +1,11 @@
 import {useState}from'react';
 import{Moon,RotateCcw,Sun}from'lucide-react';
+import{useTranslation}from'react-i18next';
 import{lowContrastPairs}from'../../domain/theme/applyTheme';
 import{normalizeHexColor}from'../../domain/theme/colors';
-import type{PaletteMode,ThemeColors}from'../../domain/theme/models';
+import type{PaletteMode,ThemeColors,ThemeMode,ThemePreferences}from'../../domain/theme/models';
 import{selectPreset,themePresets,updateThemeColor}from'../../domain/theme/presets';
+import type{ThemePresetId}from'../../domain/theme/presets';
 import type{ThemeCustomizerController}from'./themeCustomizerController';
 
 const groups:readonly{title:string;open?:boolean;fields:readonly[keyof ThemeColors,string][]}[]=[
@@ -21,14 +23,37 @@ function ColorControl({colorKey,label,value,onCommit,onFlush}:{colorKey:keyof Th
   return <label className="color-row"><span>{label}</span><input type="color" aria-label={`${label} - chọn màu`} value={value} onChange={event=>onCommit(colorKey,event.target.value)}/><input className={error?'invalid':''} aria-label={`${label} - mã HEX`} value={raw} onChange={event=>update(event.target.value)} onBlur={blur}/><i style={{backgroundColor:value}}/>{error&&<small>{error}</small>}</label>;
 }
 
+export function ThemeModeSettings({mode,onSelect}:{mode:ThemeMode;onSelect:(mode:ThemeMode)=>void}){
+  const{t}=useTranslation('theme');
+  const labels:Record<ThemeMode,string>={light:t('mode.light'),dark:t('mode.dark'),system:t('mode.system')};
+  return <section className="settings-card"><h2>{t('mode.heading')}</h2><p>{t('mode.description')}</p>
+    <div className="theme-picker" role="group" aria-label={t('mode.optionsLabel')}>{(['light','dark','system']as const).map(value=><button type="button" key={value} className={mode===value?'selected':''} aria-pressed={mode===value} onClick={()=>onSelect(value)}>{value==='light'?<Sun size={16}/>:<Moon size={16}/>} {labels[value]}</button>)}</div>
+  </section>;
+}
+
+export function ThemePresetSettings({preferences,onSelect}:{preferences:ThemePreferences;onSelect:(preferences:ThemePreferences)=>void}){
+  const{t}=useTranslation('theme');
+  const metadata={
+    'done-today':{name:t('preset.doneToday.name'),description:t('preset.doneToday.description')},
+    forest:{name:t('preset.forest.name'),description:t('preset.forest.description')},
+    ocean:{name:t('preset.ocean.name'),description:t('preset.ocean.description')},
+    lavender:{name:t('preset.lavender.name'),description:t('preset.lavender.description')},
+    'warm-sand':{name:t('preset.warmSand.name'),description:t('preset.warmSand.description')},
+    monochrome:{name:t('preset.monochrome.name'),description:t('preset.monochrome.description')},
+  }satisfies Record<ThemePresetId,{name:string;description:string}>;
+  return <section className="settings-card"><h2>{t('preset.heading')}</h2><p>{t('preset.description')}</p>
+    <div className="preset-grid" role="group" aria-label={t('preset.optionsLabel')}>{themePresets.map(preset=>{const presentation=metadata[preset.id];return <button type="button" key={preset.id} className={`preset-card ${preferences.selectedPresetId===preset.id?'selected':''}`} onClick={()=>onSelect(selectPreset(preset.id))} aria-pressed={preferences.selectedPresetId===preset.id}><strong>{presentation.name}</strong><span>{presentation.description}</span><i aria-hidden="true">{preset.preview.map(color=><b key={color} style={{backgroundColor:color}}/>)}</i></button>})}</div>
+  </section>;
+}
+
 export function ThemeCustomizerContent({controller,compact=false}:{controller:ThemeCustomizerController;compact?:boolean}){
   const{mode,setMode,preferences,activePalette,saveState,error,commit,flush,retry,reset}=controller;
   const[editing,setEditing]=useState<PaletteMode>(activePalette);
   const palette=editing==='light'?preferences.lightColors:preferences.darkColors;const warnings=lowContrastPairs(palette);
   const change=(key:keyof ThemeColors,value:string)=>commit(updateThemeColor(preferences,editing,key,value));
   return <div className={`theme-customizer-content ${compact?'compact':''}`}>
-    <section className="settings-card"><h2>Chế độ hiển thị</h2><p>Chọn bảng màu sáng, tối hoặc theo hệ điều hành.</p><div className="theme-picker">{(['light','dark','system']as const).map(value=><button key={value} className={mode===value?'selected':''} onClick={()=>setMode(value)}>{value==='light'?<Sun size={16}/>:<Moon size={16}/>} {value==='light'?'Sáng':value==='dark'?'Tối':'Theo hệ thống'}</button>)}</div></section>
-    <section className="settings-card"><h2>Chủ đề có sẵn</h2><p>Chọn nền tảng màu rồi tinh chỉnh nếu muốn.</p><div className="preset-grid">{themePresets.map(preset=><button key={preset.id} className={`preset-card ${preferences.selectedPresetId===preset.id?'selected':''}`} onClick={()=>commit(selectPreset(preset.id))} aria-pressed={preferences.selectedPresetId===preset.id}><strong>{preset.name}</strong><span>{preset.description}</span><i>{preset.preview.map(color=><b key={color} style={{backgroundColor:color}}/>)}</i></button>)}</div></section>
+    <ThemeModeSettings mode={mode} onSelect={setMode}/>
+    <ThemePresetSettings preferences={preferences} onSelect={commit}/>
     <section className="settings-card color-settings"><div className="settings-heading"><div><h2>Tùy chỉnh màu</h2><p>Mỗi chế độ có bảng màu riêng và được xem trước ngay.</p></div><div className="palette-tabs">{(['light','dark']as const).map(value=><button className={editing===value?'selected':''} key={value} onClick={()=>setEditing(value)}>Màu {value==='light'?'sáng':'tối'}</button>)}</div></div>
       {warnings.length>0&&<div className="contrast-warning">Độ tương phản thấp, nội dung có thể khó đọc. Cặp liên quan: {warnings.map(pair=>pair.join(' / ')).join(', ')}.</div>}
       <div className="color-groups">{groups.map(group=><details key={group.title} open={group.open}><summary>{group.title}</summary><div className="color-grid">{group.fields.map(([key,label])=><ColorControl key={`${editing}-${key}`} colorKey={key} label={label} value={palette[key]} onCommit={change} onFlush={()=>void flush()}/>)}</div></details>)}</div>

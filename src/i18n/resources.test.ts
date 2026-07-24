@@ -26,6 +26,9 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].common)).toHaveProperty('actions.retry');
       expect(flattenResource(resources[locale].history)).toHaveProperty('heading.title');
       expect(flattenResource(resources[locale].history)).toHaveProperty('summary.daily_other');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('mode.system');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.doneToday.name');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.warmSand.description');
     }
   });
   it('initializes idempotently and switches output',async()=>{

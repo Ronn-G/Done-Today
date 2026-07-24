@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {applyThemeVariables,lowContrastPairs,resolvePalette} from './applyTheme';
 import {calculateContrastRatio,calculateRelativeLuminance,isValidHexColor,normalizeHexColor} from './colors';
-import {defaultThemePreferences,selectPreset,themePresets,updateThemeColor} from './presets';
+import {defaultThemePreferences,selectPreset,themePresetIds,themePresets,updateThemeColor} from './presets';
 import {parseThemePreferences,themePreferencesSchema,type ThemeColors} from './models';
 describe('theme colors',()=>{
   it('validates supported HEX',()=>{expect(isValidHexColor('#abc')).toBe(true);expect(isValidHexColor('#A1b2C3')).toBe(true)});
@@ -12,6 +12,11 @@ describe('theme colors',()=>{
   it('detects low contrast',()=>expect(lowContrastPairs({...defaultThemePreferences().lightColors,primaryText:'#FFFFFF',pageBackground:'#FFFFFF'}).some(pair=>pair[1]==='pageBackground')).toBe(true));
   it('applies only whitelisted variables including stats',()=>{const values=new Map<string,string>();const root={style:{setProperty:(key:string,value:string)=>values.set(key,value)}} as unknown as HTMLElement;applyThemeVariables(defaultThemePreferences().lightColors,root);expect(values.get('--bg-page')).toBe('#FAFAF7');expect(values.get('--stats-bg')).toBe('#F0F6F2');expect(values.get('--stats-progress-fill')).toBe('#0F6E56');expect(values.has('--evil')).toBe(false)});
   it('selects every immutable preset with complete stats tokens',()=>{for(const preset of themePresets){const selected=selectPreset(preset.id);expect(selected.selectedPresetId).toBe(preset.id);expect(themePreferencesSchema.parse(selected).lightColors.statsPanelBackground).toMatch(/^#/)}});
+  it('keeps stable preset IDs ordered and presentation copy out of the domain registry',()=>{
+    expect(themePresets.map(preset=>preset.id)).toEqual(themePresetIds);
+    for(const preset of themePresets){expect(preset).not.toHaveProperty('name');expect(preset).not.toHaveProperty('description')}
+    expect(JSON.stringify(selectPreset('forest'))).not.toMatch(/Forest|Rừng xanh/);
+  });
   it('editing creates custom without mutating preset',()=>{const preset=themePresets[0];const original=preset.lightColors.accent;const next=updateThemeColor(selectPreset(preset.id),'light','accent','#123456');expect(next.selectedPresetId).toBe('custom');expect(preset.lightColors.accent).toBe(original)});
   it('resets to default',()=>expect(defaultThemePreferences().selectedPresetId).toBe('done-today'));
   it('resolves light, dark and system palettes',()=>{expect(resolvePalette('light',true)).toBe('light');expect(resolvePalette('dark',false)).toBe('dark');expect(resolvePalette('system',true)).toBe('dark')});
