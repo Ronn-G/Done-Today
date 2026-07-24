@@ -1,1 +1,4 @@
-export default {foundation:{ready:'Sẵn sàng'}} as const;
+export default {
+  foundation:{ready:'Sẵn sàng'},
+  customizer:{open:'Tùy chỉnh giao diện'},
+} as const;

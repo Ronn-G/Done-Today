@@ -4,7 +4,7 @@ import{createPortal}from'react-dom';
 import {useTranslation} from 'react-i18next';
 import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Palette,Settings,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
-import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
+import {JOURNAL_AUTOSAVE_DELAY_MS,SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
 import {workStatusSchema,type DailyLog,type DailyLogSummary,type UpdateWorkItem,type WorkItem,type WorkStatus} from '../domain/journal/models';
 import{groupDailyItems,parseCollapsedCategoryState,type CategoryGroup,type WorkCategory}from'../domain/journal/categories';
@@ -167,6 +167,7 @@ export function TodayOverview({date,stats,onGo,onOpenTheme}:{
   date:string;stats:ReturnType<typeof calculateStatistics>;onGo:(date:string)=>void;onOpenTheme:()=>void;
 }){
   const {t,i18n}=useTranslation('today');
+  const {t:tTheme}=useTranslation('theme');
   const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   const current=date===today();
   const formattedDate=formatLongLocalDate(date,locale);
@@ -178,7 +179,7 @@ export function TodayOverview({date,stats,onGo,onOpenTheme}:{
       <label className="date-picker"><span>{formattedDate}</span><input aria-label={t('dateControls.choose')} type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&onGo(event.target.value)}/></label>
       <button aria-label={t('dateControls.next')} title={t('dateControls.next')} onClick={()=>onGo(addLocalDays(date,1))}><ChevronRight size={18}/></button>
       {!current&&<button className="today-button" onClick={()=>onGo(today())}>{t('dateControls.today')}</button>}
-      <button aria-label="Tùy chỉnh giao diện" title="Tùy chỉnh giao diện" onClick={onOpenTheme}><Palette size={18}/></button>
+      <button aria-label={tTheme('customizer.open')} title={tTheme('customizer.open')} onClick={onOpenTheme}><Palette size={18}/></button>
     </div></header>
     <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
       <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section></>;
@@ -246,14 +247,13 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
 }){
   const {t}=useTranslation('today');
   const[state,setState]=useState<SaveState>('idle');
-  const[error,setError]=useState<string|null>(null);
   const latest=useRef(item);
   useEffect(()=>{latest.current=item},[item]);
   const coordinator=useMemo(()=>new SaveCoordinator<UpdateWorkItem,WorkItem>(
     input=>service.updateWorkItem(input),
     saved=>onChange(saved),
     setState,
-    600,
+    JOURNAL_AUTOSAVE_DELAY_MS,
   ),[onChange]);
   useEffect(()=>()=>{void coordinator.flush().catch(()=>undefined);coordinator.cancel()},[coordinator]);
   useEffect(()=>{
@@ -261,14 +261,14 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
     window.addEventListener('beforeunload',before);return()=>window.removeEventListener('beforeunload',before);
   },[coordinator]);
   const schedule=(next:WorkItem,immediate=false)=>{
-    latest.current=next;onChange(next);setError(null);
+    latest.current=next;onChange(next);
     const input={id:next.id,task:next.task,result:next.result,nextAction:next.nextAction,status:next.status};
     coordinator.schedule(input);
-    if(immediate)void coordinator.flush().catch(reason=>setError(friendlyError(reason)));
+    if(immediate)void coordinator.flush().catch(()=>undefined);
   };
   const changeText=(field:'task'|'result'|'nextAction',value:string)=>schedule({...latest.current,[field]:value});
-  const flush=()=>void coordinator.flush().catch(reason=>setError(friendlyError(reason)));
-  const flushBeforeAction=async()=>{try{await coordinator.flush()}catch(reason){setError(friendlyError(reason));throw reason}};
+  const flush=()=>void coordinator.flush().catch(()=>undefined);
+  const flushBeforeAction=()=>coordinator.flush();
   const escape=(event:React.KeyboardEvent)=>{if(event.key==='Escape')(event.currentTarget as HTMLElement).blur()};
   const statusLabels:Record<WorkStatus,string>={
     completed:t('status.options.completed'),
@@ -283,7 +283,7 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
     <td><textarea className="work-item-editor next-action-editor" aria-label={t('fields.nextAction.label')} placeholder={t('fields.nextAction.placeholder')} value={item.nextAction} maxLength={1000} rows={2} onChange={e=>changeText('nextAction',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
     <td><select aria-label={t('fields.status.label')} className={`status-select ${item.status}`} value={item.status} onChange={e=>submitWorkStatusSelection(e.target.value,status=>schedule({...latest.current,status},true))}>
       {workStatusSchema.options.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select>
-      <SaveIndicator state={state} error={error} retry={flush}/></td>
+      <SaveIndicator state={state} retry={flush}/></td>
     <td className="row-actions"><RowActionMenu item={item} categories={categories} flush={flushBeforeAction} onMove={onCategoryChange} onDelete={onDelete}/></td>
   </tr>;
 }
@@ -330,11 +330,13 @@ export function RowActionMenu({item,categories,flush,onMove,onDelete}:{item:Work
     {open&&createPortal(<RowActionMenuContent item={item} categories={categories} position={position} onMove={categoryId=>void move(categoryId)} onDelete={requestDelete} menuRef={menu}/>,document.body)}
     {confirmingDelete&&createPortal(<DeleteConfirmationDialog onCancel={()=>finishDelete(false)} onConfirm={()=>finishDelete(true)}/>,document.body)}</>;
 }
-function SaveIndicator({state,error,retry}:{state:SaveState;error:string|null;retry:()=>void}){
+export function SaveIndicator({state,retry}:{state:SaveState;retry:()=>void}){
+  const {t}=useTranslation('today');
   if(state==='idle')return null;
-  if(state==='saving')return <span className="save-state saving">Đang lưu…</span>;
-  if(state==='saved')return <span className="save-state saved">Đã lưu</span>;
-  return <span className="save-state failed" title={error??undefined}>Lưu thất bại <button onClick={retry}>Thử lại</button></span>;
+  if(state==='saving')return <span className="save-state saving" role="status" aria-live="polite" aria-atomic="true">{t('autosave.saving')}</span>;
+  if(state==='saved')return <span className="save-state saved" role="status" aria-live="polite" aria-atomic="true">{t('autosave.saved')}</span>;
+  const retryLabel=t('autosave.accessibility.retry');
+  return <span className="save-state failed" role="status" aria-live="polite" aria-atomic="true">{t('autosave.failed')} <button type="button" aria-label={retryLabel} title={retryLabel} onClick={retry}>{t('common:actions.retry')}</button></span>;
 }
 function Stat({label,value}:{label:string;value:string}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
 

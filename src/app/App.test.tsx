@@ -14,13 +14,14 @@ describe('I18N-2 app shell and Today overview',()=>{
   });
 
   it.each([
-    ['vi','Nhật ký theo ngày','Ngày trước','Tỷ lệ hoàn thành'],
-    ['en','Daily journal','Previous day','Completion rate'],
-  ] as const)('renders localized dates, controls and statistics in %s',async(locale,eyebrow,previous,completionRate)=>{
+    ['vi','Nhật ký theo ngày','Ngày trước','Tỷ lệ hoàn thành','Tùy chỉnh giao diện'],
+    ['en','Daily journal','Previous day','Completion rate','Customize appearance'],
+  ] as const)('renders localized dates, controls and statistics in %s',async(locale,eyebrow,previous,completionRate,customizeAppearance)=>{
     await initializeI18n(locale);
     const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} onGo={vi.fn()} onOpenTheme={vi.fn()}/>);
     expect(html).toContain(eyebrow);
     expect(html).toContain(`aria-label="${previous}"`);
+    expect(html).toContain(`aria-label="${customizeAppearance}"`);
     expect(html).toContain(completionRate);
     expect(html).toContain('50%');
     if(locale==='en')expect(html).toContain('Friday, January 2, 2026');

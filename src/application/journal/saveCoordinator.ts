@@ -1,4 +1,5 @@
 export type SaveState='idle'|'saving'|'saved'|'error';
+export const JOURNAL_AUTOSAVE_DELAY_MS=600;
 const activeCoordinators=new Set<SaveCoordinator<unknown,unknown>>();
 const inFlightSaves=new Set<Promise<unknown>>();
 export async function flushPendingJournalSaves(){
@@ -13,7 +14,7 @@ export class SaveCoordinator<T,R=T>{
   private readonly onSaved:(value:R)=>void;
   private readonly onState:(state:SaveState)=>void;
   private readonly delay:number;
-  constructor(save:(value:T)=>Promise<R>,onSaved:(value:R)=>void,onState:(state:SaveState)=>void,delay=600){
+  constructor(save:(value:T)=>Promise<R>,onSaved:(value:R)=>void,onState:(state:SaveState)=>void,delay=JOURNAL_AUTOSAVE_DELAY_MS){
     this.save=save;this.onSaved=onSaved;this.onState=onState;this.delay=delay;
     activeCoordinators.add(this as unknown as SaveCoordinator<unknown,unknown>);
   }

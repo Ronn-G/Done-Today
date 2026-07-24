@@ -49,5 +49,11 @@ export default {
   },
   emptyState:{title:'No tasks yet.',body:'Choose a category below to start recording your day.'},
   addItem:{label:'Add row to',chooseCategory:'Choose a category…',accessibility:{chooseCategory:'Choose a category for the new row'}},
-  autosave:{hint:'Ctrl + Enter to add a row · Changes save automatically'},
+  autosave:{
+    hint:'Ctrl + Enter to add a row · Changes save automatically',
+    saving:'Saving…',
+    saved:'Saved',
+    failed:'Couldn’t save',
+    accessibility:{retry:'Retry saving changes'},
+  },
 } as const;

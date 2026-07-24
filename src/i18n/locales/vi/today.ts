@@ -48,5 +48,11 @@ export default {
   },
   emptyState:{title:'Chưa có việc nào.',body:'Chọn một nhóm bên dưới để bắt đầu ghi lại ngày hôm nay.'},
   addItem:{label:'Thêm dòng vào',chooseCategory:'Chọn nhóm…',accessibility:{chooseCategory:'Chọn nhóm cho dòng mới'}},
-  autosave:{hint:'Ctrl + Enter để thêm dòng · Thay đổi được tự động lưu'},
+  autosave:{
+    hint:'Ctrl + Enter để thêm dòng · Thay đổi được tự động lưu',
+    saving:'Đang lưu…',
+    saved:'Đã lưu',
+    failed:'Không thể lưu',
+    accessibility:{retry:'Thử lưu lại thay đổi'},
+  },
 } as const;
