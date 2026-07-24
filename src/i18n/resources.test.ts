@@ -24,6 +24,8 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].settings)).toHaveProperty('language.label');
       expect(flattenResource(resources[locale].settings)).toHaveProperty('language.status.error');
       expect(flattenResource(resources[locale].common)).toHaveProperty('actions.retry');
+      expect(flattenResource(resources[locale].history)).toHaveProperty('heading.title');
+      expect(flattenResource(resources[locale].history)).toHaveProperty('summary.daily_other');
     }
   });
   it('initializes idempotently and switches output',async()=>{

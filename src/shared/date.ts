@@ -20,6 +20,14 @@ export function formatLongLocalDate(value:string,locale:AppLocale){
   const date=parseLocalDate(value);if(!date)throw new Error('Invalid local date');
   return formatDate(date,locale,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
+export function formatShortLocalDate(value:string,locale:AppLocale){
+  const date=parseLocalDate(value);if(!date)throw new Error('Invalid local date');
+  return formatDate(date,locale,{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+export function formatWeekdayLocalDate(value:string,locale:AppLocale){
+  const date=parseLocalDate(value);if(!date)throw new Error('Invalid local date');
+  return formatDate(date,locale,{weekday:'long'});
+}
 export function vietnameseDate(value:Date|string=new Date()){
   const date=typeof value==='string'?parseLocalDate(value):value;
   if(!date)throw new Error('Ngày không hợp lệ');

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {addLocalDays,formatLongLocalDate,isValidLocalDate,localDateKey,parseLocalDate} from './date';
+import {addLocalDays,formatLongLocalDate,formatShortLocalDate,formatWeekdayLocalDate,isValidLocalDate,localDateKey,parseLocalDate} from './date';
 describe('local date utilities',()=>{
   it('formats local components without UTC conversion',()=>expect(localDateKey(new Date(2026,6,18,0,5))).toBe('2026-07-18'));
   it('accepts leap day',()=>expect(parseLocalDate('2028-02-29')).not.toBeNull());
@@ -9,6 +9,10 @@ describe('local date utilities',()=>{
   it('formats the same local calendar date in Vietnamese and English',()=>{
     expect(formatLongLocalDate('2026-01-02','vi')).toContain('tháng 1');
     expect(formatLongLocalDate('2026-01-02','en')).toBe('Friday, January 2, 2026');
+    expect(formatShortLocalDate('2026-01-02','vi')).toBe('02/01/2026');
+    expect(formatShortLocalDate('2026-01-02','en')).toBe('01/02/2026');
+    expect(formatWeekdayLocalDate('2026-01-02','vi')).toBe('Thứ Sáu');
+    expect(formatWeekdayLocalDate('2026-01-02','en')).toBe('Friday');
   });
   it('rejects an invalid local date before formatting',()=>expect(()=>formatLongLocalDate('2026-02-31','en')).toThrow('Invalid local date'));
 });

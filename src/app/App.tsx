@@ -23,7 +23,7 @@ import{LanguageSettings}from'../features/settings/LanguageSettings';
 import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
 import {compatibilityLocale,normalizeLocale} from '../domain/localization/locale';
 import {formatCount,formatPercent} from '../i18n/formatters';
-import {addLocalDays,formatLongLocalDate,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
+import {addLocalDays,formatLongLocalDate,formatShortLocalDate,formatWeekdayLocalDate,isValidLocalDate,localDateKey} from '../shared/date';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
 type AppPage=Route['page'];
@@ -340,32 +340,53 @@ export function SaveIndicator({state,retry}:{state:SaveState;retry:()=>void}){
 }
 function Stat({label,value}:{label:string;value:string}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
 
+export function mergeHistorySummaries(previous:DailyLogSummary[],next:DailyLogSummary[],append:boolean){
+  return append?[...previous.filter(existing=>!next.some(entry=>entry.id===existing.id)),...next]:next;
+}
+
 function HistoryPage(){
   const[items,setItems]=useState<DailyLogSummary[]>([]);
   const[page,setPage]=useState(1);const[hasMore,setHasMore]=useState(false);
-  const[loading,setLoading]=useState(true);const[loadingMore,setLoadingMore]=useState(false);const[error,setError]=useState<string|null>(null);
+  const[loading,setLoading]=useState(true);const[loadingMore,setLoadingMore]=useState(false);const[error,setError]=useState(false);
   const load=useCallback(async(targetPage:number,append:boolean)=>{
     if(append)setLoadingMore(true);else setLoading(true);
-    setError(null);
+    setError(false);
     try{
       const result=await service.listHistory(targetPage,20);
-      setItems(previous=>append?[...previous.filter(existing=>!result.items.some(next=>next.id===existing.id)),...result.items]:result.items);
+      setItems(previous=>mergeHistorySummaries(previous,result.items,append));
       setPage(result.page);setHasMore(result.hasMore);
-    }catch(reason){setError(friendlyError(reason))}
+    }catch{setError(true)}
     finally{setLoading(false);setLoadingMore(false)}
   },[]);
   useEffect(()=>{void load(1,false)},[load]);
-  return <div className="content"><header><p className="eyebrow">Nhìn lại hành trình</p><h1>Lịch sử</h1><p className="subtitle">Mỗi ngày đã ghi lại là một dấu mốc nhỏ.</p></header>
-    {loading?<div className="history-loading"><LoaderCircle className="spin"/> Đang tải lịch sử…</div>:
-    error?<div className="page-error">{error}<button onClick={()=>void load(1,false)}>Thử lại</button></div>:
-    items.length===0?<div className="empty-state"><History size={28}/><h2>Chưa có ngày nào được ghi lại</h2><p>Hãy bắt đầu từ hôm nay.</p><button onClick={()=>navigate({page:'day',date:today()})}>Đi đến Hôm nay</button></div>:
-    <div className="history-list">{items.map(summary=><button className="history-card" key={summary.id} onClick={()=>navigate({page:'day',date:summary.logDate})}>
-      <div className="history-date"><strong>{shortVietnameseDate(summary.logDate)}</strong><span>{vietnameseDate(summary.logDate).split(',')[0]}</span></div>
-      <div className="history-summary"><strong>{summary.totalItems} việc · {summary.completedItems} hoàn thành · {summary.percentage}%</strong>
-        {summary.previewTasks.length>0&&<ul>{summary.previewTasks.map((task,index)=><li key={`${task}-${index}`}>{task}</li>)}</ul>}</div>
-      <div className="history-progress"><span style={{width:`${summary.percentage}%`}}/></div><ChevronRight size={18}/></button>)}
-      {hasMore&&<button className="load-more" disabled={loadingMore} onClick={()=>void load(page+1,true)}>{loadingMore?'Đang tải…':'Tải thêm'}</button>}
-    </div>}</div>;
+  return <HistoryView items={items} loading={loading} loadingMore={loadingMore} error={error} hasMore={hasMore}
+    onRetry={()=>void load(1,false)} onLoadMore={()=>void load(page+1,true)}
+    onOpenDay={date=>navigate({page:'day',date})} onGoToday={()=>navigate({page:'day',date:today()})}/>;
+}
+
+export function HistoryView({items,loading,loadingMore,error,hasMore,onRetry,onLoadMore,onOpenDay,onGoToday}:{
+  items:DailyLogSummary[];loading:boolean;loadingMore:boolean;error:boolean;hasMore:boolean;
+  onRetry:()=>void;onLoadMore:()=>void;onOpenDay:(date:string)=>void;onGoToday:()=>void;
+}){
+  const {t,i18n}=useTranslation('history');
+  const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
+  return <div className="content"><header><p className="eyebrow">{t('heading.eyebrow')}</p><h1>{t('heading.title')}</h1><p className="subtitle">{t('heading.subtitle')}</p></header>
+    {loading?<div className="history-loading" role="status" aria-live="polite" aria-atomic="true"><LoaderCircle className="spin"/> {t('status.loading')}</div>:
+    error?<div className="page-error" role="alert">{t('errors.load')}<button type="button" onClick={onRetry}>{t('common:actions.retry')}</button></div>:
+    items.length===0?<div className="empty-state"><History size={28}/><h2>{t('emptyState.title')}</h2><p>{t('emptyState.body')}</p><button type="button" onClick={onGoToday}>{t('actions.goToToday')}</button></div>:
+    <section className="history-list" aria-label={t('accessibility.list')}>{items.map(summary=>{
+      const date=formatLongLocalDate(summary.logDate,locale);
+      const percentage=formatPercent(summary.percentage/100,locale);
+      const dailySummary=t('summary.daily',{count:summary.totalItems,completed:summary.completedItems,percentage});
+      const accessibleName=t('accessibility.openDay',{date,summary:dailySummary});
+      return <button className="history-card" key={summary.id} type="button" aria-label={accessibleName} title={accessibleName} onClick={()=>onOpenDay(summary.logDate)}>
+        <div className="history-date"><strong>{formatShortLocalDate(summary.logDate,locale)}</strong><span>{formatWeekdayLocalDate(summary.logDate,locale)}</span></div>
+        <div className="history-summary"><strong>{dailySummary}</strong>
+          {summary.previewTasks.length>0&&<ul>{summary.previewTasks.map((task,index)=><li key={`${summary.id}-${index}`}>{task}</li>)}</ul>}</div>
+        <div className="history-progress" role="progressbar" aria-label={t('accessibility.completionRateForDay',{date})} aria-valuenow={summary.percentage} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${summary.percentage}%`}}/></div><ChevronRight size={18}/></button>;
+    })}
+      {hasMore&&<button className="load-more" type="button" disabled={loadingMore} aria-busy={loadingMore} onClick={onLoadMore}>{loadingMore?t('status.loadingMore'):t('actions.loadMore')}</button>}
+    </section>}</div>;
 }
 function SettingsPage({controller,onImported}:{controller:ThemeCustomizerController;onImported:()=>void}){
   return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>

@@ -1,6 +1,7 @@
 import i18next,{type i18n,type InitOptions,type Module} from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import {isAppLocale,normalizeLocale,resourceFallbackLocale,type AppLocale} from '../domain/localization/locale';
+import {formatCount} from './formatters';
 import {namespaces,resources} from './resources';
 
 type DocumentLanguageTarget={lang:string};
@@ -64,6 +65,17 @@ export function createI18nController(runtime:I18nRuntime,setup:()=>void,reportMi
 }
 
 const controller=createI18nController(i18next,()=>{i18next.use(initReactI18next)});
-export const initializeI18n=controller.initialize;
+let integerFormatterInstalled=false;
+export const initializeI18n=async(locale:AppLocale)=>{
+  const instance=await controller.initialize(locale);
+  if(!integerFormatterInstalled){
+    instance.services.formatter?.add('integer',(value,language)=>{
+      if(typeof value!=='number')return String(value);
+      return formatCount(value,normalizeLocale(language)??resourceFallbackLocale).value;
+    });
+    integerFormatterInstalled=true;
+  }
+  return instance;
+};
 export const changeAppLanguage=controller.changeLanguage;
 export {i18next};
