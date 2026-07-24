@@ -30,7 +30,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
 | Day Theme & Personalization | Specified | Tài liệu 17 đã có; không được suy ra là implementation đã hoàn thành |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
-| I18N-2 | In progress — checkpoint 2 complete | App navigation, Today overview, table/category/empty/add-row đã có resource/formatter/test cho `vi` và `en`; row editor/status/action và autosave closure chưa triển khai |
+| I18N-2 | In progress — checkpoint 3 complete | App navigation, Today overview, table/category/empty/add-row và row editor/status/action đã có resource/test cho `vi` và `en`; autosave và regression closure chưa triển khai |
 | I18N-3 đến I18N-5 | Planned | Thực hiện theo task contract và checkpoint của quy trình mới |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 

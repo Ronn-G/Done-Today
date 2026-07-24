@@ -1,7 +1,4 @@
-import type { WorkItem, WorkStatus } from './models';
-export const statusLabels: Record<WorkStatus,string> = {
-  completed:'Hoàn thành', in_progress:'Đang làm', postponed:'Bị hoãn', cancelled:'Đã hủy',
-};
+import type { WorkItem } from './models';
 export function calculateStatistics(items: WorkItem[]) {
   const total=items.length;
   const completed=items.filter((item)=>item.status==='completed').length;

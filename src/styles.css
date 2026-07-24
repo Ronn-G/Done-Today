@@ -194,6 +194,15 @@ tbody tr:hover { background: var(--bg-row-hover); }
 .row-action-menu button:hover,.row-action-menu button:focus-visible { background: var(--bg-interactive-hover); color: var(--accent); }
 .row-action-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--border); }
 .row-action-menu .danger { color: var(--error-text); }
+.delete-confirmation-dialog { width: min(420px,calc(100vw - 32px)); max-width: none; margin: auto; padding: 0; border: 1px solid var(--border-soft); border-radius: var(--radius-card); color: var(--text-primary); background: var(--surface-overlay); box-shadow: var(--shadow-overlay); }
+.delete-confirmation-dialog::backdrop { background: color-mix(in srgb,#000 46%,transparent); }
+.delete-confirmation-content { padding: 22px; }
+.delete-confirmation-content h2 { margin: 0; font-size: 20px; }
+.delete-confirmation-content p { margin: 10px 0 0; color: var(--text-secondary); line-height: 1.55; }
+.delete-confirmation-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
+.delete-confirmation-actions button { min-height: 38px; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-raised); color: var(--text-primary); cursor: pointer; font-weight: 700; }
+.delete-confirmation-actions button:hover,.delete-confirmation-actions button:focus-visible { background: var(--bg-interactive-hover); border-color: var(--accent); }
+.delete-confirmation-actions .danger { border-color: var(--error-border); background: var(--error-bg); color: var(--error-text); }
 .category-row th { position: static; padding: 10px 14px; text-transform: none; letter-spacing: normal; background: color-mix(in srgb,var(--surface-panel) 96%,var(--accent)); }
 .category-header { display: flex; align-items: center; gap: 9px; }
 .category-header > i { width: 4px; height: 26px; border-radius: 99px; background: var(--text-muted); }

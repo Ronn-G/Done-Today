@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect -- async route loads intentionally initialize screen state */
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
 import{createPortal}from'react-dom';
 import {useTranslation} from 'react-i18next';
 import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Palette,Settings,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
 import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
-import type {DailyLog,DailyLogSummary,UpdateWorkItem,WorkItem,WorkStatus} from '../domain/journal/models';
+import {workStatusSchema,type DailyLog,type DailyLogSummary,type UpdateWorkItem,type WorkItem,type WorkStatus} from '../domain/journal/models';
 import{groupDailyItems,parseCollapsedCategoryState,type CategoryGroup,type WorkCategory}from'../domain/journal/categories';
-import {calculateStatistics,statusLabels} from '../domain/journal/statistics';
+import {calculateStatistics} from '../domain/journal/statistics';
 import {TauriJournalRepository} from '../infrastructure/database/tauriJournalRepository';
 import {TauriThemeRepository} from '../infrastructure/database/tauriThemeRepository';
 import {applyThemePreferences,resolvePalette} from '../domain/theme/applyTheme';
@@ -30,7 +30,6 @@ type AppPage=Route['page'];
 const service=new JournalService(new TauriJournalRepository());
 const themeRepository=new TauriThemeRepository();
 const today=()=>localDateKey();
-const statusOptions=Object.entries(statusLabels) as Array<[WorkStatus,string]>;
 function parseRoute():Route{
   const hash=location.hash.slice(1);
   if(hash==='/history')return{page:'history'};
@@ -138,19 +137,17 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   },[addItem]);
   const updateLocal=useCallback((item:WorkItem)=>setLog(previous=>previous?{...previous,items:previous.items.map(entry=>entry.id===item.id?item:entry)}:previous),[]);
   const remove=async(item:WorkItem)=>{
-    const hasContent=Boolean(item.task.trim()||item.result.trim()||item.nextAction.trim());
-    if(hasContent&&!confirm('Xóa dòng này? Nội dung đã nhập sẽ không thể khôi phục.'))return;
     try{await service.deleteWorkItem(item.id);setLog(previous=>previous?{...previous,items:previous.items.filter(entry=>entry.id!==item.id)}:previous)}
-    catch(reason){setError(friendlyError(reason))}
+    catch{setError(t('item.errors.delete'))}
   };
   const move=async(bucket:WorkItem[],index:number,direction:-1|1)=>{
     if(!log)return;const target=index+direction;if(target<0||target>=bucket.length)return;
     const ordered=[...bucket];[ordered[index],ordered[target]]=[ordered[target],ordered[index]];
     try{const saved=await service.reorderWorkItems(log.id,ordered.map(item=>item.id));setLog(current=>current?{...current,items:current.items.map(item=>saved.find(value=>value.id===item.id)??item)}:current)}
-    catch(reason){setError(friendlyError(reason));void load()}
+    catch{setError(t('item.errors.reorder'));void load()}
   };
   const toggleGroup=(id:string|null)=>{const key=id??'__other__';setCollapsed(current=>{const next=current.includes(key)?current.filter(value=>value!==key):[...current,key];localStorage.setItem('done-today-collapsed-categories',JSON.stringify({schemaVersion:1,collapsedCategoryIds:next}));return next})};
-  const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(friendlyError(reason));throw reason}};
+  const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(t('item.errors.move'));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
     <TodayOverview date={date} stats={stats} onGo={go} onOpenTheme={onOpenTheme}/>
@@ -237,10 +234,17 @@ export function AddRowFooter({categories,onAddItem}:{categories:WorkCategory[];o
   </footer>;
 }
 
-function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
+export function submitWorkStatusSelection(value:string,onSelect:(status:WorkStatus)=>void){
+  const parsed=workStatusSchema.safeParse(value);
+  if(!parsed.success)return false;
+  onSelect(parsed.data);return true;
+}
+
+export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
   item:WorkItem;categories:WorkCategory[];dataIndex:number;autoFocus:boolean;onFocused:()=>void;onChange:(item:WorkItem)=>void;onCategoryChange:(id:string|null)=>Promise<void>;onDelete:()=>void;
   onMoveUp:()=>void;onMoveDown:()=>void;canMoveUp:boolean;canMoveDown:boolean;
 }){
+  const {t}=useTranslation('today');
   const[state,setState]=useState<SaveState>('idle');
   const[error,setError]=useState<string|null>(null);
   const latest=useRef(item);
@@ -266,25 +270,65 @@ function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCateg
   const flush=()=>void coordinator.flush().catch(reason=>setError(friendlyError(reason)));
   const flushBeforeAction=async()=>{try{await coordinator.flush()}catch(reason){setError(friendlyError(reason));throw reason}};
   const escape=(event:React.KeyboardEvent)=>{if(event.key==='Escape')(event.currentTarget as HTMLElement).blur()};
+  const statusLabels:Record<WorkStatus,string>={
+    completed:t('status.options.completed'),
+    in_progress:t('status.options.inProgress'),
+    postponed:t('status.options.postponed'),
+    cancelled:t('status.options.cancelled'),
+  };
   return <tr className="editable-row" data-group-index={dataIndex}>
-    <td className="reorder-cell"><button aria-label="Di chuyển lên" title="Di chuyển lên" disabled={!canMoveUp} onClick={onMoveUp}><ChevronUp size={14}/></button><button aria-label="Di chuyển xuống" title="Di chuyển xuống" disabled={!canMoveDown} onClick={onMoveDown}><ChevronDown size={14}/></button></td>
-    <td><textarea className="work-item-editor task-editor" aria-label="Việc đã làm" placeholder="Bạn đã làm gì?" value={item.task} maxLength={500} rows={2} autoFocus={autoFocus} onFocus={onFocused} onChange={e=>changeText('task',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
-    <td><textarea className="work-item-editor result-editor" aria-label="Kết quả" placeholder="Kết quả ra sao?" value={item.result} maxLength={2000} rows={2} onChange={e=>changeText('result',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
-    <td><textarea className="work-item-editor next-action-editor" aria-label="Bước tiếp theo" placeholder="Tiếp theo cần làm gì?" value={item.nextAction} maxLength={1000} rows={2} onChange={e=>changeText('nextAction',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
-    <td><select aria-label="Trạng thái" className={`status-select ${item.status}`} value={item.status} onChange={e=>schedule({...latest.current,status:e.target.value as WorkStatus},true)}>
-      {statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+    <td className="reorder-cell"><button aria-label={t('common:actions.moveUp')} title={t('common:actions.moveUp')} disabled={!canMoveUp} onClick={onMoveUp}><ChevronUp size={14}/></button><button aria-label={t('common:actions.moveDown')} title={t('common:actions.moveDown')} disabled={!canMoveDown} onClick={onMoveDown}><ChevronDown size={14}/></button></td>
+    <td><textarea className="work-item-editor task-editor" aria-label={t('fields.task.label')} placeholder={t('fields.task.placeholder')} value={item.task} maxLength={500} rows={2} autoFocus={autoFocus} onFocus={onFocused} onChange={e=>changeText('task',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><textarea className="work-item-editor result-editor" aria-label={t('fields.result.label')} placeholder={t('fields.result.placeholder')} value={item.result} maxLength={2000} rows={2} onChange={e=>changeText('result',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><textarea className="work-item-editor next-action-editor" aria-label={t('fields.nextAction.label')} placeholder={t('fields.nextAction.placeholder')} value={item.nextAction} maxLength={1000} rows={2} onChange={e=>changeText('nextAction',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><select aria-label={t('fields.status.label')} className={`status-select ${item.status}`} value={item.status} onChange={e=>submitWorkStatusSelection(e.target.value,status=>schedule({...latest.current,status},true))}>
+      {workStatusSchema.options.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select>
       <SaveIndicator state={state} error={error} retry={flush}/></td>
     <td className="row-actions"><RowActionMenu item={item} categories={categories} flush={flushBeforeAction} onMove={onCategoryChange} onDelete={onDelete}/></td>
   </tr>;
 }
-function RowActionMenu({item,categories,flush,onMove,onDelete}:{item:WorkItem;categories:WorkCategory[];flush:()=>Promise<void>;onMove:(id:string|null)=>Promise<void>;onDelete:()=>void}){
-  const[open,setOpen]=useState(false);const[position,setPosition]=useState({left:0,top:0});const trigger=useRef<HTMLButtonElement>(null);const menu=useRef<HTMLDivElement>(null);
+export function requiresDeleteConfirmation(item:Pick<WorkItem,'task'|'result'|'nextAction'>){
+  return Boolean(item.task.trim()||item.result.trim()||item.nextAction.trim());
+}
+export function completeDeleteConfirmation(confirmed:boolean,onDelete:()=>void){
+  if(confirmed)onDelete();
+  return confirmed;
+}
+export function DeleteConfirmationDialog({onCancel,onConfirm}:{onCancel:()=>void;onConfirm:()=>void}){
+  const {t}=useTranslation('today');const dialog=useRef<HTMLDialogElement>(null);const id=useId();
+  useEffect(()=>{const current=dialog.current;if(current&&!current.open)current.showModal();return()=>{if(current?.open)current.close()}},[]);
+  const cancel=()=>{dialog.current?.close();onCancel()};
+  return <dialog ref={dialog} className="delete-confirmation-dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-body`}
+    onCancel={event=>{event.preventDefault();cancel()}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();cancel()}}}>
+    <div className="delete-confirmation-content"><h2 id={`${id}-title`}>{t('item.confirmDelete.title')}</h2><p id={`${id}-body`}>{t('item.confirmDelete.body')}</p>
+      <div className="delete-confirmation-actions"><button type="button" autoFocus onClick={cancel}>{t('common:actions.cancel')}</button>
+        <button type="button" className="danger" onClick={()=>{dialog.current?.close();onConfirm()}}>{t('item.confirmDelete.confirm')}</button></div>
+    </div>
+  </dialog>;
+}
+export function RowActionMenuContent({item,categories,position,onMove,onDelete,menuRef}:{
+  item:WorkItem;categories:WorkCategory[];position:{left:number;top:number};onMove:(id:string|null)=>void;onDelete:()=>void;menuRef?:React.RefObject<HTMLDivElement|null>;
+}){
+  const {t}=useTranslation('today');const label=item.task.trim()||t('item.untitled');const actionsLabel=t('item.accessibility.actionsForTask',{task:label});
+  return <div ref={menuRef} className="row-action-menu" role="menu" aria-label={actionsLabel} style={position}><strong>{t('categories.moveTo')}</strong>
+    {getRowActionDestinations(categories).map(category=><button role="menuitem" key={category.id} onClick={()=>onMove(category.id)}>{item.categoryId===category.id?<Check size={15}/>:<span/>}{category.name}</button>)}
+    <button role="menuitem" onClick={()=>onMove(null)}>{item.categoryId===null?<Check size={15}/>:<span/>}{t('categories.other')}</button><hr/>
+    <button className="danger" role="menuitem" onClick={onDelete}><Trash2 size={15}/> {t('item.delete')}</button>
+  </div>;
+}
+export function RowActionMenu({item,categories,flush,onMove,onDelete}:{item:WorkItem;categories:WorkCategory[];flush:()=>Promise<void>;onMove:(id:string|null)=>Promise<void>;onDelete:()=>void}){
+  const {t}=useTranslation('today');
+  const[open,setOpen]=useState(false);const[confirmingDelete,setConfirmingDelete]=useState(false);const[position,setPosition]=useState({left:0,top:0});const trigger=useRef<HTMLButtonElement>(null);const menu=useRef<HTMLDivElement>(null);
   const close=useCallback(()=>{setOpen(false);requestAnimationFrame(()=>trigger.current?.focus())},[]);
   useEffect(()=>{if(!open)return;const outside=(event:PointerEvent)=>{if(!menu.current?.contains(event.target as Node)&&!trigger.current?.contains(event.target as Node))close()};const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();close()}};window.addEventListener('pointerdown',outside);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',outside);window.removeEventListener('keydown',key)}},[open,close]);
   const toggle=()=>{if(!open&&trigger.current){setPosition(positionRowActionMenu(trigger.current.getBoundingClientRect(),{width:innerWidth,height:innerHeight}))}setOpen(value=>!value)};
   const move=async(categoryId:string|null)=>{try{await moveItemAfterFlush(categoryId,flush,onMove);close()}catch{return}};
-  const label=item.task.trim()||'chưa có tên';
-  return <><button ref={trigger} className="row-action-trigger" aria-label={`Hành động cho công việc ${label}`} title={`Hành động cho công việc ${label}`} aria-haspopup="menu" aria-expanded={open} onClick={toggle}><MoreHorizontal size={19}/></button>{open&&createPortal(<div ref={menu} className="row-action-menu" role="menu" aria-label={`Hành động cho công việc ${label}`} style={position}><strong>Chuyển sang nhóm</strong>{getRowActionDestinations(categories).map(category=><button role="menuitem" key={category.id} onClick={()=>void move(category.id)}>{item.categoryId===category.id?<Check size={15}/>:<span/>}{category.name}</button>)}<button role="menuitem" onClick={()=>void move(null)}>{item.categoryId===null?<Check size={15}/>:<span/>}Việc khác</button><hr/><button className="danger" role="menuitem" onClick={()=>{close();onDelete()}}><Trash2 size={15}/> Xóa công việc</button></div>,document.body)}</>;
+  const requestDelete=()=>{setOpen(false);if(requiresDeleteConfirmation(item))setConfirmingDelete(true);else onDelete()};
+  const finishDelete=(confirmed:boolean)=>{setConfirmingDelete(false);if(!completeDeleteConfirmation(confirmed,onDelete))requestAnimationFrame(()=>trigger.current?.focus())};
+  const label=item.task.trim()||t('item.untitled');const actionsLabel=t('item.accessibility.actionsForTask',{task:label});
+  return <><button ref={trigger} className="row-action-trigger" aria-label={actionsLabel} title={actionsLabel} aria-haspopup="menu" aria-expanded={open} onClick={toggle}><MoreHorizontal size={19}/></button>
+    {open&&createPortal(<RowActionMenuContent item={item} categories={categories} position={position} onMove={categoryId=>void move(categoryId)} onDelete={requestDelete} menuRef={menu}/>,document.body)}
+    {confirmingDelete&&createPortal(<DeleteConfirmationDialog onCancel={()=>finishDelete(false)} onConfirm={()=>finishDelete(true)}/>,document.body)}</>;
 }
 function SaveIndicator({state,error,retry}:{state:SaveState;error:string|null;retry:()=>void}){
   if(state==='idle')return null;
