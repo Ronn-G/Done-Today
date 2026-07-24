@@ -10,7 +10,7 @@ describe('theme colors',()=>{
   it('calculates luminance',()=>{expect(calculateRelativeLuminance('#000000')).toBe(0);expect(calculateRelativeLuminance('#FFFFFF')).toBe(1)});
   it('calculates contrast',()=>expect(calculateContrastRatio('#000','#fff')).toBeCloseTo(21));
   it('detects low contrast',()=>expect(lowContrastPairs({...defaultThemePreferences().lightColors,primaryText:'#FFFFFF',pageBackground:'#FFFFFF'}).some(pair=>pair[1]==='pageBackground')).toBe(true));
-  it('applies only whitelisted variables including stats',()=>{const values=new Map<string,string>();const root={style:{setProperty:(key:string,value:string)=>values.set(key,value)}} as unknown as HTMLElement;applyThemeVariables(defaultThemePreferences().lightColors,root);expect(values.get('--bg-page')).toBe('#FAFAF7');expect(values.get('--stats-bg')).toBe('#F0F6F2');expect(values.get('--stats-progress-fill')).toBe('#0F6E56');expect(values.has('--evil')).toBe(false)});
+  it('applies only whitelisted variables including table header and stats',()=>{const values=new Map<string,string>();const root={style:{setProperty:(key:string,value:string)=>values.set(key,value)}} as unknown as HTMLElement;applyThemeVariables(defaultThemePreferences().lightColors,root);expect(values.get('--bg-page')).toBe('#FAFAF7');expect(values.get('--bg-table-header')).toBe('#F2F3EF');expect(values.get('--stats-bg')).toBe('#F0F6F2');expect(values.get('--stats-progress-fill')).toBe('#0F6E56');expect(values.has('--evil')).toBe(false)});
   it('selects every immutable preset with complete stats tokens',()=>{for(const preset of themePresets){const selected=selectPreset(preset.id);expect(selected.selectedPresetId).toBe(preset.id);expect(themePreferencesSchema.parse(selected).lightColors.statsPanelBackground).toMatch(/^#/)}});
   it('keeps stable preset IDs ordered and presentation copy out of the domain registry',()=>{
     expect(themePresets.map(preset=>preset.id)).toEqual(themePresetIds);
@@ -18,6 +18,16 @@ describe('theme colors',()=>{
     expect(JSON.stringify(selectPreset('forest'))).not.toMatch(/Forest|Rừng xanh/);
   });
   it('editing creates custom without mutating preset',()=>{const preset=themePresets[0];const original=preset.lightColors.accent;const next=updateThemeColor(selectPreset(preset.id),'light','accent','#123456');expect(next.selectedPresetId).toBe('custom');expect(preset.lightColors.accent).toBe(original)});
+  it('keeps light and dark table-header colors independent through serialization',()=>{
+    const initial=defaultThemePreferences();
+    const light=updateThemeColor(initial,'light','tableHeaderBackground','#123456');
+    const both=updateThemeColor(light,'dark','tableHeaderBackground','#654321');
+    const parsed=parseThemePreferences(JSON.parse(JSON.stringify(both)));
+    expect(parsed.selectedPresetId).toBe('custom');
+    expect(parsed.lightColors.tableHeaderBackground).toBe('#123456');
+    expect(parsed.darkColors.tableHeaderBackground).toBe('#654321');
+    expect(initial.lightColors.tableHeaderBackground).toBe('#F2F3EF');
+  });
   it('resets to default',()=>expect(defaultThemePreferences().selectedPresetId).toBe('done-today'));
   it('resolves light, dark and system palettes',()=>{expect(resolvePalette('light',true)).toBe('light');expect(resolvePalette('dark',false)).toBe('dark');expect(resolvePalette('system',true)).toBe('dark')});
   it('detects low stats panel contrast',()=>{const colors={...defaultThemePreferences().lightColors,statsPanelPrimaryText:'#FFFFFF',statsPanelBackground:'#FFFFFF'};expect(lowContrastPairs(colors)).toContainEqual(['statsPanelPrimaryText','statsPanelBackground'])});

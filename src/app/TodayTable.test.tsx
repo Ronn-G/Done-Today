@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import {describe,expect,it,vi} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {CategoryGroup,WorkCategory} from '../domain/journal/categories';
@@ -64,6 +65,18 @@ describe('I18N-2 Today table and add-row flow',()=>{
     const collapsed=renderToStaticMarkup(<table><tbody><TodayCategoryHeader group={virtualGroup} hidden onAddItem={vi.fn()} onToggle={vi.fn()}/></tbody></table>);
     expect(collapsed).toContain('aria-label="Expand Other"');
     expect(virtualGroup).toMatchObject({id:null,category:null,name:null});
+  });
+
+  it('uses the table-header semantic variable only for the Today column-header surface',async()=>{
+    await initializeI18n('vi');
+    const html=renderTableChrome(group,[category]);
+    const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+    const tableHeaderRule=styles.match(/thead th\s*\{([^}]*)\}/)?.[1];
+    const categoryHeaderRule=styles.match(/\.category-row th\s*\{([^}]*)\}/)?.[1];
+    expect(html).toContain('<thead>');
+    expect(html).toContain('<tr class="category-row">');
+    expect(tableHeaderRule).toContain('background: var(--bg-table-header)');
+    expect(categoryHeaderRule).not.toContain('var(--bg-table-header)');
   });
 
   it('keeps add-row behavior and category IDs stable while mapping only the virtual option to null',()=>{

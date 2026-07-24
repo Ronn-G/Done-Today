@@ -17,12 +17,22 @@ const groups:readonly{id:'surfaces'|'text'|'controls'|'todayStats'|'statuses';op
   {id:'statuses',fields:['completedBackground','completedText','completedBorder','inProgressBackground','inProgressText','inProgressBorder','postponedBackground','postponedText','postponedBorder','cancelledBackground','cancelledText','cancelledBorder']},
 ];
 
+export function resolveColorControlInput(value:string,finalize=false){
+  const trimmed=value.trim();const normalized=normalizeHexColor(trimmed);
+  if(normalized&&(finalize||trimmed.length===7))return{draft:null,normalized,invalid:false}as const;
+  return{draft:finalize?null:value,normalized:null,invalid:finalize||trimmed.length>7}as const;
+}
+
 function ColorControl({colorKey,label,value,onCommit,onFlush}:{colorKey:ThemeColorKey;label:string;value:string;onCommit:(key:ThemeColorKey,value:string)=>void;onFlush:()=>void}){
   const{t}=useTranslation('theme');
-  const[raw,setRaw]=useState(value);const[error,setError]=useState<string|null>(null);
-  const update=(next:string)=>{setRaw(next);const normalized=normalizeHexColor(next);if(normalized&&next.trim().length===7){setError(null);onCommit(colorKey,normalized)}else setError(next.trim().length>7?t('validation.colorHex'):null)};
-  const blur=()=>{const normalized=normalizeHexColor(raw);if(normalized){setError(null);setRaw(normalized);onCommit(colorKey,normalized)}else{setError(t('validation.colorHex'));setRaw(value)}onFlush()};
-  return <label className="color-row"><span>{label}</span><input type="color" aria-label={t('colorPicker.choose',{fieldLabel:label})} value={value} onChange={event=>onCommit(colorKey,event.target.value)}/><input className={error?'invalid':''} aria-label={t('colorPicker.hexCode',{fieldLabel:label})} value={raw} onChange={event=>update(event.target.value)} onBlur={blur}/><i aria-hidden="true" style={{backgroundColor:value}}/>{error&&<small>{error}</small>}</label>;
+  const[draft,setDraft]=useState<string|null>(null);const[error,setError]=useState<string|null>(null);const raw=draft??value;
+  const update=(next:string,finalize=false)=>{
+    const resolution=resolveColorControlInput(next,finalize);
+    setDraft(resolution.draft);setError(resolution.invalid?t('validation.colorHex'):null);
+    if(resolution.normalized)onCommit(colorKey,resolution.normalized);
+  };
+  const blur=()=>{update(raw,true);onFlush()};
+  return <label className="color-row"><span>{label}</span><input type="color" aria-label={t('colorPicker.choose',{fieldLabel:label})} value={value} onChange={event=>update(event.target.value,true)}/><input className={error?'invalid':''} aria-label={t('colorPicker.hexCode',{fieldLabel:label})} value={raw} onChange={event=>update(event.target.value)} onBlur={blur}/><i aria-hidden="true" style={{backgroundColor:value}}/>{error&&<small>{error}</small>}</label>;
 }
 
 export function ThemeModeSettings({mode,onSelect}:{mode:ThemeMode;onSelect:(mode:ThemeMode)=>void}){

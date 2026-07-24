@@ -1,13 +1,14 @@
 import{describe,expect,it,vi}from'vitest';
 import{renderToStaticMarkup}from'react-dom/server';
 import{initializeI18n,i18next}from'../../i18n';
+import{applyThemePreferences}from'../../domain/theme/applyTheme';
 import{themeColorsSchema,type ThemePreferences}from'../../domain/theme/models';
 import{defaultThemePreferences,selectPreset,updateThemeColor}from'../../domain/theme/presets';
 import{resources}from'../../i18n/resources';
 import{flattenResource}from'../../i18n/resourceValidation';
 import{FloatingThemeCustomizer}from'./FloatingThemeCustomizer';
 import type{FloatingThemePanelState}from'./floatingThemePanelState';
-import{ThemeCustomizerContent,ThemeModeSettings,ThemePresetSettings,ThemeSettings}from'./ThemeSettings';
+import{resolveColorControlInput,ThemeCustomizerContent,ThemeModeSettings,ThemePresetSettings,ThemeSettings}from'./ThemeSettings';
 import type{ThemeCustomizerController}from'./themeCustomizerController';
 import{themeColorTranslationKeys}from'./themeColorTranslations';
 
@@ -67,6 +68,8 @@ describe('I18N-3 Custom colors and floating customizer',()=>{
         expect(catalog[translationKey]).toBeTruthy();
         expect(i18next.t(`theme:${translationKey}`)).not.toBe(translationKey);
       }
+      expect(themeColorTranslationKeys.tableHeaderBackground).toBe('colors.tableHeaderBackground');
+      expect(catalog[themeColorTranslationKeys.tableHeaderBackground]).toBe(locale==='vi'?'Tiêu đề bảng':'Table header');
     }
   });
 
@@ -81,6 +84,33 @@ describe('I18N-3 Custom colors and floating customizer',()=>{
     expect(html.match(/type="color"/g)).toHaveLength(33);
     for(const colorKey of Object.keys(themeColorTranslationKeys))expect(html).not.toContain(`>${colorKey}<`);
     expect(html).not.toMatch(/theme\.(colors|groups|customize|radius|status)/);
+  });
+
+  it('normalizes valid HEX drafts and never promotes invalid input to theme state',()=>{
+    expect(resolveColorControlInput('#123456')).toEqual({draft:null,normalized:'#123456',invalid:false});
+    expect(resolveColorControlInput('#a3F')).toEqual({draft:'#a3F',normalized:null,invalid:false});
+    expect(resolveColorControlInput('#a3F',true)).toEqual({draft:null,normalized:'#AA33FF',invalid:false});
+    expect(resolveColorControlInput('#12')).toEqual({draft:'#12',normalized:null,invalid:false});
+    expect(resolveColorControlInput('#12',true)).toEqual({draft:null,normalized:null,invalid:true});
+    expect(resolveColorControlInput('not-a-color')).toEqual({draft:'not-a-color',normalized:null,invalid:true});
+  });
+
+  it('keeps the table-header picker, HEX field, draft palette and live preview synchronized',async()=>{
+    await initializeI18n('vi');
+    const initial=defaultThemePreferences();
+    const pickerChange=resolveColorControlInput('#123456',true);
+    expect(pickerChange.normalized).toBe('#123456');
+    const preferences=updateThemeColor(initial,'light','tableHeaderBackground',pickerChange.normalized!);
+    const values=new Map<string,string>();
+    const root={style:{setProperty:(key:string,value:string)=>values.set(key,value)}} as unknown as HTMLElement;
+    applyThemePreferences(preferences,'light',root);
+    const html=renderToStaticMarkup(<ThemeCustomizerContent controller={makeController(preferences)}/>);
+    expect(preferences.selectedPresetId).toBe('custom');
+    expect(preferences.lightColors.tableHeaderBackground).toBe('#123456');
+    expect(preferences.darkColors.tableHeaderBackground).toBe(initial.darkColors.tableHeaderBackground);
+    expect(values.get('--bg-table-header')).toBe('#123456');
+    expect(html).toMatch(/type="color" aria-label="Chọn màu: Tiêu đề bảng" value="#123456"/);
+    expect(html).toMatch(/aria-label="Mã HEX: Tiêu đề bảng" value="#123456"/);
   });
 
   it.each([
