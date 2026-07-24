@@ -252,6 +252,7 @@ tbody tr:hover { background: var(--bg-row-hover); }
 .category-settings { margin-bottom: 18px; }
 .category-create { display: grid; grid-template-columns: minmax(180px,1fr) 42px 100px auto; gap: 8px; margin-top: 18px; }
 .category-create input,.category-create button,.category-editor input,.category-editor button { min-height: 38px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); padding: 7px 9px; }
+.category-create input,.category-editor input { min-width: 0; }
 .category-create input[type=color],.category-editor input[type=color] { width: 42px; padding: 3px; }
 .category-create button { display: flex; align-items: center; gap: 6px; color: var(--accent); cursor: pointer; }
 .category-list { display: grid; gap: 8px; margin-top: 16px; }

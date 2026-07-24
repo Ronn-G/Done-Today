@@ -388,7 +388,12 @@ export function HistoryView({items,loading,loadingMore,error,hasMore,onRetry,onL
       {hasMore&&<button className="load-more" type="button" disabled={loadingMore} aria-busy={loadingMore} onClick={onLoadMore}>{loadingMore?t('status.loadingMore'):t('actions.loadMore')}</button>}
     </section>}</div>;
 }
+export function SettingsPageView({children}:{children:React.ReactNode}){
+  const{t}=useTranslation('settings');
+  return <div className="content" role="region" aria-labelledby="settings-page-title"><header>
+    <p className="eyebrow">{t('heading.eyebrow')}</p><h1 id="settings-page-title">{t('heading.title')}</h1><p className="subtitle">{t('heading.subtitle')}</p>
+  </header>{children}</div>;
+}
 function SettingsPage({controller,onImported}:{controller:ThemeCustomizerController;onImported:()=>void}){
-  return <div className="content"><header><p className="eyebrow">Tùy chỉnh trải nghiệm</p><h1>Cài đặt</h1></header>
-    <LanguageSettings/><BackupSettings flushTheme={controller.flush} onImported={onImported}/><CategorySettings service={service}/><ThemeSettings controller={controller}/></div>;
+  return <SettingsPageView><LanguageSettings/><BackupSettings flushTheme={controller.flush} onImported={onImported}/><CategorySettings service={service}/><ThemeSettings controller={controller}/></SettingsPageView>;
 }
