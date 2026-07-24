@@ -7,7 +7,7 @@ import {JournalService} from '../application/journal/journalService';
 import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
 import type {DailyLog,DailyLogSummary,UpdateWorkItem,WorkItem,WorkStatus} from '../domain/journal/models';
-import{groupDailyItems,parseCollapsedCategoryState,type WorkCategory}from'../domain/journal/categories';
+import{groupDailyItems,parseCollapsedCategoryState,type CategoryGroup,type WorkCategory}from'../domain/journal/categories';
 import {calculateStatistics,statusLabels} from '../domain/journal/statistics';
 import {TauriJournalRepository} from '../infrastructure/database/tauriJournalRepository';
 import {TauriThemeRepository} from '../infrastructure/database/tauriThemeRepository';
@@ -155,14 +155,13 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   return <div className="content">
     <TodayOverview date={date} stats={stats} onGo={go} onOpenTheme={onOpenTheme}/>
     {error&&<div className="page-error">{error}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
-    <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> Đang đọc dữ liệu…</div>:
-      <div className="table-scroll"><table><thead><tr><th className="order-col">Thứ tự</th><th>Việc đã làm</th><th>Kết quả</th><th>Bước tiếp theo</th><th>Trạng thái</th><th className="action-col"><span className="sr-only">Hành động</span></th></tr></thead>
-      <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<tr className="category-row" key={`header-${key}`}><th colSpan={6}><div className="category-header"><i style={group.color?{backgroundColor:group.color}:undefined}/><h2>{group.name}{!group.isActive&&<small> · Đã ẩn</small>}</h2><span>{group.completedItems}/{group.totalItems} hoàn thành</span><button aria-label={`Thêm việc vào ${group.name}`} onClick={()=>void addItem(group.id)}>+</button><button aria-label={`${hidden?'Mở rộng':'Thu gọn'} ${group.name}`} aria-expanded={!hidden} onClick={()=>toggleGroup(group.id)}>{hidden?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button></div></th></tr>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
+    <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
+      <div className="table-scroll"><table><TodayTableHeader/>
+      <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<TodayCategoryHeader key={`header-${key}`} group={group} hidden={hidden} onAddItem={addItem} onToggle={toggleGroup}/>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
         dataIndex={index} onChange={updateLocal} onCategoryChange={categoryId=>changeCategory(item,categoryId)} onDelete={()=>void remove(item)} onMoveUp={()=>void move(bucket,bucketIndex,-1)} onMoveDown={()=>void move(bucket,bucketIndex,1)}
         canMoveUp={bucketIndex>0} canMoveDown={bucketIndex<bucket.length-1}/>}))]})}
-      {!items.length&&<tr><td colSpan={6} className="empty-cell"><strong>Chưa có việc nào.</strong><span>Chọn một nhóm bên dưới để bắt đầu ghi lại ngày hôm nay.</span></td></tr>}</tbody></table></div>}
-      <footer className="table-footer"><label className="add-row-select"><span>Thêm dòng vào</span><select aria-label="Chọn nhóm cho dòng mới" onChange={event=>{if(event.target.value!=='')void addItem(event.target.value==='__other__'?null:event.target.value);event.target.value=''}} defaultValue=""><option value="" disabled>Chọn nhóm…</option>{categories.filter(category=>category.isActive).map(category=><option key={category.id} value={category.id}>{category.name}</option>)}<option value="__other__">Việc khác</option></select></label>
-      <p className="shortcut-hint">Ctrl + Enter để thêm dòng · Thay đổi được tự động lưu</p></footer>
+      {!items.length&&<TodayEmptyState/>}</tbody></table></div>}
+      <AddRowFooter categories={categories} onAddItem={addItem}/>
     </section>
   </div>;
 }
@@ -186,6 +185,56 @@ export function TodayOverview({date,stats,onGo,onOpenTheme}:{
     </div></header>
     <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
       <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section></>;
+}
+
+export function TodayTableHeader(){
+  const {t}=useTranslation('today');
+  return <><caption className="sr-only">{t('table.label')}</caption><thead><tr>
+    <th className="order-col">{t('table.columns.order')}</th><th>{t('table.columns.task')}</th><th>{t('table.columns.result')}</th>
+    <th>{t('table.columns.nextAction')}</th><th>{t('table.columns.status')}</th>
+    <th className="action-col"><span className="sr-only">{t('table.columns.actions')}</span></th>
+  </tr></thead></>;
+}
+
+export function TodayCategoryHeader({group,hidden,onAddItem,onToggle}:{
+  group:CategoryGroup;hidden:boolean;onAddItem:(categoryId:string|null)=>void|Promise<void>;onToggle:(categoryId:string|null)=>void;
+}){
+  const {t}=useTranslation('today');
+  const displayName=group.name??t('categories.other');
+  return <tr className="category-row"><th colSpan={6}><div className="category-header">
+    <i style={group.color?{backgroundColor:group.color}:undefined}/><h2>{displayName}{!group.isActive&&<small> · {t('categories.hidden')}</small>}</h2>
+    <span>{t('categories.completedCount',{completed:group.completedItems,count:group.totalItems})}</span>
+    <button aria-label={t('categories.addItem',{category:displayName})} onClick={()=>void onAddItem(group.id)}>+</button>
+    <button aria-label={hidden?t('categories.expand',{category:displayName}):t('categories.collapse',{category:displayName})} aria-expanded={!hidden} onClick={()=>onToggle(group.id)}>{hidden?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
+  </div></th></tr>;
+}
+
+export function TodayEmptyState(){
+  const {t}=useTranslation('today');
+  return <tr><td colSpan={6} className="empty-cell"><strong>{t('emptyState.title')}</strong><span>{t('emptyState.body')}</span></td></tr>;
+}
+
+function resolveAddRowCategorySelection(value:string):string|null|undefined{
+  if(value==='')return undefined;
+  return value==='__other__'?null:value;
+}
+
+export function submitAddRowCategorySelection(value:string,onAddItem:(categoryId:string|null)=>void|Promise<void>){
+  const categoryId=resolveAddRowCategorySelection(value);
+  if(categoryId===undefined)return false;
+  void onAddItem(categoryId);return true;
+}
+
+export function AddRowFooter({categories,onAddItem}:{categories:WorkCategory[];onAddItem:(categoryId:string|null)=>void|Promise<void>}){
+  const {t}=useTranslation('today');
+  return <footer className="table-footer"><label className="add-row-select"><span>{t('addItem.label')}</span>
+    <select aria-label={t('addItem.accessibility.chooseCategory')} onChange={event=>{submitAddRowCategorySelection(event.target.value,onAddItem);event.target.value=''}} defaultValue="">
+      <option value="" disabled>{t('addItem.chooseCategory')}</option>
+      {categories.filter(category=>category.isActive).map(category=><option key={category.id} value={category.id}>{category.name}</option>)}
+      <option value="__other__">{t('categories.other')}</option>
+    </select></label>
+    <p className="shortcut-hint">{t('autosave.hint')}</p>
+  </footer>;
 }
 
 function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{

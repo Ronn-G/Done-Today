@@ -7,9 +7,17 @@ describe('work categories',()=>{
   it('validates category input',()=>expect(categoryInputSchema.parse({name:' Học tập ',color:'#4F8A65'}).name).toBe('Học tập'));
   it('rejects empty and overlong names',()=>{expect(()=>categoryInputSchema.parse({name:' ',color:'#4F8A65'})).toThrow();expect(()=>categoryInputSchema.parse({name:'x'.repeat(101),color:'#4F8A65'})).toThrow()});
   it('rejects invalid HEX',()=>expect(()=>categoryInputSchema.parse({name:'A',color:'red'})).toThrow());
-  it('groups null as Việc khác and keeps inactive used groups',()=>{const groups=groupDailyItems([item('1','in_progress',null,0),item('2','completed','b',0)],categories);expect(groups.map(group=>group.name)).toEqual(['B','Việc khác'])});
+  it('keeps the virtual null group locale-neutral and preserves inactive category names',()=>{
+    const groups=groupDailyItems([item('1','in_progress',null,0),item('2','completed','b',0)],categories);
+    expect(groups.map(group=>({id:group.id,name:group.name}))).toEqual([{id:'b',name:'B'},{id:null,name:null}]);
+  });
   it('orders active categories by position',()=>{const active=categories.map(category=>({...category,isActive:true}));expect(groupDailyItems([item('a','in_progress','a',0),item('b','in_progress','b',0)],active).map(group=>group.id)).toEqual(['b','a'])});
   it('places completed after non-completed while preserving bucket position',()=>expect(sortItemsByBucket([item('done','completed','a',0),item('todo','in_progress','a',3)]).map(value=>value.id)).toEqual(['todo','done']));
   it('calculates category statistics',()=>expect(groupDailyItems([item('1','completed','a',0),item('2','in_progress','a',1)],categories)[0]).toMatchObject({totalItems:2,completedItems:1}));
+  it('preserves user-entered journal text verbatim while grouping',()=>{
+    const userText='Gặp khách hàng — do not translate';
+    const grouped=groupDailyItems([{...item('1','in_progress',null,0),task:userText}],categories);
+    expect(grouped[0].items[0].task).toBe(userText);
+  });
   it('validates collapsed state and drops stale ids',()=>expect(parseCollapsedCategoryState(JSON.stringify({schemaVersion:1,collapsedCategoryIds:['a','stale']}),['a'])).toEqual({schemaVersion:1,collapsedCategoryIds:['a']}));
 });
