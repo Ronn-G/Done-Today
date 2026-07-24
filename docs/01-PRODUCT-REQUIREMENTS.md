@@ -1,7 +1,7 @@
 # Product Requirements Document
 
 **Document status:** Authoritative
-**Document version:** 1.1
+**Document version:** 1.2
 **Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
 
 ## 1. Màn hình Today
@@ -34,6 +34,14 @@ Hiển thị:
 - Số việc hoàn thành.
 - Tỷ lệ hoàn thành.
 - Chuỗi ngày có ghi nhật ký.
+
+Quy tắc chuỗi ngày:
+
+- Phiên bản 1.0 chỉ hiển thị current streak, không có longest streak hoặc gamification.
+- Một ngày được tính khi có ít nhất một work item mà trường “Việc đã làm” sau khi trim không rỗng; mọi trạng thái công việc đều được tính.
+- Nếu hôm nay chưa đủ điều kiện nhưng hôm qua đủ điều kiện, chuỗi hiện tại kết thúc ở hôm qua; nếu ngày gần nhất cũ hơn hôm qua thì chuỗi bằng 0.
+- Một ngày không đủ điều kiện làm đứt chuỗi. Xóa item có nội dung cuối cùng hoặc làm rỗng toàn bộ trường “Việc đã làm” khiến ngày đó không còn được tính.
+- Phép tính dùng `daily_logs.log_date` local đã lưu dạng `YYYY-MM-DD`, mỗi ngày chỉ đếm một lần; ngày tương lai hoặc không canonical không được tính.
 
 ### Bảng nhật ký
 

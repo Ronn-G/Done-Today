@@ -136,7 +136,7 @@ main { min-width: 0; }
 h1 { margin: 0; color: var(--text-primary); font-size: 32px; line-height: 1.15; letter-spacing: -.035em; }
 .subtitle { color: var(--text-secondary); margin: 12px 0 0; font-size: 15px; font-weight: 500; line-height: 1.6; }
 
-.stats { display: grid; grid-template-columns: minmax(150px, .8fr) minmax(150px, .8fr) minmax(300px, 2fr); margin: 30px 0 22px; overflow: hidden; background: var(--stats-bg); border: 1px solid var(--stats-border); border-radius: 16px; box-shadow: var(--shadow-panel), inset 0 1px 0 var(--highlight-edge); }
+.stats { display: grid; grid-template-columns: minmax(135px, .75fr) minmax(135px, .75fr) minmax(250px, 1.6fr) minmax(160px, .9fr); margin: 30px 0 22px; overflow: hidden; background: var(--stats-bg); border: 1px solid var(--stats-border); border-radius: 16px; box-shadow: var(--shadow-panel), inset 0 1px 0 var(--highlight-edge); }
 .settings-card, .empty-state { background: var(--surface-panel); border: 1px solid var(--border-soft); border-radius: 14px; box-shadow: var(--shadow-panel), inset 0 1px 0 var(--highlight-edge); }
 .stat { min-width: 0; padding: 15px 20px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
 .stat + .stat { border-left: 1px solid var(--stats-border); }
@@ -290,6 +290,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .day-header { display: block; }
   .date-nav { justify-content: flex-start; margin-top: 22px; }
   .empty-cell { text-align: left; }
+  .stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .stats .stat:nth-child(3) { border-left: 0; }
+  .stats .stat:nth-child(3),.stats .stat:nth-child(4) { border-top: 1px solid var(--stats-border); }
   .table-footer { display: grid; grid-template-columns: minmax(0,1fr); }
   .add-row-select { justify-self: start; flex-wrap: wrap; }
   .shortcut-hint { grid-column: 1; }
@@ -299,7 +302,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 1000px) {
   .app-shell { grid-template-columns: 180px 1fr; }
   .content { padding: 38px 30px; }
-  .stats { grid-template-columns: minmax(130px, .8fr) minmax(130px, .8fr) minmax(260px, 1.7fr); }
   .stat { padding: 14px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {

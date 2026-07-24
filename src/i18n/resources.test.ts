@@ -26,6 +26,8 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].common)).toHaveProperty('actions.retry');
       expect(flattenResource(resources[locale].history)).toHaveProperty('heading.title');
       expect(flattenResource(resources[locale].history)).toHaveProperty('summary.daily_other');
+      expect(flattenResource(resources[locale].today)).toHaveProperty('stats.streak');
+      expect(flattenResource(resources[locale].today)).toHaveProperty('stats.streakValue_other');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('mode.system');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.doneToday.name');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.warmSand.description');
@@ -41,5 +43,13 @@ describe('i18n resources',()=>{
   });
   it('uses a safe fallback for a missing user-facing key',()=>{
     expect(i18next.t('settings:notPresent')).toBe(safeMissingTranslation(i18next.resolvedLanguage));
+  });
+  it('localizes journal streak counts with locale-specific plural rules',async()=>{
+    expect(i18next.t('today:stats.streakValue',{count:0})).toBe('0 ngày');
+    expect(i18next.t('today:stats.streakValue',{count:1})).toBe('1 ngày');
+    await initializeI18n('en');
+    expect(i18next.t('today:stats.streakValue',{count:0})).toBe('0 days');
+    expect(i18next.t('today:stats.streakValue',{count:1})).toBe('1 day');
+    expect(i18next.t('today:stats.streakValue',{count:6})).toBe('6 days');
   });
 });

@@ -7,7 +7,14 @@ export default {
     past:'Bạn có thể xem và chỉnh sửa ngày cũ bằng cùng một bảng.',
   },
   dateControls:{previous:'Ngày trước',next:'Ngày sau',choose:'Chọn ngày',today:'Hôm nay'},
-  stats:{label:'Thống kê trong ngày',total:'Tổng số việc',completed:'Hoàn thành',completionRate:'Tỷ lệ hoàn thành'},
+  stats:{
+    label:'Thống kê trong ngày',
+    total:'Tổng số việc',
+    completed:'Hoàn thành',
+    completionRate:'Tỷ lệ hoàn thành',
+    streak:'Chuỗi ngày ghi nhật ký',
+    streakValue_other:'{{count}} ngày',
+  },
   fields:{
     task:{label:'Việc đã làm',placeholder:'Bạn đã làm gì?'},
     result:{label:'Kết quả',placeholder:'Kết quả ra sao?'},

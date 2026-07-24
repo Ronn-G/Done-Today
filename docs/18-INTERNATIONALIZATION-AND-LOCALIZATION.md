@@ -187,6 +187,8 @@ today.item.accessibility.actionsForTask
 today.stats.total
 today.stats.completed
 today.stats.completionRate
+today.stats.streak
+today.stats.streakValue
 
 history.empty.title
 history.empty.body
@@ -821,4 +823,4 @@ unsupported locales resolve to `en`; and any existing persisted locale remains a
 | Should existing seed categories be migrated? | Names are editable, backed up and behavior uses IDs/positions. | No migration; they are user data. |
 | Should locale be in backup v1? | v1 is strict and allow-lists theme only. | No; consider explicit optional preference in backup v2. |
 | Are theme names persisted? | Only preset ID/colors are persisted. | Replace constant display strings with translation keys safely. |
-| Are documented streak and multiple motivation prompts implemented? | Current UI exposes one prompt and no streak field in statistics. | Do not invent keys/logic until implementation exists; docs are aspirational here. |
+| Are documented streak and multiple motivation prompts implemented? | Current journal streak is implemented in Today statistics with Vietnamese/English plural handling; the UI still exposes one prompt. | Treat current streak as delivered by the 2026-07-24 regression closure. Multiple prompt rotation remains aspirational and must not be inferred from the streak implementation. |

@@ -110,9 +110,11 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const[focusId,setFocusId]=useState<string|null>(null);
   const[categories,setCategories]=useState<WorkCategory[]>([]);
   const[collapsed,setCollapsed]=useState<string[]>([]);
+  const[currentStreak,setCurrentStreak]=useState(0);
+  const refreshStreak=useCallback(async()=>setCurrentStreak(await service.getCurrentStreak(today())),[]);
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    try{await service.initialize();const[nextLog,nextCategories]=await Promise.all([service.getDailyLog(date),service.listCategories(true)]);setLog(nextLog);setCategories(nextCategories);setCollapsed(parseCollapsedCategoryState(localStorage.getItem('done-today-collapsed-categories'),nextCategories.map(category=>category.id)).collapsedCategoryIds)}
+    try{await service.initialize();const[nextLog,nextCategories,nextStreak]=await Promise.all([service.getDailyLog(date),service.listCategories(true),service.getCurrentStreak(today())]);setLog(nextLog);setCategories(nextCategories);setCurrentStreak(nextStreak);setCollapsed(parseCollapsedCategoryState(localStorage.getItem('done-today-collapsed-categories'),nextCategories.map(category=>category.id)).collapsedCategoryIds)}
     catch(reason){setError(friendlyError(reason))}
     finally{setLoading(false)}
   },[date]);
@@ -138,7 +140,8 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const updateLocal=useCallback((item:WorkItem)=>setLog(previous=>previous?{...previous,items:previous.items.map(entry=>entry.id===item.id?item:entry)}:previous),[]);
   const remove=async(item:WorkItem)=>{
     try{await service.deleteWorkItem(item.id);setLog(previous=>previous?{...previous,items:previous.items.filter(entry=>entry.id!==item.id)}:previous)}
-    catch{setError(t('item.errors.delete'))}
+    catch{setError(t('item.errors.delete'));return}
+    if(item.task.trim())void refreshStreak().catch(reason=>setError(friendlyError(reason)));
   };
   const move=async(bucket:WorkItem[],index:number,direction:-1|1)=>{
     if(!log)return;const target=index+direction;if(target<0||target>=bucket.length)return;
@@ -150,12 +153,12 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(t('item.errors.move'));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
-    <TodayOverview date={date} stats={stats} onGo={go} onOpenTheme={onOpenTheme}/>
+    <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}/>
     {error&&<div className="page-error">{error}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
       <div className="table-scroll"><table><TodayTableHeader/>
       <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<TodayCategoryHeader key={`header-${key}`} group={group} hidden={hidden} onAddItem={addItem} onToggle={toggleGroup}/>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
-        dataIndex={index} onChange={updateLocal} onCategoryChange={categoryId=>changeCategory(item,categoryId)} onDelete={()=>void remove(item)} onMoveUp={()=>void move(bucket,bucketIndex,-1)} onMoveDown={()=>void move(bucket,bucketIndex,1)}
+        dataIndex={index} onChange={updateLocal} onJournalActivityChanged={refreshStreak} onCategoryChange={categoryId=>changeCategory(item,categoryId)} onDelete={()=>void remove(item)} onMoveUp={()=>void move(bucket,bucketIndex,-1)} onMoveDown={()=>void move(bucket,bucketIndex,1)}
         canMoveUp={bucketIndex>0} canMoveDown={bucketIndex<bucket.length-1}/>}))]})}
       {!items.length&&<TodayEmptyState/>}</tbody></table></div>}
       <AddRowFooter categories={categories} onAddItem={addItem}/>
@@ -163,8 +166,8 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   </div>;
 }
 
-export function TodayOverview({date,stats,onGo,onOpenTheme}:{
-  date:string;stats:ReturnType<typeof calculateStatistics>;onGo:(date:string)=>void;onOpenTheme:()=>void;
+export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme}:{
+  date:string;stats:ReturnType<typeof calculateStatistics>;currentStreak:number;onGo:(date:string)=>void;onOpenTheme:()=>void;
 }){
   const {t,i18n}=useTranslation('today');
   const {t:tTheme}=useTranslation('theme');
@@ -182,7 +185,8 @@ export function TodayOverview({date,stats,onGo,onOpenTheme}:{
       <button aria-label={tTheme('customizer.open')} title={tTheme('customizer.open')} onClick={onOpenTheme}><Palette size={18}/></button>
     </div></header>
     <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
-      <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section></>;
+      <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div>
+      <Stat className="streak-stat" label={t('stats.streak')} value={t('stats.streakValue',{count:currentStreak})}/></section></>;
 }
 
 export function TodayTableHeader(){
@@ -240,21 +244,38 @@ export function submitWorkStatusSelection(value:string,onSelect:(status:WorkStat
   if(!parsed.success)return false;
   onSelect(parsed.data);return true;
 }
+export function journalEligibilityChanged(previousTask:string,nextTask:string){
+  return Boolean(previousTask.trim())!==Boolean(nextTask.trim());
+}
+export function createJournalEligibilityTracker(initialTask:string){
+  let persistedTask=initialTask;
+  return(nextTask:string)=>{
+    const changed=journalEligibilityChanged(persistedTask,nextTask);
+    persistedTask=nextTask;return changed;
+  };
+}
 
-export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
+export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onJournalActivityChanged,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
   item:WorkItem;categories:WorkCategory[];dataIndex:number;autoFocus:boolean;onFocused:()=>void;onChange:(item:WorkItem)=>void;onCategoryChange:(id:string|null)=>Promise<void>;onDelete:()=>void;
-  onMoveUp:()=>void;onMoveDown:()=>void;canMoveUp:boolean;canMoveDown:boolean;
+  onJournalActivityChanged:()=>void|Promise<void>;onMoveUp:()=>void;onMoveDown:()=>void;canMoveUp:boolean;canMoveDown:boolean;
 }){
   const {t}=useTranslation('today');
   const[state,setState]=useState<SaveState>('idle');
   const latest=useRef(item);
+  const[initialPersistedTask]=useState(()=>item.task);
   useEffect(()=>{latest.current=item},[item]);
-  const coordinator=useMemo(()=>new SaveCoordinator<UpdateWorkItem,WorkItem>(
-    input=>service.updateWorkItem(input),
-    saved=>onChange(saved),
-    setState,
-    JOURNAL_AUTOSAVE_DELAY_MS,
-  ),[onChange]);
+  const trackEligibility=useMemo(()=>createJournalEligibilityTracker(initialPersistedTask),[initialPersistedTask]);
+  const coordinator=useMemo(()=>{
+    return new SaveCoordinator<UpdateWorkItem,WorkItem>(
+      input=>service.updateWorkItem(input),
+      saved=>{
+        const eligibilityChanged=trackEligibility(saved.task);onChange(saved);
+        if(eligibilityChanged)void onJournalActivityChanged();
+      },
+      setState,
+      JOURNAL_AUTOSAVE_DELAY_MS,
+    );
+  },[onChange,onJournalActivityChanged,trackEligibility]);
   useEffect(()=>()=>{void coordinator.flush().catch(()=>undefined);coordinator.cancel()},[coordinator]);
   useEffect(()=>{
     const before=()=>{void coordinator.flush().catch(()=>undefined)};
@@ -338,7 +359,7 @@ export function SaveIndicator({state,retry}:{state:SaveState;retry:()=>void}){
   const retryLabel=t('autosave.accessibility.retry');
   return <span className="save-state failed" role="status" aria-live="polite" aria-atomic="true">{t('autosave.failed')} <button type="button" aria-label={retryLabel} title={retryLabel} onClick={retry}>{t('common:actions.retry')}</button></span>;
 }
-function Stat({label,value}:{label:string;value:string}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
+function Stat({label,value,className=''}:{label:string;value:string;className?:string}){return <div className={`stat ${className}`.trim()}><span>{label}</span><strong>{value}</strong></div>}
 
 export function mergeHistorySummaries(previous:DailyLogSummary[],next:DailyLogSummary[],append:boolean){
   return append?[...previous.filter(existing=>!next.some(entry=>entry.id===existing.id)),...next]:next;

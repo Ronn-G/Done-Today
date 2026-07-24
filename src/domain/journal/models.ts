@@ -1,5 +1,7 @@
 import { z } from 'zod';
 export const localDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export type LocalDateKey=string;
+export const journalActivityDatesSchema=z.array(z.string());
 export const workStatusSchema = z.enum(['completed','in_progress','postponed','cancelled']);
 export type WorkStatus = z.infer<typeof workStatusSchema>;
 export const workItemSchema = z.object({

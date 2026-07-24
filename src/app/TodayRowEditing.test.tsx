@@ -5,7 +5,9 @@ import type {WorkItem,WorkStatus} from '../domain/journal/models';
 import {initializeI18n} from '../i18n';
 import {
   completeDeleteConfirmation,
+  createJournalEligibilityTracker,
   DeleteConfirmationDialog,
+  journalEligibilityChanged,
   requiresDeleteConfirmation,
   RowActionMenuContent,
   submitWorkStatusSelection,
@@ -23,7 +25,7 @@ const item:WorkItem={
 };
 const renderRow=(onChange=vi.fn(),onCategoryChange=vi.fn())=>renderToStaticMarkup(<table><tbody><WorkRow
   item={item} categories={[category]} dataIndex={0} autoFocus={false} onFocused={vi.fn()} onChange={onChange}
-  onCategoryChange={onCategoryChange} onDelete={vi.fn()} onMoveUp={vi.fn()} onMoveDown={vi.fn()} canMoveUp canMoveDown
+  onJournalActivityChanged={vi.fn()} onCategoryChange={onCategoryChange} onDelete={vi.fn()} onMoveUp={vi.fn()} onMoveDown={vi.fn()} canMoveUp canMoveDown
 /></tbody></table>);
 const renderActions=()=>renderToStaticMarkup(<RowActionMenuContent item={item} categories={[category]} position={{left:10,top:20}} onMove={vi.fn()} onDelete={vi.fn()}/>);
 const renderDialog=()=>renderToStaticMarkup(<DeleteConfirmationDialog onCancel={vi.fn()} onConfirm={vi.fn()}/>);
@@ -74,5 +76,16 @@ describe('I18N-2 Today row editing, status and actions',()=>{
     const onDelete=vi.fn();
     expect(completeDeleteConfirmation(false,onDelete)).toBe(false);expect(onDelete).not.toHaveBeenCalled();
     expect(completeDeleteConfirmation(true,onDelete)).toBe(true);expect(onDelete).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes streak eligibility only when persisted primary task content crosses empty/non-empty',()=>{
+    expect(journalEligibilityChanged('','Journal entry')).toBe(true);
+    expect(journalEligibilityChanged('   ','\t')).toBe(false);
+    expect(journalEligibilityChanged('Journal entry','Edited entry')).toBe(false);
+    expect(journalEligibilityChanged('Journal entry','   ')).toBe(true);
+    const track=createJournalEligibilityTracker('');
+    expect(track('Journal entry')).toBe(true);
+    expect(track('Edited entry')).toBe(false);
+    expect(track('')).toBe(true);
   });
 });

@@ -22,11 +22,11 @@ describe('SaveCoordinator',()=>{
     coordinator.cancel();
   });
   it('keeps a failed draft available and retries the same repository payload',async()=>{
-    let attempts=0;const states:SaveState[]=[];const payloads:string[]=[];
-    const coordinator=new SaveCoordinator<string>(async value=>{payloads.push(value);if(attempts++===0)throw new Error('work_item.update_failed');return value},()=>undefined,state=>states.push(state));
+    let attempts=0;const states:SaveState[]=[];const payloads:string[]=[];const onPersisted=vi.fn();
+    const coordinator=new SaveCoordinator<string>(async value=>{payloads.push(value);if(attempts++===0)throw new Error('work_item.update_failed');return value},onPersisted,state=>states.push(state));
     coordinator.schedule('draft mới nhất');await expect(coordinator.flush()).rejects.toThrow('work_item.update_failed');
-    expect(states).toEqual(['saving','error']);expect(payloads).toEqual(['draft mới nhất']);
-    await coordinator.flush();expect(payloads).toEqual(['draft mới nhất','draft mới nhất']);expect(states.at(-1)).toBe('saved');
+    expect(states).toEqual(['saving','error']);expect(payloads).toEqual(['draft mới nhất']);expect(onPersisted).not.toHaveBeenCalled();
+    await coordinator.flush();expect(payloads).toEqual(['draft mới nhất','draft mới nhất']);expect(states.at(-1)).toBe('saved');expect(onPersisted).toHaveBeenCalledWith('draft mới nhất');
     coordinator.cancel();
   });
   it('retries a newer draft when the user continues typing after a failure',async()=>{

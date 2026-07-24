@@ -1,5 +1,6 @@
 import { localDateSchema,updateWorkItemSchema } from '../../domain/journal/models';
 import{categoryInputSchema,categoryUpdateSchema,groupDailyItems}from'../../domain/journal/categories';
+import {calculateCurrentStreak} from '../../domain/journal/statistics';
 import type { JournalRepository } from '../../domain/journal/repository';
 export class JournalService {
   private readonly repository:JournalRepository;
@@ -17,6 +18,9 @@ export class JournalService {
   async reorderCategories(ids:string[]){return this.repository.reorderCategories(ids)}
   async moveWorkItemToCategory(itemId:string,categoryId:string|null){return this.repository.assignWorkItemCategory(itemId,categoryId)}
   groupDailyItems=groupDailyItems;
+  async getCurrentStreak(today:string){
+    return calculateCurrentStreak(await this.repository.listJournalActivityDates(),today);
+  }
   async listHistory(page:number,pageSize=20){
     if(!Number.isInteger(page)||page<1)throw new Error('Trang không hợp lệ');
     if(!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw new Error('Kích thước trang không hợp lệ');

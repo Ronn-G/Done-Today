@@ -1,4 +1,4 @@
-use chrono::{Local, NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -359,42 +359,6 @@ fn save_locale(connection: &Connection, locale: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn seed_development(connection: &mut Connection) -> rusqlite::Result<()> {
-    seed_categories(connection)?;
-    if !cfg!(debug_assertions) {
-        return Ok(());
-    }
-    let date = Local::now().format("%Y-%m-%d").to_string();
-    let exists: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM daily_logs WHERE log_date = ?1)",
-        [&date],
-        |row| row.get(0),
-    )?;
-    if exists {
-        return Ok(());
-    }
-    let transaction = connection.transaction()?;
-    let log_id = Uuid::new_v4().to_string();
-    let now = Utc::now().to_rfc3339();
-    transaction.execute(
-        "INSERT INTO daily_logs (id,log_date,created_at,updated_at) VALUES (?1,?2,?3,?4)",
-        params![log_id, date, now, now],
-    )?;
-    transaction.execute(
-        "INSERT INTO work_items
-         (id,daily_log_id,task,result,next_action,status,position,created_at,updated_at)
-         VALUES (?1,?2,?3,?4,?5,'completed',0,?6,?6)",
-        params![
-            Uuid::new_v4().to_string(),
-            log_id,
-            "Khởi tạo ứng dụng Done Today",
-            "Ứng dụng đã kết nối và đọc dữ liệu từ SQLite",
-            "Triển khai chỉnh sửa trực tiếp trong bảng",
-            now
-        ],
-    )?;
-    transaction.commit()
-}
 fn seed_categories(connection: &mut Connection) -> rusqlite::Result<()> {
     let count: i64 =
         connection.query_row("SELECT COUNT(*) FROM work_categories", [], |row| row.get(0))?;
@@ -419,7 +383,7 @@ fn open_database(path: &Path) -> AppResult<Connection> {
     }
     let mut connection = Connection::open(path)?;
     migrate(&mut connection)?;
-    seed_development(&mut connection)?;
+    seed_categories(&mut connection)?;
     Ok(connection)
 }
 fn database_path(app: &tauri::AppHandle) -> AppResult<PathBuf> {
@@ -824,6 +788,24 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
         has_more,
     })
 }
+fn list_activity_dates(connection: &Connection) -> AppResult<Vec<String>> {
+    let mut statement = connection.prepare(
+        "SELECT DISTINCT d.log_date
+         FROM daily_logs d
+         JOIN work_items w ON w.daily_log_id=d.id
+         WHERE TRIM(w.task,
+           char(9)||char(10)||char(11)||char(12)||char(13)||char(32)||char(133)||char(160)||
+           char(5760)||char(8192)||char(8193)||char(8194)||char(8195)||char(8196)||char(8197)||
+           char(8198)||char(8199)||char(8200)||char(8201)||char(8202)||char(8232)||char(8233)||
+           char(8239)||char(8287)||char(12288)
+         )<>''
+         ORDER BY d.log_date",
+    )?;
+    let dates = statement
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(dates)
+}
 
 #[tauri::command]
 fn initialize_database(app: tauri::AppHandle) -> AppResult<()> {
@@ -921,6 +903,10 @@ fn list_daily_log_summaries(
     list_summaries(&open_database(&database_path(&app)?)?, page, page_size)
 }
 #[tauri::command]
+fn list_journal_activity_dates(app: tauri::AppHandle) -> AppResult<Vec<String>> {
+    list_activity_dates(&open_database(&database_path(&app)?)?)
+}
+#[tauri::command]
 fn get_theme_preferences(app: tauri::AppHandle) -> AppResult<Option<serde_json::Value>> {
     load_theme(&open_database(&database_path(&app)?)?)
 }
@@ -984,6 +970,7 @@ pub fn run() {
             delete_work_item,
             reorder_work_items,
             list_daily_log_summaries,
+            list_journal_activity_dates,
             get_theme_preferences,
             save_theme_preferences,
             get_locale_preference,
@@ -1329,16 +1316,74 @@ mod tests {
         assert_eq!(find_daily_log(&db, "bad").unwrap_err().code, "validation");
     }
     #[test]
-    fn development_seed_does_not_duplicate() {
-        let mut db = memory();
-        seed_development(&mut db).unwrap();
-        seed_development(&mut db).unwrap();
+    fn normal_startup_does_not_seed_journal_data() {
+        let directory = tempfile::tempdir().unwrap();
+        let db = open_database(&directory.path().join("done-today.sqlite3")).unwrap();
         assert_eq!(
-            db.query_row("SELECT COUNT(*) FROM work_items", [], |r| r
+            db.query_row("SELECT COUNT(*) FROM daily_logs", [], |row| row
                 .get::<_, i64>(0))
                 .unwrap(),
-            1
+            0
         );
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM work_items", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(list_categories(&db, true).unwrap().len(), 3);
+    }
+    #[test]
+    fn activity_dates_exclude_empty_whitespace_and_auxiliary_only_items() {
+        let mut db = memory();
+        let empty = create_item(&mut db, "2026-07-18", None).unwrap();
+        db.execute(
+            "UPDATE work_items SET result='Result',next_action='Next' WHERE id=?1",
+            [&empty.id],
+        )
+        .unwrap();
+        let whitespace = create_item(&mut db, "2026-07-19", None).unwrap();
+        db.execute(
+            "UPDATE work_items SET task=char(9)||char(10)||char(13)||char(160)||char(12288)||'   ' WHERE id=?1",
+            [&whitespace.id],
+        )
+        .unwrap();
+        let transaction = db.transaction().unwrap();
+        ensure_daily_log(&transaction, "2026-07-20").unwrap();
+        transaction.commit().unwrap();
+        assert!(list_activity_dates(&db).unwrap().is_empty());
+    }
+    #[test]
+    fn activity_dates_are_distinct_deterministic_and_status_neutral() {
+        let mut db = memory();
+        for (date, status) in [
+            ("2026-07-21", "cancelled"),
+            ("2026-07-18", "in_progress"),
+            ("2026-07-20", "postponed"),
+            ("2026-07-19", "completed"),
+        ] {
+            let item = create_item(&mut db, date, None).unwrap();
+            update_item(&db, update(&item.id, "Journal entry", status)).unwrap();
+        }
+        let duplicate = create_item(&mut db, "2026-07-19", None).unwrap();
+        update_item(&db, update(&duplicate.id, "Second entry", "in_progress")).unwrap();
+        assert_eq!(
+            list_activity_dates(&db).unwrap(),
+            vec!["2026-07-18", "2026-07-19", "2026-07-20", "2026-07-21"]
+        );
+    }
+    #[test]
+    fn activity_date_tracks_current_content_after_clear_and_delete() {
+        let mut db = memory();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
+        update_item(&db, update(&item.id, "Journal entry", "completed")).unwrap();
+        assert_eq!(list_activity_dates(&db).unwrap(), vec!["2026-07-18"]);
+        update_item(&db, update(&item.id, "   ", "cancelled")).unwrap();
+        assert!(list_activity_dates(&db).unwrap().is_empty());
+        update_item(&db, update(&item.id, "Journal entry", "in_progress")).unwrap();
+        delete_item(&db, &item.id).unwrap();
+        assert!(list_activity_dates(&db).unwrap().is_empty());
+        assert!(find_daily_log(&db, "2026-07-18").unwrap().is_some());
     }
     #[test]
     fn migration_v3_preserves_old_items_with_null_category() {

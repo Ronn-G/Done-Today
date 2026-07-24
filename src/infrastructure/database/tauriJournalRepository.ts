@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { dailyLogSchema,historyPageSchema,workItemSchema } from '../../domain/journal/models';
+import { dailyLogSchema,historyPageSchema,journalActivityDatesSchema,workItemSchema } from '../../domain/journal/models';
 import{workCategorySchema,type CategoryInput,type CategoryUpdate}from'../../domain/journal/categories';
 import type { UpdateWorkItem } from '../../domain/journal/models';
 import type { JournalRepository } from '../../domain/journal/repository';
@@ -20,6 +20,9 @@ export class TauriJournalRepository implements JournalRepository {
   }
   async listDailyLogSummaries(page:number,pageSize:number){
     return historyPageSchema.parse(await invoke<unknown>('list_daily_log_summaries',{page,pageSize}));
+  }
+  async listJournalActivityDates(){
+    return journalActivityDatesSchema.parse(await invoke<unknown>('list_journal_activity_dates'));
   }
   async listCategories(includeInactive=true){return workCategorySchema.array().parse(await invoke<unknown>('list_work_categories',{includeInactive}))}
   async createCategory(input:CategoryInput){return workCategorySchema.parse(await invoke<unknown>('create_work_category',{input}))}

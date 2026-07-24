@@ -1,4 +1,4 @@
-import type { DailyLog,HistoryPage,UpdateWorkItem,WorkItem } from './models';
+import type { DailyLog,HistoryPage,LocalDateKey,UpdateWorkItem,WorkItem } from './models';
 import type{CategoryInput,CategoryUpdate,WorkCategory}from'./categories';
 export interface JournalRepository {
   initialize(): Promise<void>;
@@ -14,4 +14,5 @@ export interface JournalRepository {
   reorderCategories(orderedIds:string[]):Promise<WorkCategory[]>;
   assignWorkItemCategory(itemId:string,categoryId:string|null):Promise<WorkItem>;
   listDailyLogSummaries(page:number,pageSize:number):Promise<HistoryPage>;
+  listJournalActivityDates():Promise<LocalDateKey[]>;
 }

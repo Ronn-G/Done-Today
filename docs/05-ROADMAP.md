@@ -1,7 +1,7 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.1
+**Document version:** 2.2
 **Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
 
 ## 1. Cách đọc trạng thái
@@ -23,7 +23,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Foundation | Completed | React, TypeScript, Vite, Tauri, SQLite, migration runner và test nền tảng |
 | Daily Table | Completed | CRUD, inline editing, bốn trạng thái và autosave |
 | Navigation and History | Completed | Điều hướng theo ngày, route ngày và lịch sử có phân trang |
-| Motivation UI | Completed | Thống kê, progress, streak, câu gợi ý, light/dark và empty states |
+| Motivation UI | Completed | Thống kê, progress, current journal streak, câu gợi ý, light/dark và empty states; streak được hoàn tất qua regression closure ngày 2026-07-24 |
 | App Appearance Theme | Completed | App Theme toàn cục; xem tài liệu 06 |
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
@@ -55,7 +55,9 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Chuyển ngày trước/sau và quay về Today.
 - Mở ngày cũ từ History.
 - Phân trang lịch sử.
-- Thống kê, progress, streak, câu gợi ý và empty states.
+- Thống kê, progress, câu gợi ý và empty states đã có trước regression closure.
+- Roadmap trước đây đã ghi gộp streak là Completed dù source chưa có implementation.
+- Regression closure ngày 2026-07-24 bổ sung current journal streak end-to-end: pure domain rule, activity-date query, Tauri contract, Today UI, i18n Việt/Anh và regression tests.
 
 ### App Appearance Theme
 

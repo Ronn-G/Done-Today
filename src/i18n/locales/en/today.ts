@@ -7,7 +7,15 @@ export default {
     past:'You can view and edit past days in the same table.',
   },
   dateControls:{previous:'Previous day',next:'Next day',choose:'Choose date',today:'Today'},
-  stats:{label:'Daily statistics',total:'Total tasks',completed:'Completed',completionRate:'Completion rate'},
+  stats:{
+    label:'Daily statistics',
+    total:'Total tasks',
+    completed:'Completed',
+    completionRate:'Completion rate',
+    streak:'Journal streak',
+    streakValue_one:'{{count}} day',
+    streakValue_other:'{{count}} days',
+  },
   fields:{
     task:{label:'Work done',placeholder:'What did you work on?'},
     result:{label:'Result',placeholder:'What was the result?'},
