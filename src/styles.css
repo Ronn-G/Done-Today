@@ -319,6 +319,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .preset-card span { color: var(--text-secondary); font-size: 12px; flex: 1; }
 .preset-card i { display: flex; width: 100%; height: 10px; overflow: hidden; border-radius: 99px; }
 .preset-card i b { flex: 1; }
+.custom-preset-status { display: flex; align-items: baseline; gap: 6px; margin-top: 12px; color: var(--text-secondary); }
+.custom-preset-status strong { color: var(--accent); }
 .settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .palette-tabs,.radius-control,.settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .palette-tabs button,.radius-control button,.settings-actions button { border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); padding: 8px 11px; border-radius: var(--radius-control); cursor: pointer; }

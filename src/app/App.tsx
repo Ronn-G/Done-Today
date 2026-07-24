@@ -52,11 +52,12 @@ function friendlyError(error:unknown){
 }
 
 export function App(){
+  const{t:tTheme}=useTranslation('theme');
   const[route,setRoute]=useState<Route>(parseRoute);
   const[theme,setTheme]=useState<ThemeMode>(initialTheme);
   const[themePreferences,setThemePreferences]=useState<ThemePreferences>(defaultThemePreferences);
   const[themeSaveState,setThemeSaveState]=useState<ThemeSaveState>('idle');
-  const[themeError,setThemeError]=useState<string|null>(null);
+  const[themeSaveError,setThemeSaveError]=useState(false);
   const[floatingThemePanel,setFloatingThemePanel]=useState(initialFloatingThemePanelState);
   const[dataRevision,setDataRevision]=useState(0);
   const[systemDark,setSystemDark]=useState(()=>matchMedia('(prefers-color-scheme: dark)').matches);
@@ -77,10 +78,10 @@ export function App(){
   useEffect(()=>{void themeRepository.load().then(saved=>{if(saved)setThemePreferences(saved)}).catch(()=>setThemePreferences(defaultThemePreferences()))},[]);
   useEffect(()=>()=>{void themeCoordinator.flush().catch(()=>undefined);themeCoordinator.cancel()},[themeCoordinator]);
   useEffect(()=>{const flush=()=>void themeCoordinator.flush().catch(()=>undefined);window.addEventListener('beforeunload',flush);return()=>window.removeEventListener('beforeunload',flush)},[themeCoordinator]);
-  const commitTheme=useCallback((next:ThemePreferences)=>{setThemePreferences(next);setThemeError(null);themeCoordinator.schedule(next)},[themeCoordinator]);
-  const flushTheme=useCallback(async()=>{try{await themeCoordinator.flush();setThemeError(null)}catch{setThemeError('Không thể lưu giao diện.');throw new Error('Không thể lưu giao diện.')}},[themeCoordinator]);
-  const resetTheme=useCallback(()=>{if(confirm('Khôi phục toàn bộ màu sáng, màu tối và độ bo góc về Done Today? Chế độ hiển thị được giữ nguyên.'))commitTheme(defaultThemePreferences())},[commitTheme]);
-  const themeController:ThemeCustomizerController={mode:theme,setMode:setTheme,preferences:themePreferences,setPreferences:setThemePreferences,activePalette,saveState:themeSaveState,error:themeError,commit:commitTheme,flush:flushTheme,retry:flushTheme,reset:resetTheme};
+  const commitTheme=useCallback((next:ThemePreferences)=>{setThemePreferences(next);setThemeSaveError(false);themeCoordinator.schedule(next)},[themeCoordinator]);
+  const flushTheme=useCallback(async()=>{try{await themeCoordinator.flush();setThemeSaveError(false)}catch{setThemeSaveError(true);throw new Error(tTheme('errors.save'))}},[themeCoordinator,tTheme]);
+  const resetTheme=useCallback(()=>{if(confirm(tTheme('actions.resetConfirmation')))commitTheme(defaultThemePreferences())},[commitTheme,tTheme]);
+  const themeController:ThemeCustomizerController={mode:theme,setMode:setTheme,preferences:themePreferences,setPreferences:setThemePreferences,activePalette,saveState:themeSaveState,error:themeSaveError?tTheme('errors.save'):null,commit:commitTheme,flush:flushTheme,retry:flushTheme,reset:resetTheme};
   const openThemePanel=()=>setFloatingThemePanel(current=>{const next={...current,open:true};localStorage.setItem('done-today-floating-theme-panel',JSON.stringify(next));return next});
   return <div className="app-shell"><aside className="sidebar">
     <div className="brand"><span className="brand-mark"><CheckCircle2 size={20}/></span><span>Done Today</span></div>

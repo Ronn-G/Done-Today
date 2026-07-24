@@ -4,6 +4,7 @@ export default {
     title:'Settings',
     subtitle:'Manage your language, work categories, backups, and appearance.',
   },
+  about:{version:'Version'},
   language:{label:'Language',description:'Choose the language used by the app.',option:{vi:'Tiếng Việt',en:'English'},status:{saving:'Saving…',saved:'Saved',error:'We couldn’t save the language. Try again.'}},
   categories:{
     heading:{title:'Work categories',description:'Create and arrange the categories shown in the Today table.'},

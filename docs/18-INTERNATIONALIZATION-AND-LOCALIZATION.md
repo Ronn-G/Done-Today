@@ -641,14 +641,14 @@ Native Windows review is required for both `vi` and `en`.
 - [ ] History list and empty/loading/error states
 - [ ] Settings and Language Settings
 - [ ] Category Settings
-- [ ] Theme Settings and Floating Theme Customizer
+- [x] Theme Settings and Floating Theme Customizer
 - [ ] Backup export and native save dialog
 - [ ] Backup import preview and native open dialog
 - [ ] Merge and Replace confirmations
 - [ ] Backup warnings, validation errors and generic errors
 - [ ] Loading and empty states
 - [ ] Tooltips and accessibility labels
-- [ ] Light mode, dark mode and a custom theme/preset
+- [x] Light mode, dark mode and a custom theme/preset
 
 ### Checks for every applicable screen
 
@@ -787,6 +787,12 @@ Scope: History summaries, general settings, category management, appearance UI, 
 Main files: Settings features, theme preset contract/resources, History components.
 
 Risks: 33 theme field labels, existing category seed semantics, long English settings copy.
+
+Delivery status: **Completed** on 2026-07-24 through four checkpoints. Checkpoint 4 localized
+Custom colors and Floating Theme Customizer with an exhaustive typed
+`ThemeColorKey -> theme.colors.<key>` registry, translated contrast/accessibility copy, and
+locale-independent theme/panel state. This completion does not include Backup/Restore or backend
+error localization, which remain in their own later scope.
 
 Acceptance: both locales cover every screen; existing category names untouched; theme persistence
 and preset IDs unchanged.

@@ -3,24 +3,26 @@ import{Moon,RotateCcw,Sun}from'lucide-react';
 import{useTranslation}from'react-i18next';
 import{lowContrastPairs}from'../../domain/theme/applyTheme';
 import{normalizeHexColor}from'../../domain/theme/colors';
-import type{PaletteMode,ThemeColors,ThemeMode,ThemePreferences}from'../../domain/theme/models';
+import type{PaletteMode,ThemeColorKey,ThemeMode,ThemePreferences}from'../../domain/theme/models';
 import{selectPreset,themePresets,updateThemeColor}from'../../domain/theme/presets';
 import type{ThemePresetId}from'../../domain/theme/presets';
+import{translateThemeColorLabel}from'./themeColorTranslations';
 import type{ThemeCustomizerController}from'./themeCustomizerController';
 
-const groups:readonly{title:string;open?:boolean;fields:readonly[keyof ThemeColors,string][]}[]=[
-  {title:'Nền và bề mặt',open:true,fields:[['pageBackground','Nền ứng dụng'],['sidebarBackground','Nền sidebar'],['sidebarActiveBackground','Mục sidebar đang chọn'],['cardBackground','Card và bảng'],['tableHeaderBackground','Tiêu đề bảng'],['editorHoverBackground','Editor khi hover']]},
-  {title:'Chữ',fields:[['primaryText','Chữ chính'],['secondaryText','Chữ phụ'],['mutedText','Chữ gợi ý'],['sidebarText','Chữ sidebar'],['sidebarActiveText','Chữ sidebar đang chọn']]},
-  {title:'Điều khiển',fields:[['accent','Màu nhấn'],['border','Màu viền'],['focusRing','Focus ring'],['progressTrack','Progress track']]},
-  {title:'Thống kê trong ngày',open:true,fields:[['statsPanelBackground','Nền khối thống kê'],['statsPanelBorder','Viền khối thống kê'],['statsPanelPrimaryText','Chữ chính khối thống kê'],['statsPanelSecondaryText','Chữ phụ khối thống kê'],['statsPanelProgressTrack','Nền thanh tiến độ'],['statsPanelProgressFill','Màu thanh tiến độ']]},
-  {title:'Trạng thái',fields:[['completedBackground','Hoàn thành · nền'],['completedText','Hoàn thành · chữ'],['completedBorder','Hoàn thành · viền'],['inProgressBackground','Đang làm · nền'],['inProgressText','Đang làm · chữ'],['inProgressBorder','Đang làm · viền'],['postponedBackground','Bị hoãn · nền'],['postponedText','Bị hoãn · chữ'],['postponedBorder','Bị hoãn · viền'],['cancelledBackground','Đã hủy · nền'],['cancelledText','Đã hủy · chữ'],['cancelledBorder','Đã hủy · viền']]},
+const groups:readonly{id:'surfaces'|'text'|'controls'|'todayStats'|'statuses';open?:boolean;fields:readonly ThemeColorKey[]}[]=[
+  {id:'surfaces',open:true,fields:['pageBackground','sidebarBackground','sidebarActiveBackground','cardBackground','tableHeaderBackground','editorHoverBackground']},
+  {id:'text',fields:['primaryText','secondaryText','mutedText','sidebarText','sidebarActiveText']},
+  {id:'controls',fields:['accent','border','focusRing','progressTrack']},
+  {id:'todayStats',open:true,fields:['statsPanelBackground','statsPanelBorder','statsPanelPrimaryText','statsPanelSecondaryText','statsPanelProgressTrack','statsPanelProgressFill']},
+  {id:'statuses',fields:['completedBackground','completedText','completedBorder','inProgressBackground','inProgressText','inProgressBorder','postponedBackground','postponedText','postponedBorder','cancelledBackground','cancelledText','cancelledBorder']},
 ];
 
-function ColorControl({colorKey,label,value,onCommit,onFlush}:{colorKey:keyof ThemeColors;label:string;value:string;onCommit:(key:keyof ThemeColors,value:string)=>void;onFlush:()=>void}){
+function ColorControl({colorKey,label,value,onCommit,onFlush}:{colorKey:ThemeColorKey;label:string;value:string;onCommit:(key:ThemeColorKey,value:string)=>void;onFlush:()=>void}){
+  const{t}=useTranslation('theme');
   const[raw,setRaw]=useState(value);const[error,setError]=useState<string|null>(null);
-  const update=(next:string)=>{setRaw(next);const normalized=normalizeHexColor(next);if(normalized&&next.trim().length===7){setError(null);onCommit(colorKey,normalized)}else setError(next.trim().length>7?'Dùng #RGB hoặc #RRGGBB.':null)};
-  const blur=()=>{const normalized=normalizeHexColor(raw);if(normalized){setError(null);setRaw(normalized);onCommit(colorKey,normalized)}else{setError('Dùng #RGB hoặc #RRGGBB.');setRaw(value)}onFlush()};
-  return <label className="color-row"><span>{label}</span><input type="color" aria-label={`${label} - chọn màu`} value={value} onChange={event=>onCommit(colorKey,event.target.value)}/><input className={error?'invalid':''} aria-label={`${label} - mã HEX`} value={raw} onChange={event=>update(event.target.value)} onBlur={blur}/><i style={{backgroundColor:value}}/>{error&&<small>{error}</small>}</label>;
+  const update=(next:string)=>{setRaw(next);const normalized=normalizeHexColor(next);if(normalized&&next.trim().length===7){setError(null);onCommit(colorKey,normalized)}else setError(next.trim().length>7?t('validation.colorHex'):null)};
+  const blur=()=>{const normalized=normalizeHexColor(raw);if(normalized){setError(null);setRaw(normalized);onCommit(colorKey,normalized)}else{setError(t('validation.colorHex'));setRaw(value)}onFlush()};
+  return <label className="color-row"><span>{label}</span><input type="color" aria-label={t('colorPicker.choose',{fieldLabel:label})} value={value} onChange={event=>onCommit(colorKey,event.target.value)}/><input className={error?'invalid':''} aria-label={t('colorPicker.hexCode',{fieldLabel:label})} value={raw} onChange={event=>update(event.target.value)} onBlur={blur}/><i aria-hidden="true" style={{backgroundColor:value}}/>{error&&<small>{error}</small>}</label>;
 }
 
 export function ThemeModeSettings({mode,onSelect}:{mode:ThemeMode;onSelect:(mode:ThemeMode)=>void}){
@@ -43,26 +45,38 @@ export function ThemePresetSettings({preferences,onSelect}:{preferences:ThemePre
   }satisfies Record<ThemePresetId,{name:string;description:string}>;
   return <section className="settings-card"><h2>{t('preset.heading')}</h2><p>{t('preset.description')}</p>
     <div className="preset-grid" role="group" aria-label={t('preset.optionsLabel')}>{themePresets.map(preset=>{const presentation=metadata[preset.id];return <button type="button" key={preset.id} className={`preset-card ${preferences.selectedPresetId===preset.id?'selected':''}`} onClick={()=>onSelect(selectPreset(preset.id))} aria-pressed={preferences.selectedPresetId===preset.id}><strong>{presentation.name}</strong><span>{presentation.description}</span><i aria-hidden="true">{preset.preview.map(color=><b key={color} style={{backgroundColor:color}}/>)}</i></button>})}</div>
+    {preferences.selectedPresetId==='custom'&&<div className="custom-preset-status" role="status"><strong>{t('preset.custom.name')}</strong><span>{t('preset.custom.description')}</span></div>}
   </section>;
 }
 
 export function ThemeCustomizerContent({controller,compact=false}:{controller:ThemeCustomizerController;compact?:boolean}){
+  const{t}=useTranslation('theme');
   const{mode,setMode,preferences,activePalette,saveState,error,commit,flush,retry,reset}=controller;
   const[editing,setEditing]=useState<PaletteMode>(activePalette);
   const palette=editing==='light'?preferences.lightColors:preferences.darkColors;const warnings=lowContrastPairs(palette);
-  const change=(key:keyof ThemeColors,value:string)=>commit(updateThemeColor(preferences,editing,key,value));
+  const colorLabel=(key:ThemeColorKey)=>translateThemeColorLabel(t,key);
+  const groupLabels={
+    surfaces:t('groups.surfaces'),text:t('groups.text'),controls:t('groups.controls'),
+    todayStats:t('groups.todayStats'),statuses:t('groups.statuses'),
+  }satisfies Record<(typeof groups)[number]['id'],string>;
+  const radiusLabels={
+    square:t('radius.square'),subtle:t('radius.subtle'),rounded:t('radius.rounded'),soft:t('radius.soft'),
+  }satisfies Record<ThemePreferences['borderRadius'],string>;
+  const change=(key:ThemeColorKey,value:string)=>commit(updateThemeColor(preferences,editing,key,value));
+  const warningPairs=warnings.map(([text,background])=>`${colorLabel(text)} / ${colorLabel(background)}`).join(', ');
   return <div className={`theme-customizer-content ${compact?'compact':''}`}>
     <ThemeModeSettings mode={mode} onSelect={setMode}/>
     <ThemePresetSettings preferences={preferences} onSelect={commit}/>
-    <section className="settings-card color-settings"><div className="settings-heading"><div><h2>Tùy chỉnh màu</h2><p>Mỗi chế độ có bảng màu riêng và được xem trước ngay.</p></div><div className="palette-tabs">{(['light','dark']as const).map(value=><button className={editing===value?'selected':''} key={value} onClick={()=>setEditing(value)}>Màu {value==='light'?'sáng':'tối'}</button>)}</div></div>
-      {warnings.length>0&&<div className="contrast-warning">Độ tương phản thấp, nội dung có thể khó đọc. Cặp liên quan: {warnings.map(pair=>pair.join(' / ')).join(', ')}.</div>}
-      <div className="color-groups">{groups.map(group=><details key={group.title} open={group.open}><summary>{group.title}</summary><div className="color-grid">{group.fields.map(([key,label])=><ColorControl key={`${editing}-${key}`} colorKey={key} label={label} value={palette[key]} onCommit={change} onFlush={()=>void flush()}/>)}</div></details>)}</div>
-      <div className="radius-control"><strong>Độ bo góc</strong>{([['square','Vuông · 4px'],['subtle','Nhẹ · 8px'],['rounded','Bo tròn · 12px'],['soft','Mềm · 16px']]as const).map(([value,label])=><button key={value} className={preferences.borderRadius===value?'selected':''} onClick={()=>commit({...preferences,borderRadius:value,selectedPresetId:'custom',updatedAt:new Date().toISOString()})}>{label}</button>)}</div>
-      <div className="settings-actions"><button className="reset-theme" onClick={reset}><RotateCcw size={16}/> Khôi phục giao diện mặc định</button><span className={`theme-save ${saveState}`}>{saveState==='saving'?'Đang lưu…':saveState==='saved'?'Đã lưu':saveState==='error'?'Lưu thất bại':'Mọi thay đổi tự động lưu'}</span>{saveState==='error'&&<button onClick={()=>void retry()}>Thử lại</button>}</div>{error&&<div className="page-error">{error}</div>}
+    <section className="settings-card color-settings"><div className="settings-heading"><div><h2>{t('customize.heading')}</h2><p>{t('customize.description')}</p></div><div className="palette-tabs" role="group" aria-label={t('customize.paletteOptionsLabel')}>{(['light','dark']as const).map(value=><button type="button" className={editing===value?'selected':''} aria-pressed={editing===value} key={value} onClick={()=>setEditing(value)}>{value==='light'?t('customize.paletteLight'):t('customize.paletteDark')}</button>)}</div></div>
+      {warnings.length>0&&<div className="contrast-warning" role="alert">{t('warnings.contrast',{pairs:warningPairs})}</div>}
+      <div className="color-groups">{groups.map(group=><details key={group.id} open={group.open}><summary>{groupLabels[group.id]}</summary><div className="color-grid">{group.fields.map(key=><ColorControl key={`${editing}-${key}`} colorKey={key} label={colorLabel(key)} value={palette[key]} onCommit={change} onFlush={()=>void flush()}/>)}</div></details>)}</div>
+      <div className="radius-control" role="group" aria-label={t('radius.heading')}><strong>{t('radius.heading')}</strong>{(['square','subtle','rounded','soft']as const).map(value=><button type="button" key={value} className={preferences.borderRadius===value?'selected':''} aria-pressed={preferences.borderRadius===value} onClick={()=>commit({...preferences,borderRadius:value,selectedPresetId:'custom',updatedAt:new Date().toISOString()})}>{radiusLabels[value]}</button>)}</div>
+      <div className="settings-actions"><button type="button" className="reset-theme" onClick={reset}><RotateCcw aria-hidden="true" size={16}/> {t('actions.reset')}</button><span className={`theme-save ${saveState}`} role="status" aria-live="polite">{saveState==='saving'?t('status.saving'):saveState==='saved'?t('status.saved'):saveState==='error'?t('status.error'):t('status.idle')}</span>{saveState==='error'&&<button type="button" onClick={()=>void retry()}>{t('common:actions.retry')}</button>}</div>{error&&<div className="page-error" role="alert">{error}</div>}
     </section>
   </div>;
 }
 
 export function ThemeSettings({controller}:{controller:ThemeCustomizerController}){
-  return <section className="settings-stack"><p className="settings-tip">Bạn cũng có thể tùy chỉnh trực tiếp trên màn hình Hôm nay.</p><ThemeCustomizerContent controller={controller}/><div className="settings-card version"><span>Phiên bản</span><strong>0.1.0</strong></div></section>;
+  const{t}=useTranslation('theme');const{t:tSettings}=useTranslation('settings');
+  return <section className="settings-stack"><p className="settings-tip">{t('settings.tip')}</p><ThemeCustomizerContent controller={controller}/><div className="settings-card version"><span>{tSettings('about.version')}</span><strong>0.1.0</strong></div></section>;
 }

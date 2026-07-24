@@ -4,6 +4,7 @@ export default {
     title:'Cài đặt',
     subtitle:'Quản lý ngôn ngữ, nhóm công việc, sao lưu và giao diện.',
   },
+  about:{version:'Phiên bản'},
   language:{label:'Ngôn ngữ',description:'Chọn ngôn ngữ hiển thị của ứng dụng.',option:{vi:'Tiếng Việt',en:'English'},status:{saving:'Đang lưu…',saved:'Đã lưu',error:'Không thể lưu ngôn ngữ. Hãy thử lại.'}},
   categories:{
     heading:{title:'Nhóm công việc',description:'Tạo và sắp xếp các nhóm hiển thị trong bảng Hôm nay.'},

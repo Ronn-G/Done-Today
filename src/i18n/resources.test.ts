@@ -31,6 +31,13 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].theme)).toHaveProperty('mode.system');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.doneToday.name');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.warmSand.description');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('customize.heading');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('colors.pageBackground');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('colors.cancelledBorder');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('floating.dragHandle');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('actions.resetConfirmation');
+      expect(flattenResource(resources[locale].settings)).toHaveProperty('about.version');
+      expect(flattenResource(resources[locale].common)).toHaveProperty('actions.close');
     }
   });
   it('initializes idempotently and switches output',async()=>{

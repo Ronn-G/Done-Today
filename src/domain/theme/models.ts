@@ -23,6 +23,7 @@ export const themeColorsSchema=z.object({
   cancelledBackground:hexColorSchema,cancelledText:hexColorSchema,cancelledBorder:hexColorSchema,
 }).strict();
 export type ThemeColors=z.infer<typeof themeColorsSchema>;
+export type ThemeColorKey=keyof ThemeColors;
 
 export const themePreferencesSchema=z.object({
   selectedPresetId:z.string().max(40),lightColors:themeColorsSchema,darkColors:themeColorsSchema,

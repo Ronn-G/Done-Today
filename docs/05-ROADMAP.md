@@ -31,7 +31,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Day Theme & Personalization | Specified | Tài liệu 17 đã có; không được suy ra là implementation đã hoàn thành |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
-| I18N-3 | In progress — checkpoint 3 complete | History, Settings shell + Categories và App Theme modes, presets + metadata đã hoàn tất workflow `vi`/`en`; checkpoint tiếp theo là Custom colors + Floating Theme Customizer |
+| I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 đến I18N-5 | Planned | Thực hiện theo task contract và checkpoint của quy trình mới |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
