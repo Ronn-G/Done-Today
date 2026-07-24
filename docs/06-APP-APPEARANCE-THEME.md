@@ -1,8 +1,32 @@
-# Theme customization
+# App Appearance Theme
+
+**Document status:** Authoritative
+**Document version:** 1.1
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
+## Phạm vi và quan hệ với Day Theme
+
+Tài liệu này định nghĩa **App Theme** toàn cục: app shell, sidebar, navigation, dialog,
+toast, nền toàn ứng dụng, light/dark mode và các semantic token dùng chung. App Theme
+giữ nguyên khi người dùng chuyển giữa các ngày.
+
+`17-DAY-THEME-AND-PERSONALIZATION.md` định nghĩa **Day Theme** gắn với một `daily_log`.
+Day Theme chỉ được áp dụng bên trong day content container và không được ghi đè app shell,
+navigation, dialog, toast hoặc global accessibility.
+
+Quan hệ authoritative:
+
+- `16-DESIGN-SYSTEM.md`: semantic design language và accessibility chung.
+- Tài liệu 06 này: App Theme và `ThemePreferences` lưu trong `app_settings`.
+- `17-DAY-THEME-AND-PERSONALIZATION.md`: Day Theme/Day Style lưu theo từng ngày.
+
+Tên preset có thể trùng giữa App Theme và Day Theme nhưng không cùng identity, scope hoặc
+persistence. Code và tài liệu phải luôn ghi rõ `App Theme` hay `Day Theme`, không dùng từ
+`Theme` đơn lẻ khi quyết định có thể gây nhầm.
 
 ## Kiến trúc
 
-Theme là domain typed độc lập với React. `ThemePreferences` schema version 2 chứa preset
+App Theme là domain typed độc lập với React. `ThemePreferences` schema version 2 chứa preset
 đang chọn, hai bảng màu light/dark, mức bo góc và thời điểm cập nhật. UI gọi application
 coordinator, coordinator gọi `ThemeRepository`, implementation Tauri gọi command typed
 và lưu JSON vào SQLite.

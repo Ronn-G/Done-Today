@@ -1,5 +1,9 @@
 # Database Design
 
+**Document status:** Authoritative
+**Document version:** 1.1
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## 1. Bảng daily_logs
 
 ```sql
@@ -71,34 +75,9 @@ Migration 003 thêm `work_categories` và khóa ngoại nullable `work_items.cat
 
 ## 7. Backup format
 
-Schema chính thức và semantics hiện hành nằm trong `08-BACKUP-RESTORE.md`. Migration 004 bổ sung
-`backup_import_receipts(id, checksum, imported_at, mode, source_exported_at, result_summary_json)` và
-index theo checksum. Receipt không thuộc payload backup.
+Schema, ví dụ JSON và semantics authoritative nằm duy nhất trong `08-BACKUP-RESTORE.md`.
+Không sao chép envelope hoặc payload backup vào tài liệu này để tránh hai nguồn sự thật.
 
-```json
-{
-  "format": "done-today-backup",
-  "version": 1,
-  "exportedAt": "2026-07-18T12:00:00.000Z",
-  "dailyLogs": [
-    {
-      "id": "uuid",
-      "logDate": "2026-07-18",
-      "createdAt": "...",
-      "updatedAt": "...",
-      "items": [
-        {
-          "id": "uuid",
-          "task": "...",
-          "result": "...",
-          "nextAction": "...",
-          "status": "completed",
-          "position": 0,
-          "createdAt": "...",
-          "updatedAt": "..."
-        }
-      ]
-    }
-  ]
-}
-```
+Migration 004 bổ sung
+`backup_import_receipts(id, checksum, imported_at, mode, source_exported_at, result_summary_json)`
+và index theo checksum. Receipt không thuộc payload backup.

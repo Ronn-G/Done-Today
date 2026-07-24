@@ -6,6 +6,7 @@
 **Trạng thái:** Tài liệu chuẩn bắt buộc  
 **Phạm vi:** Toàn bộ giao diện desktop của Done Today  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
 
 ---
 

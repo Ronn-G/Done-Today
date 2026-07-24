@@ -1,5 +1,9 @@
 # Product Requirements Document
 
+**Document status:** Authoritative
+**Document version:** 1.1
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## 1. Màn hình Today
 
 ### Header
@@ -135,9 +139,9 @@ Bao gồm:
 - Giao diện không giống bảng Excel thô.
 - Bảng cần có khoảng trắng, bo góc và hiệu ứng hover nhẹ.
 
-## 7. Tiêu chí hoàn thành MVP
+## 7. Tiêu chí hoàn thành phát triển MVP
 
-MVP được coi là hoàn thành khi:
+Phần phát triển MVP được coi là hoàn thành khi:
 
 1. Có thể tạo nhiều dòng cho một ngày.
 2. Đóng và mở lại app không mất dữ liệu.
@@ -147,5 +151,17 @@ MVP được coi là hoàn thành khi:
 6. Chuỗi ngày tính đúng.
 7. Import lỗi không làm hỏng dữ liệu.
 8. Có test cho migration và repository chính.
-9. Build được bản cài đặt Windows.
-10. Build được bản portable.
+9. Frontend test, typecheck, lint và development build đạt gate của task.
+10. Các thay đổi UI đã được kiểm tra thủ công ở kích thước cửa sổ phù hợp.
+
+## 8. Tiêu chí phát hành
+
+Release packaging là giai đoạn riêng sau development completion. Một bản phát hành chỉ sẵn sàng
+khi:
+
+1. Development gate của phiên bản đã pass.
+2. Build được Windows installer có version.
+3. Build được portable ZIP có version.
+4. Hai artifact được smoke test trên Windows; ưu tiên máy sạch khi có thể.
+
+Không yêu cầu build installer hoặc portable sau mỗi feature, bug fix hay checkpoint.

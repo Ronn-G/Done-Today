@@ -1,5 +1,9 @@
 # Nhóm công việc
 
+**Document status:** Authoritative
+**Document version:** 1.0
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## Mô hình dữ liệu
 
 `work_categories` lưu tên, màu HEX, thứ tự, trạng thái active và timestamps. `work_items.category_id`

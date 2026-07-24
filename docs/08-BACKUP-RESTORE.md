@@ -1,5 +1,9 @@
 # Backup và restore
 
+**Document status:** Authoritative
+**Document version:** 1.0
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## Envelope v1
 
 Định dạng chính là JSON UTF-8 độc lập với SQLite:

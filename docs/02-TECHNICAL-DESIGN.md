@@ -1,5 +1,9 @@
 # Technical Design
 
+**Document status:** Authoritative
+**Document version:** 1.1
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## 1. Công nghệ
 
 - React.
@@ -83,11 +87,23 @@ Quy tắc:
 6. Thất bại giữ dữ liệu trên UI và cung cấp Retry.
 7. Không tạo nhiều request ghi trùng nhau cho cùng một dòng.
 
-## 6. Build
+## 6. Development completion
 
-Yêu cầu đầu ra:
+Một development task được coi là hoàn tất khi đạt đúng acceptance criteria của task và các
+quality gate theo phạm vi, thường gồm targeted tests, full frontend tests trước final commit,
+typecheck, lint, development build và kiểm tra thủ công/visual khi có thay đổi UI.
+
+Development completion không mặc định yêu cầu tạo installer hoặc portable ZIP.
+
+## 7. Release packaging
+
+Release packaging là gate riêng, chỉ chạy khi chuẩn bị phát hành hoặc prompt yêu cầu rõ:
 
 - Windows installer.
 - Portable ZIP.
-- Tên file có version.
+- Tên artifact có version.
+- Smoke test artifact trên Windows; ưu tiên máy sạch khi có thể.
 - Không commit file build vào Git nếu không có lý do rõ ràng.
+
+Chi tiết quy trình và mức gate xem
+`QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md`.

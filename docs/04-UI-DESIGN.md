@@ -1,5 +1,14 @@
 # UI Design
 
+**Document status:** Superseded — reference only
+**Document version:** 1.0
+**Superseded by:** `16-DESIGN-SYSTEM.md` for all normative UI decisions
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
+> Tài liệu này chỉ giữ lại định hướng bố cục và cảm giác sản phẩm ban đầu. Khi có khác biệt
+> về token, màu sắc, typography, spacing, component, accessibility hoặc theme compatibility,
+> `16-DESIGN-SYSTEM.md` là nguồn authoritative.
+
 ## 1. Phong cách
 
 - Tối giản.

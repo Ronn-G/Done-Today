@@ -6,6 +6,7 @@
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
 
 ---
 
@@ -70,6 +71,10 @@ Thông điệp cốt lõi:
 ---
 
 # 3. Phân biệt App Theme và Day Theme
+
+`06-APP-APPEARANCE-THEME.md` là nguồn authoritative cho App Theme hiện hành.
+Tài liệu này là nguồn authoritative cho Day Theme. Hai hệ thống dùng chung semantic
+design language trong `16-DESIGN-SYSTEM.md` nhưng có scope và persistence khác nhau.
 
 ## 3.1. App Theme
 

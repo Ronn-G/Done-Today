@@ -1,5 +1,9 @@
 # Done Today
 
+**Document status:** Authoritative
+**Document version:** 1.1
+**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+
 ## 1. Mục tiêu
 
 Done Today là ứng dụng desktop Windows dạng bảng, giúp người dùng ghi lại hằng ngày:
@@ -45,9 +49,17 @@ Done Today là ứng dụng desktop Windows dạng bảng, giúp người dùng 
 - Chuỗi ngày đã ghi nhật ký.
 - Light mode và dark mode.
 - Backup và restore.
-- Bản cài đặt Windows và bản portable.
 
-## 6. Ngoài phạm vi phiên bản 1.0
+Các mục trên là phạm vi chức năng. Bản cài đặt Windows và portable ZIP là đầu ra của
+**release packaging**, không phải điều kiện hoàn thành mặc định của từng development task.
+
+## 6. Đầu ra phát hành
+
+- Windows installer có version.
+- Portable ZIP có version.
+- Smoke test trên Windows trước khi phát hành.
+
+## 7. Ngoài phạm vi phiên bản 1.0
 
 - AI.
 - Đăng nhập.
