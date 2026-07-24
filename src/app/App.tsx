@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- async route loads intentionally initialize screen state */
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import{createPortal}from'react-dom';
+import {useTranslation} from 'react-i18next';
 import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Palette,Settings,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
 import {SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
@@ -20,9 +21,12 @@ import{CategorySettings}from'../features/settings/CategorySettings';
 import{BackupSettings}from'../features/backup/BackupSettings';
 import{LanguageSettings}from'../features/settings/LanguageSettings';
 import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
-import {addLocalDays,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
+import {compatibilityLocale,normalizeLocale} from '../domain/localization/locale';
+import {formatCount,formatPercent} from '../i18n/formatters';
+import {addLocalDays,formatLongLocalDate,isValidLocalDate,localDateKey,shortVietnameseDate,vietnameseDate} from '../shared/date';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
+type AppPage=Route['page'];
 const service=new JournalService(new TauriJournalRepository());
 const themeRepository=new TauriThemeRepository();
 const today=()=>localDateKey();
@@ -81,20 +85,25 @@ export function App(){
   const openThemePanel=()=>setFloatingThemePanel(current=>{const next={...current,open:true};localStorage.setItem('done-today-floating-theme-panel',JSON.stringify(next));return next});
   return <div className="app-shell"><aside className="sidebar">
     <div className="brand"><span className="brand-mark"><CheckCircle2 size={20}/></span><span>Done Today</span></div>
-    <nav><Nav active={route.page==='day'} onClick={()=>navigate({page:'day',date:today()})} icon={<CalendarDays size={18}/>}>Hôm nay</Nav>
-      <Nav active={route.page==='history'} onClick={()=>navigate({page:'history'})} icon={<History size={18}/>}>Lịch sử</Nav></nav>
-    <Nav active={route.page==='settings'} onClick={()=>navigate({page:'settings'})} icon={<Settings size={18}/>}>Cài đặt</Nav>
+    <AppNavigation activePage={route.page} onNavigate={page=>page==='day'?navigate({page,date:today()}):navigate({page})}/>
   </aside><main>
     {route.page==='day'&&<DayEditor key={`${route.date}-${dataRevision}`} date={route.date} onOpenTheme={openThemePanel}/>}
     {route.page==='history'&&<HistoryPage key={dataRevision}/>}
     {route.page==='settings'&&<SettingsPage controller={themeController} onImported={()=>{setDataRevision(value=>value+1);void themeRepository.load().then(value=>setThemePreferences(value??defaultThemePreferences()));navigate({page:'day',date:today()})}}/>}
   </main>{route.page==='day'&&<FloatingThemeCustomizer controller={themeController} state={floatingThemePanel} setState={setFloatingThemePanel}/>}</div>;
 }
+export function AppNavigation({activePage,onNavigate}:{activePage:AppPage;onNavigate:(page:AppPage)=>void}){
+  const {t}=useTranslation('nav');
+  return <><nav><Nav active={activePage==='day'} onClick={()=>onNavigate('day')} icon={<CalendarDays size={18}/>}>{t('today')}</Nav>
+    <Nav active={activePage==='history'} onClick={()=>onNavigate('history')} icon={<History size={18}/>}>{t('history')}</Nav></nav>
+    <Nav active={activePage==='settings'} onClick={()=>onNavigate('settings')} icon={<Settings size={18}/>}>{t('settings')}</Nav></>;
+}
 function Nav({active,onClick,icon,children}:{active:boolean;onClick:()=>void;icon:React.ReactNode;children:React.ReactNode}){
   return <button className={`nav-item ${active?'active':''}`} onClick={onClick}>{icon}<span>{children}</span></button>;
 }
 
 function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
+  const {t}=useTranslation('today');
   const[log,setLog]=useState<DailyLog|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
@@ -144,19 +153,8 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(friendlyError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
-    <header className="day-header"><div><p className="eyebrow">{date===today()?'Hôm nay':'Nhật ký theo ngày'}</p>
-      <h1>{date===today()?'Hôm nay bạn đã tạo ra điều gì?':vietnameseDate(date)}</h1>
-      <p className="subtitle">{date===today()?'Ghi lại một ngày bình thường — vì đó là cách tiến bộ được tạo nên.':'Bạn có thể xem và chỉnh sửa ngày cũ bằng cùng một bảng.'}</p></div>
-      <div className="date-nav">
-        <button aria-label="Ngày trước" title="Ngày trước" onClick={()=>go(addLocalDays(date,-1))}><ChevronLeft size={18}/></button>
-        <label className="date-picker"><span>{vietnameseDate(date)}</span><input aria-label="Chọn ngày" type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&go(event.target.value)}/></label>
-        <button aria-label="Ngày sau" title="Ngày sau" onClick={()=>go(addLocalDays(date,1))}><ChevronRight size={18}/></button>
-        {date!==today()&&<button className="today-button" onClick={()=>go(today())}>Hôm nay</button>}
-        <button aria-label="Tùy chỉnh giao diện" title="Tùy chỉnh giao diện" onClick={onOpenTheme}><Palette size={18}/></button>
-      </div></header>
-    <section className="stats" aria-label="Thống kê trong ngày"><Stat label="Tổng số việc" value={stats.total}/><Stat label="Hoàn thành" value={stats.completed}/>
-      <div className="stat progress-stat"><span>Tỷ lệ hoàn thành</span><strong>{stats.percentage}%</strong><div className="progress" role="progressbar" aria-label="Tỷ lệ hoàn thành" aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section>
-    {error&&<div className="page-error">{error}<button onClick={()=>void load()}>Thử lại</button></div>}
+    <TodayOverview date={date} stats={stats} onGo={go} onOpenTheme={onOpenTheme}/>
+    {error&&<div className="page-error">{error}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> Đang đọc dữ liệu…</div>:
       <div className="table-scroll"><table><thead><tr><th className="order-col">Thứ tự</th><th>Việc đã làm</th><th>Kết quả</th><th>Bước tiếp theo</th><th>Trạng thái</th><th className="action-col"><span className="sr-only">Hành động</span></th></tr></thead>
       <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<tr className="category-row" key={`header-${key}`}><th colSpan={6}><div className="category-header"><i style={group.color?{backgroundColor:group.color}:undefined}/><h2>{group.name}{!group.isActive&&<small> · Đã ẩn</small>}</h2><span>{group.completedItems}/{group.totalItems} hoàn thành</span><button aria-label={`Thêm việc vào ${group.name}`} onClick={()=>void addItem(group.id)}>+</button><button aria-label={`${hidden?'Mở rộng':'Thu gọn'} ${group.name}`} aria-expanded={!hidden} onClick={()=>toggleGroup(group.id)}>{hidden?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button></div></th></tr>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
@@ -167,6 +165,27 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
       <p className="shortcut-hint">Ctrl + Enter để thêm dòng · Thay đổi được tự động lưu</p></footer>
     </section>
   </div>;
+}
+
+export function TodayOverview({date,stats,onGo,onOpenTheme}:{
+  date:string;stats:ReturnType<typeof calculateStatistics>;onGo:(date:string)=>void;onOpenTheme:()=>void;
+}){
+  const {t,i18n}=useTranslation('today');
+  const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
+  const current=date===today();
+  const formattedDate=formatLongLocalDate(date,locale);
+  return <><header className="day-header"><div><p className="eyebrow">{current?t('eyebrow.today'):t('eyebrow.archive')}</p>
+    <h1>{current?t('heading.prompt'):formattedDate}</h1>
+    <p className="subtitle">{current?t('subtitle.today'):t('subtitle.past')}</p></div>
+    <div className="date-nav">
+      <button aria-label={t('dateControls.previous')} title={t('dateControls.previous')} onClick={()=>onGo(addLocalDays(date,-1))}><ChevronLeft size={18}/></button>
+      <label className="date-picker"><span>{formattedDate}</span><input aria-label={t('dateControls.choose')} type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&onGo(event.target.value)}/></label>
+      <button aria-label={t('dateControls.next')} title={t('dateControls.next')} onClick={()=>onGo(addLocalDays(date,1))}><ChevronRight size={18}/></button>
+      {!current&&<button className="today-button" onClick={()=>onGo(today())}>{t('dateControls.today')}</button>}
+      <button aria-label="Tùy chỉnh giao diện" title="Tùy chỉnh giao diện" onClick={onOpenTheme}><Palette size={18}/></button>
+    </div></header>
+    <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
+      <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div></section></>;
 }
 
 function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,onCategoryChange,onDelete,onMoveUp,onMoveDown,canMoveUp,canMoveDown}:{
@@ -224,7 +243,7 @@ function SaveIndicator({state,error,retry}:{state:SaveState;error:string|null;re
   if(state==='saved')return <span className="save-state saved">Đã lưu</span>;
   return <span className="save-state failed" title={error??undefined}>Lưu thất bại <button onClick={retry}>Thử lại</button></span>;
 }
-function Stat({label,value}:{label:string;value:number}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
+function Stat({label,value}:{label:string;value:string}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
 
 function HistoryPage(){
   const[items,setItems]=useState<DailyLogSummary[]>([]);

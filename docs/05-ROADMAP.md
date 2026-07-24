@@ -8,6 +8,7 @@
 
 - **Completed:** đã triển khai và nằm trong commit được xác minh gần nhất.
 - **In progress — uncommitted:** đã triển khai trong working tree nhưng chưa thuộc commit được xác minh.
+- **In progress — checkpoint complete:** ít nhất một checkpoint độc lập đã hoàn thành, nhưng feature chưa đạt toàn bộ acceptance criteria.
 - **Specified:** đặc tả đã có; chưa được coi là implementation hoàn thành.
 - **Planned:** chưa bắt đầu hoặc chưa có bằng chứng hoàn thành.
 - **Release gate:** chỉ thực hiện khi chuẩn bị phát hành, không phải development gate.
@@ -29,7 +30,8 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
 | Day Theme & Personalization | Specified | Tài liệu 17 đã có; không được suy ra là implementation đã hoàn thành |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
-| I18N-2 đến I18N-5 | Planned | Thực hiện theo task contract và checkpoint của quy trình mới |
+| I18N-2 | In progress — checkpoint 1 complete | App navigation và Today overview đã có resource/formatter/test cho `vi` và `en`; các checkpoint Today còn lại chưa triển khai |
+| I18N-3 đến I18N-5 | Planned | Thực hiện theo task contract và checkpoint của quy trình mới |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành

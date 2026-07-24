@@ -1,3 +1,6 @@
+import type {AppLocale} from '../domain/localization/locale';
+import {formatDate} from '../i18n/formatters';
+
 const DATE=/^(\d{4})-(\d{2})-(\d{2})$/;
 export function localDateKey(date=new Date()){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -12,6 +15,10 @@ export function isValidLocalDate(value:string){return parseLocalDate(value)!==nu
 export function addLocalDays(value:string,amount:number){
   const date=parseLocalDate(value);if(!date)throw new Error('Ngày không hợp lệ');
   date.setDate(date.getDate()+amount);return localDateKey(date);
+}
+export function formatLongLocalDate(value:string,locale:AppLocale){
+  const date=parseLocalDate(value);if(!date)throw new Error('Invalid local date');
+  return formatDate(date,locale,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 export function vietnameseDate(value:Date|string=new Date()){
   const date=typeof value==='string'?parseLocalDate(value):value;
