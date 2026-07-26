@@ -30,5 +30,10 @@ export default {
       update:'Couldn’t update the work category.',
       reorder:'Couldn’t change the category order.',
     },
+    backendErrors:{
+      nameInvalid:'Category names must contain {{min}}–{{max}} characters.',
+      colorInvalid:'Enter a valid hexadecimal category color.',
+      reorderInvalid:'The category order is invalid. Refresh and try again.',
+    },
   },
 } as const;

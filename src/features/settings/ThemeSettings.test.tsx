@@ -172,7 +172,7 @@ describe('I18N-3 Custom colors and floating customizer',()=>{
     const savingHtml=renderToStaticMarkup(<ThemeCustomizerContent controller={makeController(preferences,{saveState:'saving'})}/>);
     const savedHtml=renderToStaticMarkup(<ThemeCustomizerContent controller={makeController(preferences,{saveState:'saved'})}/>);
     const retryCallback=vi.fn(async()=>undefined);
-    const errorHtml=renderToStaticMarkup(<ThemeCustomizerContent controller={makeController(preferences,{saveState:'error',error:'failure',retry:retryCallback})}/>);
+    const errorHtml=renderToStaticMarkup(<ThemeCustomizerContent controller={makeController(preferences,{saveState:'error',error:{kind:'known',code:'theme.invalid',params:{}},retry:retryCallback})}/>);
     expect(savingHtml).toContain(saving);expect(savedHtml).toContain(saved);expect(errorHtml).toContain(error);expect(errorHtml).toContain(retry);
     expect(errorHtml).toContain('role="alert"');expect(retryCallback).not.toHaveBeenCalled();
   });

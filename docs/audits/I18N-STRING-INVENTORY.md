@@ -1,9 +1,10 @@
 # I18N string inventory
 
-Audit date: 2026-07-23  
-Scope: Sprint I18N-0, repository state `eb17d1d`.
-Checkpoint update: 2026-07-26 — I18N-4 checkpoint 1 localized Backup/Restore UI and native dialog
-presentation; structured backend errors and preview warnings remain open.
+Audit date: 2026-07-26
+Scope: I18N-4 checkpoint 2, baseline repository state `c0f56fd`.
+Checkpoint update: 2026-07-26 — I18N-4 checkpoint 2 localized all current Tauri error families,
+converted Backup preview warnings to structured payloads and added exhaustive `vi`/`en` mapping.
+Native Windows/accessibility regression remains open.
 
 ## Method and exclusions
 
@@ -34,7 +35,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 
 | Location | Current strings | Type | Translate | Proposed key(s) | Priority | Notes / risk |
 |---|---|---|---|---|---|---|
-| `src/app/App.tsx:47,77-78` | “Đã có lỗi xảy ra. Vui lòng thử lại.”; “Không thể lưu giao diện.”; reset-theme confirmation | ui / validation | Yes | `common.errors.generic`, `theme.errors.save`, `theme.confirmReset.title`, `theme.confirmReset.body` | P0 | Confirmation and thrown fallback currently share literal text. Copy review required; native visual review required for the dialog. |
+| `src/app/App.tsx` | Generic Tauri error, Theme save error; reset-theme confirmation | ui / validation | Completed for backend errors | `errors.messages.unknown`, `theme.backendErrors.*`, `theme.actions.resetConfirmation` | P0 | Structured payload is retained in state and localized during render. No backend message is rendered. Native visual review remains. |
 | `src/app/App.tsx:83-85` | “Hôm nay”; “Lịch sử”; “Cài đặt” | ui | Yes | `nav.today`, `nav.history`, `nav.settings` | P0 | Navigation labels and accessible names come from the same nodes. |
 | `src/app/App.tsx:132` | Delete-row confirmation | ui | Yes | `today.item.confirmDelete.title`, `today.item.confirmDelete.body` | P0 | Must preserve warning strength. Copy review required; native visual review required for the dialog. |
 | `src/app/App.tsx:146-148` | “Hôm nay”; “Nhật ký theo ngày”; page heading, motivation subtitle, old-day subtitle | ui | Yes | `today.eyebrow.today`, `today.eyebrow.archive`, `today.heading.prompt`, `today.subtitle.today`, `today.subtitle.past` | P0 | Motivation content should be resource data, not component literals. |
@@ -52,7 +53,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 
 | Location | Current strings | Type | Translate | Proposed key(s) | Priority | Notes / risk |
 |---|---|---|---|---|---|---|
-| `src/features/settings/CategorySettings.tsx:11-15` | Four category load/create/update/reorder errors | validation / ui | Yes | `settings.categories.errors.load`, `settings.categories.errors.invalid`, `settings.categories.errors.update`, `settings.categories.errors.reorder` | P0 | Frontend currently discards backend detail for these flows. |
+| `src/features/settings/CategorySettings.tsx` | Category load/create/update/reorder failures | validation / ui | Completed | `settings.categories.backendErrors.*`, `errors.messages.unknown` | P0 | Backend failures retain normalized structured payloads; local form validation remains localized separately. |
 | `src/features/settings/CategorySettings.tsx:16-19` | Heading/body; new-name/color/HEX labels; create; loading; per-category move/show/hide labels; visible/hidden; retry | ui / accessibility | Yes | `settings.categories.*`, `settings.categories.create.*`, `settings.categories.status.loading`, `settings.categories.item.*`, `common.actions.retry` | P0 | `${category.name}` is user data and is interpolation only. Copy review required for button labels and accessibility text; native visual review required. |
 | `src/domain/journal/categories.ts:4-5` | Category color/name schema validation | validation | Yes | `settings.categories.validation.colorHex`, `settings.categories.validation.nameRequired`, `settings.categories.validation.nameMax` | P1 | Zod schema currently owns Vietnamese messages; future schema should emit codes/metadata. |
 | `src/domain/journal/categories.ts:20-27` | Virtual name “Việc khác” | ui | Yes | `today.categories.other` | P0 | Must not be persisted as a category translation. |
@@ -67,10 +68,10 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 
 | Location | Current strings | Type | Translate | Proposed key(s) | Priority | Notes / risk |
 |---|---|---|---|---|---|---|
-| `src/features/backup/BackupSettings.tsx` | Generic fallback error | ui | Completed for checkpoint 1 | `errors.messages.unknown` | P0 | Unknown/untrusted failures use the localized safe fallback. Existing allow-listed safe backend messages remain visible until the structured error checkpoint; SQL/path-shaped unknown detail is not rendered. |
+| `src/features/backup/BackupSettings.tsx` | Known and generic backend failures | ui | Completed | `backup.backendErrors.*`, `errors.messages.unknown` | P0 | Known stable codes ignore compatibility messages. Unknown/malformed failures use localized safe fallback and never render raw code/message/SQL/path. |
 | `src/features/backup/BackupSettings.tsx` | Export and restore success summaries | ui | Completed | `backup.export.success`, `backup.import.success`, `backup.import.summary.remapped` | P0 | Counts use i18next plural forms and integer formatting; list order is locale-aware and the stable file name is interpolation. |
 | `src/features/backup/BackupSettings.tsx` | Heading/body/privacy warning; export/import actions; preparing/restoring; close | ui / accessibility | Completed | `backup.settings.*`, `backup.export.*`, `backup.import.*`, `backup.status.*`, `common.actions.close` | P0 | Visible labels, status live regions, region/dialog names and decorative icon semantics are localized. Native visual review remains required. |
-| `src/features/backup/BackupSettings.tsx` | Preview metadata/checksum/summaries; Merge/Replace; confirmations; apply theme; cancel/import | ui / validation / accessibility | Presentation completed | `backup.preview.*`, `backup.mode.*`, `backup.confirm.*`, `backup.options.*`, `common.actions.cancel` | P0 | Stable `merge`/`replace` values and confirmation behavior are unchanged. Backend `warnings: string[]` remain untranslated pending structured warning codes. |
+| `src/features/backup/BackupSettings.tsx` | Preview metadata/checksum/summaries; warnings; Merge/Replace; confirmations; apply theme; cancel/import | ui / validation / accessibility | Completed through checkpoint 2 | `backup.preview.*`, `backup.backendWarnings.*`, `backup.mode.*`, `backup.confirm.*`, `backup.options.*`, `common.actions.cancel` | P0 | Warnings are `{code, params}` and localized at render. Stable `merge`/`replace` values and confirmation behavior are unchanged. |
 | `src/features/backup/BackupSettings.tsx` | Export/import and prior-import timestamps | ui | Completed via formatter | `formatDateTime` policy | P0 | Uses the active locale with explicit `Intl` formatters; stored RFC3339 values are unchanged. |
 | `src/application/backup/backupRepository.ts`, `src/infrastructure/backup/tauriBackupRepository.ts` | Native Save/Open title and filter label | ui | Completed | `backup.dialog.exportTitle`, `backup.dialog.importTitle`, `backup.dialog.filterName` | P0 | A typed presentation object crosses the application/infrastructure boundary. Infrastructure imports neither React hooks nor a translator singleton; native Windows review remains required. |
 | `src/infrastructure/backup/tauriBackupRepository.ts` | `done-today-backup-<UTC stamp>.json` | file name | No | N/A | Stable ASCII filename, UTC compact stamp, `.json` extension and cancel behavior remain unchanged. |
@@ -87,19 +88,20 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 
 ## Rust/Tauri user-facing messages
 
-All entries below are returned through serialized `AppError { code, message }` or through
-`ImportPreview.warnings`; the frontend currently renders `message`/warning directly.
+Checkpoint 2 completed the entries below. Errors serialize as
+`AppError { code, params, message? }`; preview warnings serialize as `{code, params}`. The frontend
+never renders compatibility `message` or warning text from Rust.
 
 | Location | Current strings | Type | Translate | Proposed stable code(s) | Mapped frontend translation key(s) | Priority | Notes / risk |
 |---|---|---|---|---|---|---|---|
-| `src-tauri/src/lib.rs:62-82` | Not found; database unavailable | backend-user-facing | Yes, in frontend | `data.not_found`, `database.unavailable` | `errors.data.notFound`, `errors.database.unavailable` | P0 | Existing codes are `not_found` and `database`. SQLite detail is only logged in debug, which is good. |
-| `src-tauri/src/lib.rs:198-329` | Invalid/oversized/corrupt theme preferences; invalid/incomplete palette; invalid HEX; unsupported theme schema | backend-user-facing | Yes, in frontend | `theme.invalid`, `theme.too_large`, `theme.schema_unsupported`, `theme.palette_invalid`, `theme.palette_incomplete`, `theme.color_invalid`, `theme.stored_corrupt` | `theme.errors.invalid`, `theme.errors.tooLarge`, `theme.errors.schemaUnsupported`, `theme.errors.paletteInvalid`, `theme.errors.paletteIncomplete`, `theme.errors.colorInvalid`, `theme.errors.storedCorrupt` | P1 | Current code collapses all to `validation`; introduce specific codes incrementally. |
-| `src-tauri/src/lib.rs:411-430` | Invalid date; task/result/next-action length; invalid status | backend-user-facing | Yes, in frontend | `date.invalid`, `work_item.task_too_long`, `work_item.result_too_long`, `work_item.next_action_too_long`, `work_item.status_invalid` | `errors.date.invalid`, `today.errors.taskTooLong`, `today.errors.resultTooLong`, `today.errors.nextActionTooLong`, `today.errors.statusInvalid` | P0 | Length limits should be numeric params, not embedded localized digits. |
-| `src-tauri/src/lib.rs:560-747` | Category name/color invalid; category/item reorder invalid or empty; pagination invalid | backend-user-facing | Yes, in frontend | `category.name_invalid`, `category.color_invalid`, `category.reorder_invalid`, `work_item.reorder_empty`, `work_item.reorder_invalid`, `history.pagination_invalid` | `settings.categories.errors.nameInvalid`, `settings.categories.errors.colorInvalid`, `settings.categories.errors.reorderInvalid`, `today.errors.reorderEmpty`, `today.errors.reorderInvalid`, `history.errors.paginationInvalid` | P1 | Do not expose SQL or paths. |
-| `src-tauri/src/backup.rs:150-294` | Create/read/size/JSON/version/shape/date/timestamp/checksum/reference/duplicate validation errors | backend-user-facing | Yes, in frontend | `backup.create_failed`, `backup.file_read_failed`, `backup.file_too_large`, `backup.json_invalid`, `backup.version_missing`, `backup.version_newer`, `backup.version_unsupported`, `backup.structure_invalid`, `backup.format_invalid`, `backup.timestamp_invalid`, `backup.checksum_mismatch`, `backup.reference_invalid`, `backup.duplicate_id` | `backup.errors.createFailed`, `backup.errors.fileReadFailed`, `backup.errors.fileTooLarge`, `backup.errors.jsonInvalid`, `backup.errors.versionMissing`, `backup.errors.versionNewer`, `backup.errors.versionUnsupported`, `backup.errors.structureInvalid`, `backup.errors.formatInvalid`, `backup.errors.timestampInvalid`, `backup.errors.checksumMismatch`, `backup.errors.referenceInvalid`, `backup.errors.duplicateId` | P0 | Existing specific codes exist only for a subset. Add structured params such as `{maxMiB:20}`. |
-| `src-tauri/src/backup.rs:363-450` | Stored theme invalid; destination invalid; write/create failed | backend-user-facing | Yes, in frontend | `backup.theme_invalid`, `backup.destination_invalid`, `backup.file_write_failed`, `backup.create_failed` | `backup.errors.themeInvalid`, `backup.errors.destinationInvalid`, `backup.errors.fileWriteFailed`, `backup.errors.createFailed` | P0 | No absolute path is returned; preserve this behavior. |
-| `src-tauri/src/backup.rs:506-576` | Unsafe merge; missing mapping; app-version warning; previously-imported warning | backend-user-facing | Yes, in frontend | `backup.merge_unsafe`, `backup.mapping_missing`, `backup.warning.app_version`, `backup.warning.previously_imported` | `backup.errors.mergeUnsafe`, `backup.errors.mappingMissing`, `backup.warnings.appVersion`, `backup.warnings.previouslyImported` | P0 | Warnings should become `{code, params}` rather than localized strings. |
-| `src-tauri/src/backup.rs:685-732` | Reimport confirmation required; invalid theme; receipt write failed | backend-user-facing | Yes, in frontend | `backup.reimport_confirmation_required`, `backup.theme_invalid`, `backup.receipt_write_failed` | `backup.errors.reimportConfirmationRequired`, `backup.errors.themeInvalid`, `backup.errors.receiptWriteFailed` | P0 | Keep conflict semantics stable while changing presentation. |
+| `src-tauri/src/lib.rs` | Not found; database unavailable | backend-user-facing | Completed | `data.not_found`, `database.unavailable` | `errors.messages.dataNotFound`, `errors.messages.databaseUnavailable` | P0 | Old generic codes are removed. SQLite detail remains debug-only. |
+| `src-tauri/src/lib.rs` | Invalid/oversized/corrupt theme preferences; invalid/incomplete palette; invalid HEX; unsupported theme schema | backend-user-facing | Completed | `theme.invalid`, `theme.too_large`, `theme.schema_unsupported`, `theme.palette_invalid`, `theme.palette_incomplete`, `theme.color_invalid`, `theme.stored_corrupt` | `theme.backendErrors.*` | P1 | Specific codes are active; limits/schema versions use numeric params. |
+| `src-tauri/src/lib.rs` | Invalid date; task/result/next-action length; invalid status | backend-user-facing | Completed | `date.invalid`, `work_item.task_too_long`, `work_item.result_too_long`, `work_item.next_action_too_long`, `work_item.status_invalid` | `errors.messages.dateInvalid`, `today.backendErrors.*` | P0 | Length limits are numeric params. |
+| `src-tauri/src/lib.rs` | Category name/color invalid; category/item reorder invalid or empty; pagination invalid | backend-user-facing | Completed | `category.name_invalid`, `category.color_invalid`, `category.reorder_invalid`, `work_item.reorder_empty`, `work_item.reorder_invalid`, `history.pagination_invalid` | `settings.categories.backendErrors.*`, `today.backendErrors.*`, `history.backendErrors.paginationInvalid` | P1 | Structured errors expose no SQL or paths. |
+| `src-tauri/src/backup.rs` | Create/read/size/JSON/version/shape/date/timestamp/checksum/reference/duplicate validation errors | backend-user-facing | Completed | `backup.create_failed`, `backup.file_read_failed`, `backup.file_too_large`, `backup.json_invalid`, `backup.version_missing`, `backup.version_newer`, `backup.version_unsupported`, `backup.structure_invalid`, `backup.format_invalid`, `backup.timestamp_invalid`, `backup.checksum_mismatch`, `backup.reference_invalid`, `backup.duplicate_id` | `backup.backendErrors.*` | P0 | Active params include `{maxMiB:20}` and numeric version pairs. |
+| `src-tauri/src/backup.rs` | Stored theme invalid; destination invalid; write/create failed | backend-user-facing | Completed | `backup.theme_invalid`, `backup.destination_invalid`, `backup.file_write_failed`, `backup.create_failed` | `backup.backendErrors.*` | P0 | No absolute path is returned. |
+| `src-tauri/src/backup.rs` | Unsafe merge; missing mapping; app-version warning; previously-imported warning | backend-user-facing | Completed | `backup.merge_unsafe`, `backup.mapping_missing`, `backup.warning.app_version`, `backup.warning.previously_imported` | `backup.backendErrors.*`, `backup.backendWarnings.*` | P0 | Warnings are `{code, params}`; receipt/re-import behavior uses typed fields, not wording. |
+| `src-tauri/src/backup.rs` | Reimport confirmation required; invalid theme; receipt write failed | backend-user-facing | Completed | `backup.reimport_confirmation_required`, `backup.theme_invalid`, `backup.receipt_write_failed` | `backup.backendErrors.*` | P0 | Confirmation and receipt semantics are unchanged. |
 | `src-tauri/src/lib.rs:367-369` | Development seed journal content | user-data seed | No translation after persistence | N/A | N/A | P2 | Debug-only records become user data. New localized seeds are optional; never translate existing content. |
 | `src-tauri/src/lib.rs:384-386` | “Công việc cơ quan”; “Dự án cá nhân”; “Học tập” | user-data seed | Do not translate existing rows | Future `seed.category.*` only at creation | N/A | P1 | Editable and backed up. No bulk migration. See policy in spec 18. |
 
@@ -124,20 +126,12 @@ All entries below are returned through serialized `AppError { code, message }` o
 | `src/domain/backup/canonical.test.ts:10` | `toThrow(/mới hơn/)` | test-only | N/A | Assert stable error code/issue type. | P1 |
 | `src/shared/date.test.ts` | Local date mechanics only | test-only | No | Keep and add vi/en formatter matrix. | P1 |
 | Rust tests | Primarily assert stable error codes and data | test-only | No | Continue code assertions; add params and ensure fallback message contains no sensitive details. | P1 |
-| Current repository | No rendered React UI tests or snapshots | test-only | N/A | Add focused provider/formatter/component tests; avoid large localized snapshots. | P2 |
+| Current repository | Focused mapper, provider and rendered component tests | test-only | N/A | Keep focused semantic tests and avoid large localized snapshots. | P2 |
 
-## Approximate totals
+## Current checkpoint-2 result
 
-The source contains 117 frontend TS/TSX lines and 72 Rust lines with accented Vietnamese
-literals. After grouping interpolation variants and excluding tests/user-data seeds, the runtime
-migration surface is approximately:
-
-- 105–125 frontend visible/accessibility/validation messages;
-- 45–55 backend user-facing errors and warnings;
-- 6 theme preset names plus 6 descriptions;
-- 3 persisted category seed labels and 3 debug journal seed values that must be treated as user data;
-- 4 stable work-status values with 4 translated display labels;
-- 6 test assertions/fixtures directly coupled to Vietnamese text.
-
-Counts are deliberately approximate because one JSX line can contain many messages and a single
-message can serve visible text, `title` and `aria-label`.
+- 41 stable error codes and 2 stable warning codes are shared through the reviewed contract fixture.
+- No current Tauri command family relies on a raw backend message for frontend presentation.
+- Remaining Vietnamese Rust literals are editable category seed data, not UI/error copy, and are
+  intentionally outside translation/migration scope.
+- Native Windows and final accessibility regression remain manual I18N-4 work.

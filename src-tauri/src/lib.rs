@@ -2,6 +2,7 @@ use chrono::{NaiveDate, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -53,30 +54,141 @@ const THEME_COLOR_KEYS: [&str; 33] = [
     "statsPanelProgressFill",
 ];
 
+mod error_code {
+    pub const DATA_NOT_FOUND: &str = "data.not_found";
+    pub const DATABASE_UNAVAILABLE: &str = "database.unavailable";
+    pub const LOCALIZATION_UNSUPPORTED: &str = "localization.unsupported";
+    pub const DATE_INVALID: &str = "date.invalid";
+    pub const WORK_ITEM_TASK_TOO_LONG: &str = "work_item.task_too_long";
+    pub const WORK_ITEM_RESULT_TOO_LONG: &str = "work_item.result_too_long";
+    pub const WORK_ITEM_NEXT_ACTION_TOO_LONG: &str = "work_item.next_action_too_long";
+    pub const WORK_ITEM_STATUS_INVALID: &str = "work_item.status_invalid";
+    pub const WORK_ITEM_REORDER_EMPTY: &str = "work_item.reorder_empty";
+    pub const WORK_ITEM_REORDER_INVALID: &str = "work_item.reorder_invalid";
+    pub const CATEGORY_NAME_INVALID: &str = "category.name_invalid";
+    pub const CATEGORY_COLOR_INVALID: &str = "category.color_invalid";
+    pub const CATEGORY_REORDER_INVALID: &str = "category.reorder_invalid";
+    pub const HISTORY_PAGINATION_INVALID: &str = "history.pagination_invalid";
+    pub const THEME_INVALID: &str = "theme.invalid";
+    pub const THEME_TOO_LARGE: &str = "theme.too_large";
+    pub const THEME_SCHEMA_UNSUPPORTED: &str = "theme.schema_unsupported";
+    pub const THEME_PALETTE_INVALID: &str = "theme.palette_invalid";
+    pub const THEME_PALETTE_INCOMPLETE: &str = "theme.palette_incomplete";
+    pub const THEME_COLOR_INVALID: &str = "theme.color_invalid";
+    pub const THEME_STORED_CORRUPT: &str = "theme.stored_corrupt";
+    pub const BACKUP_CREATE_FAILED: &str = "backup.create_failed";
+    pub const BACKUP_FILE_READ_FAILED: &str = "backup.file_read_failed";
+    pub const BACKUP_FILE_TOO_LARGE: &str = "backup.file_too_large";
+    pub const BACKUP_JSON_INVALID: &str = "backup.json_invalid";
+    pub const BACKUP_VERSION_MISSING: &str = "backup.version_missing";
+    pub const BACKUP_VERSION_NEWER: &str = "backup.version_newer";
+    pub const BACKUP_VERSION_UNSUPPORTED: &str = "backup.version_unsupported";
+    pub const BACKUP_STRUCTURE_INVALID: &str = "backup.structure_invalid";
+    pub const BACKUP_FORMAT_INVALID: &str = "backup.format_invalid";
+    pub const BACKUP_TIMESTAMP_INVALID: &str = "backup.timestamp_invalid";
+    pub const BACKUP_CHECKSUM_MISMATCH: &str = "backup.checksum_mismatch";
+    pub const BACKUP_REFERENCE_INVALID: &str = "backup.reference_invalid";
+    pub const BACKUP_DUPLICATE_ID: &str = "backup.duplicate_id";
+    pub const BACKUP_THEME_INVALID: &str = "backup.theme_invalid";
+    pub const BACKUP_DESTINATION_INVALID: &str = "backup.destination_invalid";
+    pub const BACKUP_FILE_WRITE_FAILED: &str = "backup.file_write_failed";
+    pub const BACKUP_MERGE_UNSAFE: &str = "backup.merge_unsafe";
+    pub const BACKUP_MAPPING_MISSING: &str = "backup.mapping_missing";
+    pub const BACKUP_REIMPORT_CONFIRMATION_REQUIRED: &str = "backup.reimport_confirmation_required";
+    pub const BACKUP_RECEIPT_WRITE_FAILED: &str = "backup.receipt_write_failed";
+
+    #[cfg(test)]
+    pub const ALL: [&str; 41] = [
+        DATA_NOT_FOUND,
+        DATABASE_UNAVAILABLE,
+        LOCALIZATION_UNSUPPORTED,
+        DATE_INVALID,
+        WORK_ITEM_TASK_TOO_LONG,
+        WORK_ITEM_RESULT_TOO_LONG,
+        WORK_ITEM_NEXT_ACTION_TOO_LONG,
+        WORK_ITEM_STATUS_INVALID,
+        WORK_ITEM_REORDER_EMPTY,
+        WORK_ITEM_REORDER_INVALID,
+        CATEGORY_NAME_INVALID,
+        CATEGORY_COLOR_INVALID,
+        CATEGORY_REORDER_INVALID,
+        HISTORY_PAGINATION_INVALID,
+        THEME_INVALID,
+        THEME_TOO_LARGE,
+        THEME_SCHEMA_UNSUPPORTED,
+        THEME_PALETTE_INVALID,
+        THEME_PALETTE_INCOMPLETE,
+        THEME_COLOR_INVALID,
+        THEME_STORED_CORRUPT,
+        BACKUP_CREATE_FAILED,
+        BACKUP_FILE_READ_FAILED,
+        BACKUP_FILE_TOO_LARGE,
+        BACKUP_JSON_INVALID,
+        BACKUP_VERSION_MISSING,
+        BACKUP_VERSION_NEWER,
+        BACKUP_VERSION_UNSUPPORTED,
+        BACKUP_STRUCTURE_INVALID,
+        BACKUP_FORMAT_INVALID,
+        BACKUP_TIMESTAMP_INVALID,
+        BACKUP_CHECKSUM_MISMATCH,
+        BACKUP_REFERENCE_INVALID,
+        BACKUP_DUPLICATE_ID,
+        BACKUP_THEME_INVALID,
+        BACKUP_DESTINATION_INVALID,
+        BACKUP_FILE_WRITE_FAILED,
+        BACKUP_MERGE_UNSAFE,
+        BACKUP_MAPPING_MISSING,
+        BACKUP_REIMPORT_CONFIRMATION_REQUIRED,
+        BACKUP_RECEIPT_WRITE_FAILED,
+    ];
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+#[serde(untagged)]
+pub(crate) enum AppErrorParam {
+    String(String),
+    Number(i64),
+    Boolean(bool),
+}
+pub(crate) type AppErrorParams = BTreeMap<String, AppErrorParam>;
+
 #[derive(Debug, Serialize)]
 struct AppError {
     code: &'static str,
-    message: String,
+    params: AppErrorParams,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
 }
 type AppResult<T> = Result<T, AppError>;
 impl AppError {
-    fn validation(message: &str) -> Self {
+    pub(crate) fn new(code: &'static str) -> Self {
         Self {
-            code: "validation",
-            message: message.into(),
+            code,
+            params: BTreeMap::new(),
+            message: Some("The operation could not be completed.".into()),
         }
+    }
+    pub(crate) fn with_number(mut self, name: &str, value: i64) -> Self {
+        self.params
+            .insert(name.into(), AppErrorParam::Number(value));
+        self
+    }
+    pub(crate) fn with_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.params
+            .insert(name.into(), AppErrorParam::String(value.into()));
+        self
+    }
+    #[allow(dead_code)]
+    pub(crate) fn with_boolean(mut self, name: &str, value: bool) -> Self {
+        self.params
+            .insert(name.into(), AppErrorParam::Boolean(value));
+        self
     }
     fn not_found() -> Self {
-        Self {
-            code: "not_found",
-            message: "Không tìm thấy dữ liệu.".into(),
-        }
+        Self::new(error_code::DATA_NOT_FOUND)
     }
     fn database() -> Self {
-        Self {
-            code: "database",
-            message: "Không thể truy cập dữ liệu. Vui lòng thử lại.".into(),
-        }
+        Self::new(error_code::DATABASE_UNAVAILABLE)
     }
 }
 impl From<rusqlite::Error> for AppError {
@@ -195,16 +307,14 @@ fn apply_migration(transaction: &Transaction<'_>, version: i64, sql: &str) -> ru
 }
 
 fn validate_theme_preferences(value: &serde_json::Value) -> AppResult<()> {
-    let encoded = serde_json::to_string(value)
-        .map_err(|_| AppError::validation("Cấu hình giao diện không hợp lệ."))?;
+    let encoded =
+        serde_json::to_string(value).map_err(|_| AppError::new(error_code::THEME_INVALID))?;
     if encoded.len() > 16_384 {
-        return Err(AppError::validation(
-            "Cấu hình giao diện vượt quá giới hạn.",
-        ));
+        return Err(AppError::new(error_code::THEME_TOO_LARGE).with_number("maxKiB", 16));
     }
     let object = value
         .as_object()
-        .ok_or_else(|| AppError::validation("Cấu hình giao diện không hợp lệ."))?;
+        .ok_or_else(|| AppError::new(error_code::THEME_INVALID))?;
     const OUTER_KEYS: [&str; 6] = [
         "selectedPresetId",
         "lightColors",
@@ -213,14 +323,17 @@ fn validate_theme_preferences(value: &serde_json::Value) -> AppResult<()> {
         "updatedAt",
         "schemaVersion",
     ];
+    let schema_version = object
+        .get("schemaVersion")
+        .and_then(serde_json::Value::as_i64)
+        .ok_or_else(|| AppError::new(error_code::THEME_INVALID))?;
+    if !matches!(schema_version, 1 | 2) {
+        return Err(AppError::new(error_code::THEME_SCHEMA_UNSUPPORTED)
+            .with_number("version", schema_version)
+            .with_number("supportedVersion", 2));
+    }
     if object.len() != OUTER_KEYS.len()
         || !OUTER_KEYS.iter().all(|key| object.contains_key(*key))
-        || !matches!(
-            object
-                .get("schemaVersion")
-                .and_then(serde_json::Value::as_i64),
-            Some(1 | 2)
-        )
         || !matches!(object.get("selectedPresetId").and_then(serde_json::Value::as_str), Some(id) if !id.is_empty() && id.len() <= 40)
         || !matches!(
             object
@@ -230,20 +343,14 @@ fn validate_theme_preferences(value: &serde_json::Value) -> AppResult<()> {
         )
         || !matches!(object.get("updatedAt").and_then(serde_json::Value::as_str), Some(timestamp) if timestamp.len() <= 40 && chrono::DateTime::parse_from_rfc3339(timestamp).is_ok())
     {
-        return Err(AppError::validation(
-            "Phiên bản hoặc thuộc tính giao diện không hợp lệ.",
-        ));
+        return Err(AppError::new(error_code::THEME_INVALID));
     }
     for palette_name in ["lightColors", "darkColors"] {
         let palette = object
             .get(palette_name)
             .and_then(serde_json::Value::as_object)
-            .ok_or_else(|| AppError::validation("Bảng màu không hợp lệ."))?;
-        let version = object
-            .get("schemaVersion")
-            .and_then(serde_json::Value::as_i64)
-            .unwrap_or_default();
-        let required_keys = if version == 1 {
+            .ok_or_else(|| AppError::new(error_code::THEME_PALETTE_INVALID))?;
+        let required_keys = if schema_version == 1 {
             &THEME_COLOR_KEYS[..LEGACY_THEME_COLOR_COUNT]
         } else {
             &THEME_COLOR_KEYS[..]
@@ -251,20 +358,20 @@ fn validate_theme_preferences(value: &serde_json::Value) -> AppResult<()> {
         if palette.len() != required_keys.len()
             || !required_keys.iter().all(|key| palette.contains_key(*key))
         {
-            return Err(AppError::validation("Bảng màu không đầy đủ."));
+            return Err(AppError::new(error_code::THEME_PALETTE_INCOMPLETE));
         }
         for key in required_keys {
             let color = palette
                 .get(*key)
                 .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| AppError::validation("Bảng màu không đầy đủ."))?;
+                .ok_or_else(|| AppError::new(error_code::THEME_PALETTE_INCOMPLETE))?;
             if color.len() != 7
                 || !color.starts_with('#')
                 || !color[1..]
                     .chars()
                     .all(|character| character.is_ascii_hexdigit())
             {
-                return Err(AppError::validation("Màu giao diện phải dùng HEX #RRGGBB."));
+                return Err(AppError::new(error_code::THEME_COLOR_INVALID));
             }
         }
     }
@@ -283,7 +390,7 @@ fn upgrade_legacy_theme(value: &mut serde_json::Value) -> AppResult<bool> {
         let palette = value
             .get_mut(palette_name)
             .and_then(serde_json::Value::as_object_mut)
-            .ok_or_else(|| AppError::validation("Bảng màu không hợp lệ."))?;
+            .ok_or_else(|| AppError::new(error_code::THEME_PALETTE_INVALID))?;
         for (target, source) in [
             ("statsPanelBackground", "cardBackground"),
             ("statsPanelBorder", "border"),
@@ -295,7 +402,7 @@ fn upgrade_legacy_theme(value: &mut serde_json::Value) -> AppResult<bool> {
             let color = palette
                 .get(source)
                 .cloned()
-                .ok_or_else(|| AppError::validation("Bảng màu không đầy đủ."))?;
+                .ok_or_else(|| AppError::new(error_code::THEME_PALETTE_INCOMPLETE))?;
             palette.insert(target.into(), color);
         }
     }
@@ -306,8 +413,8 @@ fn upgrade_legacy_theme(value: &mut serde_json::Value) -> AppResult<bool> {
 
 fn save_theme(connection: &Connection, value: &serde_json::Value) -> AppResult<()> {
     validate_theme_preferences(value)?;
-    let encoded = serde_json::to_string(value)
-        .map_err(|_| AppError::validation("Cấu hình giao diện không hợp lệ."))?;
+    let encoded =
+        serde_json::to_string(value).map_err(|_| AppError::new(error_code::THEME_INVALID))?;
     connection.execute(
         "INSERT INTO app_settings (key,value,updated_at) VALUES (?1,?2,?3)
          ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
@@ -327,8 +434,9 @@ fn load_theme(connection: &Connection) -> AppResult<Option<serde_json::Value>> {
     encoded
         .map(|raw| {
             let mut value: serde_json::Value = serde_json::from_str(&raw)
-                .map_err(|_| AppError::validation("Cấu hình giao diện đã lưu bị hỏng."))?;
-            validate_theme_preferences(&value)?;
+                .map_err(|_| AppError::new(error_code::THEME_STORED_CORRUPT))?;
+            validate_theme_preferences(&value)
+                .map_err(|_| AppError::new(error_code::THEME_STORED_CORRUPT))?;
             if upgrade_legacy_theme(&mut value)? {
                 save_theme(connection, &value)?;
             }
@@ -349,7 +457,9 @@ fn load_locale(connection: &Connection) -> AppResult<Option<String>> {
 
 fn save_locale(connection: &Connection, locale: &str) -> AppResult<()> {
     if !matches!(locale, "vi" | "en") {
-        return Err(AppError::validation("Ngôn ngữ không được hỗ trợ."));
+        return Err(
+            AppError::new(error_code::LOCALIZATION_UNSUPPORTED).with_string("locale", locale)
+        );
     }
     connection.execute(
         "INSERT INTO app_settings (key,value,updated_at) VALUES (?1,?2,?3)
@@ -395,26 +505,22 @@ fn database_path(app: &tauri::AppHandle) -> AppResult<PathBuf> {
 fn validate_date(value: &str) -> AppResult<()> {
     NaiveDate::parse_from_str(value, "%Y-%m-%d")
         .map(|_| ())
-        .map_err(|_| AppError::validation("Ngày không hợp lệ."))
+        .map_err(|_| AppError::new(error_code::DATE_INVALID))
 }
 fn validate_text(input: &UpdateWorkItem) -> AppResult<()> {
     if input.task.chars().count() > 500 {
-        return Err(AppError::validation(
-            "Việc đã làm không được vượt quá 500 ký tự.",
-        ));
+        return Err(AppError::new(error_code::WORK_ITEM_TASK_TOO_LONG).with_number("max", 500));
     }
     if input.result.chars().count() > 2_000 {
-        return Err(AppError::validation(
-            "Kết quả không được vượt quá 2.000 ký tự.",
-        ));
+        return Err(AppError::new(error_code::WORK_ITEM_RESULT_TOO_LONG).with_number("max", 2_000));
     }
     if input.next_action.chars().count() > 1_000 {
-        return Err(AppError::validation(
-            "Bước tiếp theo không được vượt quá 1.000 ký tự.",
-        ));
+        return Err(
+            AppError::new(error_code::WORK_ITEM_NEXT_ACTION_TOO_LONG).with_number("max", 1_000)
+        );
     }
     if !STATUSES.contains(&input.status.as_str()) {
-        return Err(AppError::validation("Trạng thái không hợp lệ."));
+        return Err(AppError::new(error_code::WORK_ITEM_STATUS_INVALID));
     }
     Ok(())
 }
@@ -544,13 +650,15 @@ fn delete_item(connection: &Connection, id: &str) -> AppResult<()> {
 fn validate_category(name: &str, color: &str) -> AppResult<(String, String)> {
     let name = name.trim().to_string();
     if name.is_empty() || name.chars().count() > 100 {
-        return Err(AppError::validation("Tên nhóm phải có từ 1 đến 100 ký tự."));
+        return Err(AppError::new(error_code::CATEGORY_NAME_INVALID)
+            .with_number("min", 1)
+            .with_number("max", 100));
     }
     if color.len() != 7
         || !color.starts_with('#')
         || !color[1..].chars().all(|c| c.is_ascii_hexdigit())
     {
-        return Err(AppError::validation("Màu nhóm phải dùng HEX #RRGGBB."));
+        return Err(AppError::new(error_code::CATEGORY_COLOR_INVALID));
     }
     Ok((name, color.to_uppercase()))
 }
@@ -636,7 +744,7 @@ fn reorder_category_records(
     supplied.sort();
     supplied.dedup();
     if existing != supplied {
-        return Err(AppError::validation("Danh sách sắp xếp nhóm không hợp lệ."));
+        return Err(AppError::new(error_code::CATEGORY_REORDER_INVALID));
     }
     for (position, id) in ids.iter().enumerate() {
         transaction.execute(
@@ -686,9 +794,7 @@ fn reorder_items(
 ) -> AppResult<Vec<WorkItem>> {
     let transaction = connection.transaction()?;
     if ids.is_empty() {
-        return Err(AppError::validation(
-            "Danh sách sắp xếp không được để trống.",
-        ));
+        return Err(AppError::new(error_code::WORK_ITEM_REORDER_EMPTY));
     }
     let (category_id, completed): (Option<String>, bool) = transaction
         .query_row(
@@ -713,7 +819,7 @@ fn reorder_items(
     supplied.sort();
     supplied.dedup();
     if supplied != expected {
-        return Err(AppError::validation("Danh sách sắp xếp không hợp lệ."));
+        return Err(AppError::new(error_code::WORK_ITEM_REORDER_INVALID));
     }
     for (position, id) in ids.iter().enumerate() {
         transaction.execute(
@@ -731,7 +837,7 @@ fn reorder_items(
 }
 fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResult<HistoryPage> {
     if page < 1 || !(1..=100).contains(&page_size) {
-        return Err(AppError::validation("Thông tin phân trang không hợp lệ."));
+        return Err(AppError::new(error_code::HISTORY_PAGINATION_INVALID));
     }
     let offset = (page - 1) * page_size;
     let mut statement = connection.prepare(
@@ -986,6 +1092,35 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[derive(Deserialize)]
+    struct ErrorCodeContract {
+        errors: Vec<String>,
+        warnings: Vec<String>,
+    }
+
+    #[test]
+    fn structured_error_contract_matches_shared_code_matrix() {
+        let contract: ErrorCodeContract =
+            serde_json::from_str(include_str!("../../contracts/app-error-codes.json")).unwrap();
+        assert_eq!(contract.errors, error_code::ALL);
+        assert_eq!(contract.warnings, backup::warning_code::ALL);
+    }
+
+    #[test]
+    fn app_error_serializes_scalar_params_without_internal_details() {
+        let error = AppError::new(error_code::WORK_ITEM_TASK_TOO_LONG)
+            .with_number("max", 500)
+            .with_boolean("retryable", false);
+        let value = serde_json::to_value(error).unwrap();
+        assert_eq!(value["code"], error_code::WORK_ITEM_TASK_TOO_LONG);
+        assert_eq!(value["params"]["max"], 500);
+        assert_eq!(value["params"]["retryable"], false);
+        let encoded = value.to_string().to_lowercase();
+        for unsafe_fragment in ["sqlite", "select ", "c:\\", "stack"] {
+            assert!(!encoded.contains(unsafe_fragment));
+        }
+    }
+
     fn theme_value() -> serde_json::Value {
         let colors = serde_json::json!({
             "pageBackground":"#FAFAF7","sidebarBackground":"#1F3A2E","sidebarActiveBackground":"#2D5240",
@@ -1051,7 +1186,12 @@ mod tests {
         assert_eq!(load_locale(&db).unwrap(), None);
         save_locale(&db, "en").unwrap();
         assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
-        assert!(save_locale(&db, "fr").is_err());
+        let error = save_locale(&db, "fr").unwrap_err();
+        assert_eq!(error.code, error_code::LOCALIZATION_UNSUPPORTED);
+        assert_eq!(
+            error.params.get("locale"),
+            Some(&AppErrorParam::String("fr".into()))
+        );
         assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
     }
     #[test]
@@ -1140,7 +1280,10 @@ mod tests {
         create_item(&mut db, "2026-07-19", None).unwrap();
         let mut value = theme_value();
         value["lightColors"]["accent"] = serde_json::json!("var(--evil)");
-        assert_eq!(save_theme(&db, &value).unwrap_err().code, "validation");
+        assert_eq!(
+            save_theme(&db, &value).unwrap_err().code,
+            error_code::THEME_COLOR_INVALID
+        );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM work_items", [], |row| row
                 .get::<_, i64>(0))
@@ -1169,10 +1312,10 @@ mod tests {
             4
         );
         let error: AppError = rusqlite::Error::InvalidQuery.into();
-        assert!(!error.message.to_lowercase().contains("sqlite"));
-        assert!(!error
-            .message
-            .contains(file.path().to_string_lossy().as_ref()));
+        assert_eq!(error.code, error_code::DATABASE_UNAVAILABLE);
+        let message = error.message.as_deref().unwrap_or_default();
+        assert!(!message.to_lowercase().contains("sqlite"));
+        assert!(!message.contains(file.path().to_string_lossy().as_ref()));
     }
     #[test]
     fn creates_log_once_and_default_item_at_end() {
@@ -1206,13 +1349,13 @@ mod tests {
             update_item(&db, update(&item.id, "x", "wrong"))
                 .unwrap_err()
                 .code,
-            "validation"
+            error_code::WORK_ITEM_STATUS_INVALID
         );
         assert_eq!(
             update_item(&db, update(&item.id, &"x".repeat(501), "completed"))
                 .unwrap_err()
                 .code,
-            "validation"
+            error_code::WORK_ITEM_TASK_TOO_LONG
         );
     }
     #[test]
@@ -1220,6 +1363,10 @@ mod tests {
         let mut db = memory();
         let item = create_item(&mut db, "2026-07-18", None).unwrap();
         delete_item(&db, &item.id).unwrap();
+        assert_eq!(
+            delete_item(&db, &item.id).unwrap_err().code,
+            error_code::DATA_NOT_FOUND
+        );
         assert!(find_daily_log(&db, "2026-07-18")
             .unwrap()
             .unwrap()
@@ -1250,12 +1397,22 @@ mod tests {
         let mut db = memory();
         let items = create_three(&mut db, "2026-07-18");
         let before = find_daily_log(&db, "2026-07-18").unwrap().unwrap().items;
-        assert!(reorder_items(
-            &mut db,
-            &items[0].daily_log_id,
-            &[items[0].id.clone(), "missing".into()]
-        )
-        .is_err());
+        assert_eq!(
+            reorder_items(&mut db, &items[0].daily_log_id, &[])
+                .unwrap_err()
+                .code,
+            error_code::WORK_ITEM_REORDER_EMPTY
+        );
+        assert_eq!(
+            reorder_items(
+                &mut db,
+                &items[0].daily_log_id,
+                &[items[0].id.clone(), "missing".into()]
+            )
+            .unwrap_err()
+            .code,
+            error_code::WORK_ITEM_REORDER_INVALID
+        );
         let after = find_daily_log(&db, "2026-07-18").unwrap().unwrap().items;
         assert_eq!(
             before.iter().map(|i| &i.id).collect::<Vec<_>>(),
@@ -1292,7 +1449,10 @@ mod tests {
         ensure_daily_log(&tx, "2026-07-18").unwrap();
         tx.commit().unwrap();
         assert!(list_summaries(&db, 1, 20).unwrap().items.is_empty());
-        assert_eq!(list_summaries(&db, 1, 101).unwrap_err().code, "validation");
+        assert_eq!(
+            list_summaries(&db, 1, 101).unwrap_err().code,
+            error_code::HISTORY_PAGINATION_INVALID
+        );
     }
     #[test]
     fn history_reflects_crud() {
@@ -1311,9 +1471,12 @@ mod tests {
         let mut db = memory();
         assert_eq!(
             create_item(&mut db, "2026-02-31", None).unwrap_err().code,
-            "validation"
+            error_code::DATE_INVALID
         );
-        assert_eq!(find_daily_log(&db, "bad").unwrap_err().code, "validation");
+        assert_eq!(
+            find_daily_log(&db, "bad").unwrap_err().code,
+            error_code::DATE_INVALID
+        );
     }
     #[test]
     fn normal_startup_does_not_seed_journal_data() {
@@ -1466,7 +1629,7 @@ mod tests {
             )
             .unwrap_err()
             .code,
-            "validation"
+            error_code::CATEGORY_NAME_INVALID
         );
         assert_eq!(
             create_category_record(
@@ -1478,7 +1641,41 @@ mod tests {
             )
             .unwrap_err()
             .code,
-            "validation"
+            error_code::CATEGORY_COLOR_INVALID
+        );
+        let mut db = memory();
+        seed_categories(&mut db).unwrap();
+        let first_id = list_categories(&db, true).unwrap()[0].id.clone();
+        assert_eq!(
+            reorder_category_records(&mut db, &[first_id])
+                .unwrap_err()
+                .code,
+            error_code::CATEGORY_REORDER_INVALID
+        );
+    }
+
+    #[test]
+    fn theme_limit_and_schema_errors_include_numeric_params() {
+        let mut unsupported = theme_value();
+        unsupported["schemaVersion"] = 3.into();
+        let schema_error = validate_theme_preferences(&unsupported).unwrap_err();
+        assert_eq!(schema_error.code, error_code::THEME_SCHEMA_UNSUPPORTED);
+        assert_eq!(
+            schema_error.params.get("version"),
+            Some(&AppErrorParam::Number(3))
+        );
+        assert_eq!(
+            schema_error.params.get("supportedVersion"),
+            Some(&AppErrorParam::Number(2))
+        );
+
+        let mut oversized = theme_value();
+        oversized["selectedPresetId"] = "x".repeat(17_000).into();
+        let size_error = validate_theme_preferences(&oversized).unwrap_err();
+        assert_eq!(size_error.code, error_code::THEME_TOO_LARGE);
+        assert_eq!(
+            size_error.params.get("maxKiB"),
+            Some(&AppErrorParam::Number(16))
         );
     }
     #[test]

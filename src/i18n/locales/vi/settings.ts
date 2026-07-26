@@ -30,5 +30,10 @@ export default {
       update:'Không thể cập nhật nhóm công việc.',
       reorder:'Không thể thay đổi thứ tự nhóm.',
     },
+    backendErrors:{
+      nameInvalid:'Tên danh mục phải có từ {{min}} đến {{max}} ký tự.',
+      colorInvalid:'Hãy nhập màu danh mục ở định dạng mã hex hợp lệ.',
+      reorderInvalid:'Thứ tự danh mục không hợp lệ. Hãy tải lại và thử lại.',
+    },
   },
 } as const;

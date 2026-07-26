@@ -2,16 +2,20 @@
 import{useEffect,useState}from'react';
 import{useTranslation}from'react-i18next';
 import{ChevronDown,ChevronUp,Eye,EyeOff,LoaderCircle,Plus}from'lucide-react';
+import{normalizeAppError}from'../../application/errors/errorNormalizer';
+import type{NormalizedAppError}from'../../domain/errors/appError';
 import{categoryInputSchema,type WorkCategory}from'../../domain/journal/categories';
 import{normalizeHexColor}from'../../domain/theme/colors';
 import{JournalService}from'../../application/journal/journalService';
+import{localizeAppError,toErrorTranslator}from'../../i18n/errorPresentation';
 
 type CategoryService=Pick<JournalService,'listCategories'|'createCategory'|'updateCategory'|'reorderCategories'>;
 export type CategorySettingsError='load'|'invalid'|'update'|'reorder'|'nameRequired'|'nameMax'|'colorHex';
+type CategorySettingsFailure=CategorySettingsError|NormalizedAppError;
 type CategoryRetryAction={kind:'load'}|{kind:'create'}|{kind:'update';id:string}|null;
 type CategoryPatch=Partial<Pick<WorkCategory,'name'|'color'|'isActive'>>;
 export type CategorySettingsViewProps={
-  categories:WorkCategory[];loading:boolean;error:CategorySettingsError|null;name:string;color:string;
+  categories:WorkCategory[];loading:boolean;error:CategorySettingsFailure|null;name:string;color:string;
   onNameChange:(value:string)=>void;onColorChange:(value:string)=>void;onHexChange:(value:string)=>void;
   onCreate:()=>void;onEdit:(category:WorkCategory,patch:CategoryPatch)=>void;
   onSave:(category:WorkCategory,patch:CategoryPatch)=>void;onMove:(index:number,direction:-1|1)=>void;onRetry:()=>void;
@@ -19,13 +23,15 @@ export type CategorySettingsViewProps={
 
 export function CategorySettingsView({categories,loading,error,name,color,onNameChange,onColorChange,onHexChange,onCreate,onEdit,onSave,onMove,onRetry}:CategorySettingsViewProps){
   const{t}=useTranslation('settings');
+  const{t:tErrors}=useTranslation('errors');
   const errorMessage=error==='load'?t('categories.errors.load'):
     error==='invalid'?t('categories.errors.invalid'):
     error==='update'?t('categories.errors.update'):
     error==='reorder'?t('categories.errors.reorder'):
     error==='nameRequired'?t('categories.validation.nameRequired'):
     error==='nameMax'?t('categories.validation.nameMax'):
-    error==='colorHex'?t('categories.validation.colorHex'):null;
+    error==='colorHex'?t('categories.validation.colorHex'):
+    error&&typeof error==='object'?localizeAppError(error,toErrorTranslator(tErrors)):null;
   const errorDescription=error==='nameRequired'||error==='nameMax'||error==='colorHex'?'category-settings-error':undefined;
   return <section className="settings-card category-settings" aria-labelledby="work-categories-heading">
     <h2 id="work-categories-heading">{t('categories.heading.title')}</h2><p>{t('categories.heading.description')}</p>
@@ -71,23 +77,23 @@ export async function reorderCategories(service:CategoryService,categories:WorkC
 }
 
 export function CategorySettings({service}:{service:CategoryService}){
-  const[categories,setCategories]=useState<WorkCategory[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState<CategorySettingsError|null>(null);
+  const[categories,setCategories]=useState<WorkCategory[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState<CategorySettingsFailure|null>(null);
   const[retryAction,setRetryAction]=useState<CategoryRetryAction>(null);
   const[name,setName]=useState('');const[color,setColor]=useState('#4F7CAC');
-  const load=async()=>{setLoading(true);try{setCategories(await service.listCategories(true));setError(null);setRetryAction(null)}catch{setError('load');setRetryAction({kind:'load'})}finally{setLoading(false)}};
+  const load=async()=>{setLoading(true);try{setCategories(await service.listCategories(true));setError(null);setRetryAction(null)}catch(reason){setError(normalizeAppError(reason));setRetryAction({kind:'load'})}finally{setLoading(false)}};
   useEffect(()=>{void load()},[]);
-  const create=async()=>{const validation=validateCategoryValues(name,color);if(validation){setError(validation);setRetryAction({kind:'create'});return}try{const created=await createCategory(service,name,color);setCategories(current=>[...current,created]);setName('');setError(null);setRetryAction(null)}catch{setError('invalid');setRetryAction({kind:'create'})}};
+  const create=async()=>{const validation=validateCategoryValues(name,color);if(validation){setError(validation);setRetryAction({kind:'create'});return}try{const created=await createCategory(service,name,color);setCategories(current=>[...current,created]);setName('');setError(null);setRetryAction(null)}catch(reason){setError(normalizeAppError(reason));setRetryAction({kind:'create'})}};
   const save=async(category:WorkCategory,patch:CategoryPatch)=>{
     const next=applyCategoryPatch(category,patch);const validation=validateCategoryValues(next.name,next.color);if(validation){setError(validation);setRetryAction({kind:'update',id:category.id});return}
     setCategories(current=>current.map(value=>value.id===category.id?applyCategoryPatch(value,patch):value));
     try{const saved=await updateCategory(service,category,patch);setCategories(current=>current.map(value=>value.id===saved.id?saved:value));setError(null);setRetryAction(null)}
-    catch{setError('update');setRetryAction({kind:'update',id:category.id})}
+    catch(reason){setError(normalizeAppError(reason));setRetryAction({kind:'update',id:category.id})}
   };
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;if(target<0||target>=categories.length)return;
     const optimistic=[...categories];[optimistic[index],optimistic[target]]=[optimistic[target],optimistic[index]];setCategories(optimistic);
     try{const result=await reorderCategories(service,categories,index,direction);if(result)setCategories(result.saved);setError(null)}
-    catch{setError('reorder');void load()}
+    catch(reason){const failure=normalizeAppError(reason);void load().finally(()=>setError(failure))}
   };
   const retry=()=>{if(retryAction?.kind==='create'){void create();return}if(retryAction?.kind==='update'){
     const current=categories.find(category=>category.id===retryAction.id);if(current){void save(current,{});return}

@@ -1,0 +1,61 @@
+export const appErrorCodes = [
+  'data.not_found',
+  'database.unavailable',
+  'localization.unsupported',
+  'date.invalid',
+  'work_item.task_too_long',
+  'work_item.result_too_long',
+  'work_item.next_action_too_long',
+  'work_item.status_invalid',
+  'work_item.reorder_empty',
+  'work_item.reorder_invalid',
+  'category.name_invalid',
+  'category.color_invalid',
+  'category.reorder_invalid',
+  'history.pagination_invalid',
+  'theme.invalid',
+  'theme.too_large',
+  'theme.schema_unsupported',
+  'theme.palette_invalid',
+  'theme.palette_incomplete',
+  'theme.color_invalid',
+  'theme.stored_corrupt',
+  'backup.create_failed',
+  'backup.file_read_failed',
+  'backup.file_too_large',
+  'backup.json_invalid',
+  'backup.version_missing',
+  'backup.version_newer',
+  'backup.version_unsupported',
+  'backup.structure_invalid',
+  'backup.format_invalid',
+  'backup.timestamp_invalid',
+  'backup.checksum_mismatch',
+  'backup.reference_invalid',
+  'backup.duplicate_id',
+  'backup.theme_invalid',
+  'backup.destination_invalid',
+  'backup.file_write_failed',
+  'backup.merge_unsafe',
+  'backup.mapping_missing',
+  'backup.reimport_confirmation_required',
+  'backup.receipt_write_failed',
+] as const;
+
+export const appWarningCodes = [
+  'backup.warning.app_version',
+  'backup.warning.previously_imported',
+] as const;
+
+export type AppErrorCode = (typeof appErrorCodes)[number];
+export type AppWarningCode = (typeof appWarningCodes)[number];
+export type AppErrorParam = string | number | boolean;
+export type AppErrorParams = Readonly<Record<string, AppErrorParam>>;
+
+export type NormalizedAppError =
+  | {kind: 'known'; code: AppErrorCode; params: AppErrorParams}
+  | {kind: 'unknown'};
+
+export type NormalizedAppWarning =
+  | {kind: 'known'; code: AppWarningCode; params: AppErrorParams}
+  | {kind: 'unknown'};

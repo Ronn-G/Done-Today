@@ -1,10 +1,13 @@
-use crate::{validate_theme_preferences, AppError, AppResult, STATUSES, THEME_KEY};
+use crate::{
+    error_code, validate_theme_preferences, AppError, AppErrorParam, AppErrorParams, AppResult,
+    STATUSES, THEME_KEY,
+};
 use chrono::{DateTime, NaiveDate, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs::{self, File, OpenOptions},
     io::{Read, Write},
     path::Path,
@@ -14,6 +17,13 @@ use uuid::Uuid;
 const FORMAT: &str = "done-today-backup";
 const VERSION: i64 = 1;
 const MAX_FILE_SIZE: u64 = 20 * 1024 * 1024;
+
+pub(crate) mod warning_code {
+    pub const APP_VERSION: &str = "backup.warning.app_version";
+    pub const PREVIOUSLY_IMPORTED: &str = "backup.warning.previously_imported";
+    #[cfg(test)]
+    pub const ALL: [&str; 2] = [APP_VERSION, PREVIOUSLY_IMPORTED];
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -96,7 +106,7 @@ pub struct ImportPreview {
     conflicts: usize,
     unchanged: usize,
     previously_imported_at: Option<String>,
-    warnings: Vec<String>,
+    warnings: Vec<AppWarning>,
 }
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -121,10 +131,22 @@ struct Plan {
     category_map: HashMap<String, String>,
 }
 
-fn error(code: &'static str, message: &str) -> AppError {
-    AppError {
-        code,
-        message: message.into(),
+#[derive(Debug, Serialize)]
+struct AppWarning {
+    code: &'static str,
+    params: AppErrorParams,
+}
+impl AppWarning {
+    fn new(code: &'static str) -> Self {
+        Self {
+            code,
+            params: BTreeMap::new(),
+        }
+    }
+    fn with_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.params
+            .insert(name.into(), AppErrorParam::String(value.into()));
+        self
     }
 }
 fn counts(payload: &BackupPayloadV1) -> BackupCounts {
@@ -147,8 +169,8 @@ fn canonical_payload(payload: &BackupPayloadV1) -> AppResult<String> {
         .work_categories
         .sort_by(|a, b| (a.position, &a.id).cmp(&(b.position, &b.id)));
     let value = serde_json::to_value(&normalized)
-        .map_err(|_| error("unknown", "Không thể tạo bản sao lưu."))?;
-    serde_json::to_string(&value).map_err(|_| error("unknown", "Không thể tạo bản sao lưu."))
+        .map_err(|_| AppError::new(error_code::BACKUP_CREATE_FAILED))?;
+    serde_json::to_string(&value).map_err(|_| AppError::new(error_code::BACKUP_CREATE_FAILED))
 }
 fn checksum(payload: &BackupPayloadV1) -> AppResult<String> {
     Ok(format!(
@@ -164,19 +186,17 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
     let mut dates = HashSet::new();
     for log in &payload.daily_logs {
         if log.id.trim().is_empty() || !ids.insert(log.id.as_str()) {
-            return Err(AppError::validation("ID ngày bị trống hoặc trùng."));
+            return Err(AppError::new(error_code::BACKUP_DUPLICATE_ID));
         }
         let parsed = NaiveDate::parse_from_str(&log.log_date, "%Y-%m-%d")
-            .map_err(|_| AppError::validation("Ngày trong bản sao lưu không hợp lệ."))?;
+            .map_err(|_| AppError::new(error_code::BACKUP_STRUCTURE_INVALID))?;
         if parsed.format("%Y-%m-%d").to_string() != log.log_date
             || !dates.insert(log.log_date.as_str())
         {
-            return Err(AppError::validation(
-                "Ngày trong bản sao lưu bị trùng hoặc không hợp lệ.",
-            ));
+            return Err(AppError::new(error_code::BACKUP_DUPLICATE_ID));
         }
         if !valid_timestamp(&log.created_at) || !valid_timestamp(&log.updated_at) {
-            return Err(AppError::validation("Mốc thời gian không hợp lệ."));
+            return Err(AppError::new(error_code::BACKUP_TIMESTAMP_INVALID));
         }
     }
     let log_ids: HashSet<_> = payload
@@ -187,10 +207,10 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
     ids.clear();
     for category in &payload.work_categories {
         if category.id.trim().is_empty() || !ids.insert(category.id.as_str()) {
-            return Err(AppError::validation("ID nhóm bị trống hoặc trùng."));
+            return Err(AppError::new(error_code::BACKUP_DUPLICATE_ID));
         }
         if category.name.trim().is_empty() || category.name.chars().count() > 80 {
-            return Err(AppError::validation("Tên nhóm không hợp lệ."));
+            return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
         }
         if category.color.len() != 7
             || !category.color.starts_with('#')
@@ -198,13 +218,13 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
                 .chars()
                 .all(|value| value.is_ascii_hexdigit())
         {
-            return Err(AppError::validation("Màu nhóm phải có dạng #RRGGBB."));
+            return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
         }
         if category.position < 0
             || !valid_timestamp(&category.created_at)
             || !valid_timestamp(&category.updated_at)
         {
-            return Err(AppError::validation("Dữ liệu nhóm không hợp lệ."));
+            return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
         }
     }
     let category_ids: HashSet<_> = payload
@@ -215,21 +235,17 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
     ids.clear();
     for item in &payload.work_items {
         if item.id.trim().is_empty() || !ids.insert(item.id.as_str()) {
-            return Err(AppError::validation("ID công việc bị trống hoặc trùng."));
+            return Err(AppError::new(error_code::BACKUP_DUPLICATE_ID));
         }
         if !log_ids.contains(item.daily_log_id.as_str()) {
-            return Err(AppError::validation(
-                "Công việc tham chiếu đến ngày không tồn tại.",
-            ));
+            return Err(AppError::new(error_code::BACKUP_REFERENCE_INVALID));
         }
         if item
             .category_id
             .as_deref()
             .is_some_and(|id| !category_ids.contains(id))
         {
-            return Err(AppError::validation(
-                "Công việc tham chiếu đến nhóm không tồn tại.",
-            ));
+            return Err(AppError::new(error_code::BACKUP_REFERENCE_INVALID));
         }
         if !STATUSES.contains(&item.status.as_str())
             || item.position < 0
@@ -239,60 +255,53 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
             || !valid_timestamp(&item.created_at)
             || !valid_timestamp(&item.updated_at)
         {
-            return Err(AppError::validation("Dữ liệu công việc không hợp lệ."));
+            return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
         }
     }
     if let Some(theme) = &payload.theme_preferences {
-        validate_theme_preferences(theme)?;
+        validate_theme_preferences(theme)
+            .map_err(|_| AppError::new(error_code::BACKUP_THEME_INVALID))?;
     }
     Ok(())
 }
 fn read(path: &Path) -> AppResult<BackupEnvelopeV1> {
     let metadata =
-        fs::metadata(path).map_err(|_| error("file_read", "Không thể đọc file sao lưu."))?;
+        fs::metadata(path).map_err(|_| AppError::new(error_code::BACKUP_FILE_READ_FAILED))?;
     if metadata.len() > MAX_FILE_SIZE {
-        return Err(error(
-            "file_too_large",
-            "File sao lưu lớn hơn giới hạn 20 MiB.",
-        ));
+        return Err(AppError::new(error_code::BACKUP_FILE_TOO_LARGE).with_number("maxMiB", 20));
     }
-    let file = File::open(path).map_err(|_| error("file_read", "Không thể đọc file sao lưu."))?;
+    let file = File::open(path).map_err(|_| AppError::new(error_code::BACKUP_FILE_READ_FAILED))?;
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
     file.take(MAX_FILE_SIZE + 1)
         .read_to_end(&mut bytes)
-        .map_err(|_| error("file_read", "Không thể đọc file sao lưu."))?;
+        .map_err(|_| AppError::new(error_code::BACKUP_FILE_READ_FAILED))?;
     let value: serde_json::Value = serde_json::from_slice(&bytes)
-        .map_err(|_| AppError::validation("File không phải JSON hợp lệ."))?;
+        .map_err(|_| AppError::new(error_code::BACKUP_JSON_INVALID))?;
     let version = value
         .get("version")
         .and_then(serde_json::Value::as_i64)
-        .ok_or_else(|| AppError::validation("Thiếu phiên bản bản sao lưu."))?;
+        .ok_or_else(|| AppError::new(error_code::BACKUP_VERSION_MISSING))?;
     if version > VERSION {
-        return Err(error(
-            "unsupported_version",
-            "Bản sao lưu được tạo bởi phiên bản mới hơn của Done Today.",
-        ));
+        return Err(AppError::new(error_code::BACKUP_VERSION_NEWER)
+            .with_number("version", version)
+            .with_number("supportedVersion", VERSION));
     }
     if version < VERSION {
-        return Err(error(
-            "unsupported_version",
-            "Phiên bản bản sao lưu không được hỗ trợ.",
-        ));
+        return Err(AppError::new(error_code::BACKUP_VERSION_UNSUPPORTED)
+            .with_number("version", version)
+            .with_number("supportedVersion", VERSION));
     }
     let envelope: BackupEnvelopeV1 = serde_json::from_value(value)
-        .map_err(|_| AppError::validation("Cấu trúc bản sao lưu không hợp lệ."))?;
+        .map_err(|_| AppError::new(error_code::BACKUP_STRUCTURE_INVALID))?;
     if envelope.format != FORMAT {
-        return Err(AppError::validation("Định dạng bản sao lưu không hợp lệ."));
+        return Err(AppError::new(error_code::BACKUP_FORMAT_INVALID));
     }
     if !valid_timestamp(&envelope.exported_at) {
-        return Err(AppError::validation("Thời điểm xuất không hợp lệ."));
+        return Err(AppError::new(error_code::BACKUP_TIMESTAMP_INVALID));
     }
     validate(&envelope.payload)?;
     if checksum(&envelope.payload)? != envelope.checksum {
-        return Err(error(
-            "checksum_mismatch",
-            "Checksum không khớp. File có thể đã bị thay đổi.",
-        ));
+        return Err(AppError::new(error_code::BACKUP_CHECKSUM_MISMATCH));
     }
     Ok(envelope)
 }
@@ -360,7 +369,7 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
         .optional()?
         .map(|value| serde_json::from_str(&value))
         .transpose()
-        .map_err(|_| AppError::validation("Giao diện đã lưu không hợp lệ."))?;
+        .map_err(|_| AppError::new(error_code::BACKUP_THEME_INVALID))?;
     tx.commit()?;
     Ok(BackupPayloadV1 {
         daily_logs,
@@ -372,7 +381,7 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
 fn atomic_write(path: &Path, bytes: &[u8]) -> AppResult<()> {
     let parent = path
         .parent()
-        .ok_or_else(|| error("file_write", "Vị trí lưu không hợp lệ."))?;
+        .ok_or_else(|| AppError::new(error_code::BACKUP_DESTINATION_INVALID))?;
     let temp = parent.join(format!(
         ".{}.{}.tmp",
         path.file_name().unwrap_or_default().to_string_lossy(),
@@ -394,12 +403,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> AppResult<()> {
     if result.is_err() {
         let _ = fs::remove_file(&temp);
     }
-    result.map_err(|_| {
-        error(
-            "file_write",
-            "Không thể ghi file sao lưu. Vui lòng chọn vị trí khác.",
-        )
-    })
+    result.map_err(|_| AppError::new(error_code::BACKUP_FILE_WRITE_FAILED))
 }
 
 #[cfg(not(windows))]
@@ -447,7 +451,7 @@ pub fn export(database: &Path, path: &Path) -> AppResult<ExportResult> {
         payload,
     };
     let json = serde_json::to_vec_pretty(&envelope)
-        .map_err(|_| error("unknown", "Không thể tạo bản sao lưu."))?;
+        .map_err(|_| AppError::new(error_code::BACKUP_CREATE_FAILED))?;
     atomic_write(path, &json)?;
     Ok(ExportResult {
         file_name: path
@@ -500,12 +504,7 @@ fn make_plan(tx: &Transaction<'_>, payload: &BackupPayloadV1) -> AppResult<Plan>
                 plan.unchanged += 1;
                 plan.log_map.insert(log.id.clone(), log.id.clone());
             }
-            (Some(_), _) => {
-                return Err(error(
-                    "conflict",
-                    "ID ngày trùng nhưng ngày khác; không thể hợp nhất an toàn.",
-                ))
-            }
+            (Some(_), _) => return Err(AppError::new(error_code::BACKUP_MERGE_UNSAFE)),
             (None, Some(id)) => {
                 plan.existing += 1;
                 plan.conflicts += 1;
@@ -538,7 +537,7 @@ fn make_plan(tx: &Transaction<'_>, payload: &BackupPayloadV1) -> AppResult<Plan>
         let log_id = plan
             .log_map
             .get(&item.daily_log_id)
-            .ok_or_else(|| AppError::validation("Thiếu ánh xạ ngày."))?;
+            .ok_or_else(|| AppError::new(error_code::BACKUP_MAPPING_MISSING))?;
         let category_id = item
             .category_id
             .as_ref()
@@ -570,10 +569,14 @@ pub fn preview(database: &Path, path: &Path) -> AppResult<ImportPreview> {
     tx.rollback()?;
     let mut warnings = Vec::new();
     if envelope.app_version != env!("CARGO_PKG_VERSION") {
-        warnings.push("Bản sao lưu được tạo bởi phiên bản ứng dụng khác.".into());
+        warnings.push(
+            AppWarning::new(warning_code::APP_VERSION)
+                .with_string("backupVersion", envelope.app_version.clone())
+                .with_string("currentVersion", env!("CARGO_PKG_VERSION")),
+        );
     }
     if previously_imported_at.is_some() {
-        warnings.push("Bản sao lưu này đã từng được nhập.".into());
+        warnings.push(AppWarning::new(warning_code::PREVIOUSLY_IMPORTED));
     }
     Ok(ImportPreview {
         file_name: path
@@ -680,9 +683,8 @@ pub fn import(
         |row| row.get(0),
     )?;
     if prior && !confirm_reimport {
-        return Err(error(
-            "conflict",
-            "Bản sao lưu này đã từng được nhập. Hãy xác nhận để nhập lại.",
+        return Err(AppError::new(
+            error_code::BACKUP_REIMPORT_CONFIRMATION_REQUIRED,
         ));
     }
     let plan = if matches!(mode, ImportMode::Replace) {
@@ -726,10 +728,10 @@ pub fn import(
         .filter(|_| matches!(mode, ImportMode::Replace) || apply_theme)
     {
         tx.execute("INSERT INTO app_settings(key,value,updated_at)VALUES(?1,?2,?3) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
-            params![THEME_KEY,serde_json::to_string(theme).map_err(|_|AppError::validation("Giao diện không hợp lệ."))?,Utc::now().to_rfc3339()])?;
+            params![THEME_KEY,serde_json::to_string(theme).map_err(|_|AppError::new(error_code::BACKUP_THEME_INVALID))?,Utc::now().to_rfc3339()])?;
     }
     let summary=serde_json::to_string(&serde_json::json!({"dailyLogs":envelope.payload.daily_logs.len(),"workItems":envelope.payload.work_items.len(),"workCategories":envelope.payload.work_categories.len(),"remapped":remapped}))
-        .map_err(|_|error("unknown","Không thể ghi biên nhận."))?;
+        .map_err(|_|AppError::new(error_code::BACKUP_RECEIPT_WRITE_FAILED))?;
     tx.execute("INSERT INTO backup_import_receipts(id,checksum,imported_at,mode,source_exported_at,result_summary_json)VALUES(?1,?2,?3,?4,?5,?6)",
         params![Uuid::new_v4().to_string(),envelope.checksum,Utc::now().to_rfc3339(),match mode{ImportMode::Merge=>"merge",ImportMode::Replace=>"replace"},envelope.exported_at,summary])?;
     tx.commit()?;
@@ -798,7 +800,10 @@ mod tests {
             created_at: "2026-07-19T00:00:00Z".into(),
             updated_at: "2026-07-19T00:00:00Z".into(),
         });
-        assert_eq!(validate(&value).unwrap_err().code, "validation")
+        assert_eq!(
+            validate(&value).unwrap_err().code,
+            error_code::BACKUP_REFERENCE_INVALID
+        )
     }
     #[test]
     fn snapshot_excludes_receipts() {
@@ -838,10 +843,42 @@ mod tests {
         )
     }
     #[test]
+    fn preview_returns_structured_version_warning_with_params() {
+        let directory = tempfile::tempdir().unwrap();
+        let db_path = directory.path().join("db.sqlite");
+        let mut db = Connection::open(&db_path).unwrap();
+        migrate(&mut db).unwrap();
+        drop(db);
+        let file = write_envelope(empty_payload());
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
+        value["appVersion"] = "9.9.9".into();
+        fs::write(file.path(), serde_json::to_vec(&value).unwrap()).unwrap();
+
+        let result = preview(&db_path, file.path()).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        let warning = &result.warnings[0];
+        assert_eq!(warning.code, warning_code::APP_VERSION);
+        assert_eq!(
+            warning.params.get("backupVersion"),
+            Some(&AppErrorParam::String("9.9.9".into()))
+        );
+        assert_eq!(
+            warning.params.get("currentVersion"),
+            Some(&AppErrorParam::String(env!("CARGO_PKG_VERSION").into()))
+        );
+        let serialized = serde_json::to_value(warning).unwrap();
+        assert_eq!(serialized["code"], warning_code::APP_VERSION);
+        assert!(serialized["params"].is_object());
+    }
+    #[test]
     fn invalid_json_is_rejected() {
         let file = tempfile::NamedTempFile::new().unwrap();
         fs::write(file.path(), b"{").unwrap();
-        assert_eq!(read(file.path()).unwrap_err().code, "validation")
+        assert_eq!(
+            read(file.path()).unwrap_err().code,
+            error_code::BACKUP_JSON_INVALID
+        )
     }
     #[test]
     fn wrong_format_is_rejected() {
@@ -851,13 +888,32 @@ mod tests {
             serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
         value["format"] = "wrong".into();
         fs::write(file.path(), serde_json::to_vec(&value).unwrap()).unwrap();
-        assert_eq!(read(file.path()).unwrap_err().code, "validation")
+        assert_eq!(
+            read(file.path()).unwrap_err().code,
+            error_code::BACKUP_FORMAT_INVALID
+        )
     }
     #[test]
     fn unsupported_version_is_rejected() {
         let file = tempfile::NamedTempFile::new().unwrap();
         fs::write(file.path(), br#"{"version":2}"#).unwrap();
-        assert_eq!(read(file.path()).unwrap_err().code, "unsupported_version")
+        let error = read(file.path()).unwrap_err();
+        assert_eq!(error.code, error_code::BACKUP_VERSION_NEWER);
+        assert_eq!(error.params.get("version"), Some(&AppErrorParam::Number(2)));
+        assert_eq!(
+            error.params.get("supportedVersion"),
+            Some(&AppErrorParam::Number(1))
+        )
+    }
+    #[test]
+    fn file_read_error_masks_the_absolute_path() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("private-backup.json");
+        let error = read(&path).unwrap_err();
+        assert_eq!(error.code, error_code::BACKUP_FILE_READ_FAILED);
+        let serialized = serde_json::to_string(&error).unwrap();
+        assert!(!serialized.contains(path.to_string_lossy().as_ref()));
+        assert!(serde_json::to_value(error).unwrap()["params"].is_object());
     }
     #[test]
     fn checksum_mismatch_is_rejected() {
@@ -866,7 +922,10 @@ mod tests {
             serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
         value["checksum"] = format!("sha256:{}", "0".repeat(64)).into();
         fs::write(file.path(), serde_json::to_vec(&value).unwrap()).unwrap();
-        assert_eq!(read(file.path()).unwrap_err().code, "checksum_mismatch")
+        assert_eq!(
+            read(file.path()).unwrap_err().code,
+            error_code::BACKUP_CHECKSUM_MISMATCH
+        )
     }
     #[test]
     fn atomic_write_creates_and_replaces_after_dialog_confirmation() {
@@ -902,11 +961,17 @@ mod tests {
         drop(db);
         let file = write_envelope(empty_payload());
         import(&db_path, file.path(), ImportMode::Merge, false, false).unwrap();
+        let preview = preview(&db_path, file.path()).unwrap();
+        assert!(preview
+            .warnings
+            .iter()
+            .any(|warning| warning.code == warning_code::PREVIOUSLY_IMPORTED));
+        assert!(preview.previously_imported_at.is_some());
         assert_eq!(
             import(&db_path, file.path(), ImportMode::Merge, false, false)
                 .unwrap_err()
                 .code,
-            "conflict"
+            error_code::BACKUP_REIMPORT_CONFIRMATION_REQUIRED
         );
         import(&db_path, file.path(), ImportMode::Merge, false, true).unwrap();
     }
@@ -914,6 +979,8 @@ mod tests {
     fn file_size_limit_is_enforced() {
         let file = tempfile::NamedTempFile::new().unwrap();
         file.as_file().set_len(MAX_FILE_SIZE + 1).unwrap();
-        assert_eq!(read(file.path()).unwrap_err().code, "file_too_large");
+        let error = read(file.path()).unwrap_err();
+        assert_eq!(error.code, error_code::BACKUP_FILE_TOO_LARGE);
+        assert_eq!(error.params.get("maxMiB"), Some(&AppErrorParam::Number(20)));
     }
 }

@@ -20,4 +20,5 @@ export default {
     openDay:'Mở {{date}}: {{summary}}',
     completionRateForDay:'Tỷ lệ hoàn thành của {{date}}',
   },
+  backendErrors:{paginationInvalid:'Trang lịch sử được yêu cầu không hợp lệ.'},
 } as const;

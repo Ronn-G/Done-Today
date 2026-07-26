@@ -414,16 +414,17 @@ The domain may continue returning integer `percentage` for compatibility, but UI
 
 ## 13. Error-code localization
 
-Rust currently returns:
+Rust returns a locale-neutral structured payload:
 
 ```rust
-AppError { code: &'static str, message: String }
+AppError {
+    code: &'static str,
+    params: BTreeMap<String, AppErrorParam>,
+    message: Option<String>,
+}
 ```
 
-This is a useful compatibility base, but many unrelated failures use `validation` or `unknown` and
-the frontend renders Vietnamese `message` directly.
-
-Target wire shape:
+Wire shape:
 
 ```ts
 type AppErrorPayload = {
@@ -441,13 +442,12 @@ Examples:
 {"code":"backup.version_newer","params":{"version":2,"supportedVersion":1}}
 ```
 
-Migration strategy:
-
-1. Add specific codes and optional params while retaining the safe `message`.
-2. Add a frontend exhaustive code-to-key map with `errors.messages.unknown` fallback.
-3. Migrate one command family at a time.
-4. Stop rendering backend messages after all supported commands have stable codes.
-5. Keep internal SQL/path detail in debug logs only.
+I18N-4 checkpoint 2 completed this migration for every current Tauri command family. The frontend
+runtime normalizer accepts `unknown`, validates scalar params, ignores `message` for known codes and
+uses `errors.messages.unknown` for unknown/malformed payloads. Static exhaustive registries map
+codes to semantic namespace resources; no translation key is constructed from backend input.
+`contracts/app-error-codes.json` is checked by Rust and TypeScript tests so a code-list drift fails
+the build. SQL/path/internal details remain debug-only.
 
 Rust does not need the active locale in the initial phases. It validates and returns stable codes;
 React localizes. Native file-dialog labels are supplied by localized frontend/application code.
@@ -531,8 +531,8 @@ Provisional policy:
 - if locale is added later, Merge requires an explicit “apply language preference” choice and
   Replace must show the language change before confirmation.
 
-Backend preview warnings must become stable `{code, params}` entries before full English backup UI
-support.
+Backend preview warnings use stable `{code, params}` entries and are localized by the frontend
+warning registry.
 
 ## 17. Accessibility
 
@@ -805,7 +805,7 @@ accessibility audit, resource completeness and native Windows regression.
 Main files: backup React/application/infrastructure files, `src-tauri/src/lib.rs`,
 `src-tauri/src/backup.rs`, error adapters and tests.
 
-Delivery status: **In progress — checkpoint 1 complete** on 2026-07-26. Checkpoint 1 localized the
+Delivery status: **In progress — checkpoint 2 complete** on 2026-07-26. Checkpoint 1 localized the
 existing Backup/Restore presentation surface for `vi` and `en`, including visible and accessibility
 copy, locale-aware timestamp/count/plural summaries, and native Save/Open dialog titles and filter
 labels supplied through a typed presentation object. Locale switching re-renders an open preview
@@ -813,10 +813,16 @@ without changing preview data, Merge/Replace identity, apply-theme choice or the
 active locale. The stable ASCII default filename and backup v1 envelope/checksum/planner/import
 contracts are unchanged.
 
-Structured Rust `{code, params}` errors, structured preview warning codes, exhaustive frontend
-error/warning mapping and native Windows regression remain for later I18N-4 checkpoints. Until that
-migration, existing safe backend warning/message text is preserved and unknown errors use the
-localized generic fallback; checkpoint 1 does not claim complete backend error localization.
+Checkpoint 2 migrated journal/daily log/work item, History, categories/reorder, Theme persistence,
+locale persistence, database/not-found and all Backup export/preview/import/receipt failures to
+stable namespaced `{code, params, message?}` payloads. Backup preview warnings now use
+`{code, params}`. A runtime boundary normalizes invoke rejections, and exhaustive typed registries
+map every known error/warning to static `vi`/`en` resource keys. Known codes ignore compatibility
+messages; unknown/malformed payloads never expose raw code, message, SQL, stack or paths.
+Re-import remains driven by `previouslyImportedAt`/receipt state, not localized wording.
+
+Native Windows and final accessibility regression remain for a later I18N-4 checkpoint, so the
+feature is not marked Completed.
 
 Risks: cross-language Rust/TS contract, keeping fallback compatibility, destructive-flow clarity.
 

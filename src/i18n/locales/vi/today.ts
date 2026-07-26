@@ -62,4 +62,12 @@ export default {
     failed:'Không thể lưu',
     accessibility:{retry:'Thử lưu lại thay đổi'},
   },
+  backendErrors:{
+    taskTooLong:'Công việc không được vượt quá {{max}} ký tự.',
+    resultTooLong:'Kết quả không được vượt quá {{max}} ký tự.',
+    nextActionTooLong:'Bước tiếp theo không được vượt quá {{max}} ký tự.',
+    statusInvalid:'Trạng thái công việc đã chọn không hợp lệ.',
+    reorderEmpty:'Không có công việc nào để sắp xếp.',
+    reorderInvalid:'Thứ tự công việc không hợp lệ. Hãy tải lại và thử lại.',
+  },
 } as const;

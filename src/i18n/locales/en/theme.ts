@@ -94,6 +94,15 @@ export default {
     error:'Save failed',
   },
   errors:{save:'Couldn’t save your appearance settings.'},
+  backendErrors:{
+    invalid:'The theme settings are invalid.',
+    tooLarge:'Theme settings must be no larger than {{maxKiB}} KiB.',
+    schemaUnsupported:'Theme schema {{version}} is not supported. This app supports schema {{supportedVersion}}.',
+    paletteInvalid:'The theme palette is invalid.',
+    paletteIncomplete:'The theme palette is missing required colors.',
+    colorInvalid:'One or more theme colors are invalid.',
+    storedCorrupt:'The saved theme is damaged. Reset it and try again.',
+  },
   settings:{tip:'You can also customize your appearance directly from the Today screen.'},
   floating:{
     label:'Appearance customizer',

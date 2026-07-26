@@ -13,7 +13,7 @@ const preview:ImportPreview={
   counts:{dailyLogs:1,workItems:2,workCategories:1,theme:true},
   existingIds:1,newRecords:2,conflicts:1,unchanged:2,
   previouslyImportedAt:'2026-01-03T10:30:00Z',
-  warnings:['Bản sao lưu được tạo bởi phiên bản ứng dụng khác.'],
+  warnings:[{kind:'known',code:'backup.warning.app_version',params:{backupVersion:'0.1.0',currentVersion:'0.2.0'}}],
 };
 const actions=()=>({
   setMode:vi.fn(),setApplyTheme:vi.fn(),setReplaceConfirmed:vi.fn(),setReimportConfirmed:vi.fn(),
@@ -40,7 +40,7 @@ const expectNoRawBackupKeys=(html:string)=>{
     expect(html).not.toContain(`>${key}<`);
 };
 
-describe('I18N-4 checkpoint 1 Backup settings',()=>{
+describe('I18N-4 checkpoint 2 Backup settings',()=>{
   it.each([
     ['vi','Sao lưu và khôi phục','Xuất bản sao lưu','Khôi phục từ bản sao lưu'],
     ['en','Backup and restore','Export backup','Restore from backup'],
@@ -58,15 +58,16 @@ describe('I18N-4 checkpoint 1 Backup settings',()=>{
     await initializeI18n(locale);
     const busy=renderSettings(locale,{state:'validating'}).html;
     expect(busy).toContain('role="status"');expect(busy).toContain('aria-live="polite"');expect(busy).toContain(loading);
-    const error=renderSettings(locale,{state:'error',error:{code:'unexpected',message:String.raw`C:\Users\long\database.sqlite: SELECT *`}}).html;
+    const error=renderSettings(locale,{state:'error',error:{kind:'unknown'}}).html;
     expect(error).toContain('role="alert"');expect(error).toContain(fallback);expect(error).toContain(`>${close}</button>`);
     expect(error).not.toContain('database.sqlite');expect(error).not.toContain('SELECT *');
   });
 
-  it('preserves an existing safe backend backup message until the structured error checkpoint',async()=>{
+  it('localizes a stable backend code instead of rendering its compatibility message',async()=>{
     await initializeI18n('en');
-    const html=renderSettings('en',{state:'error',error:{code:'file_read',message:'Không thể đọc file sao lưu.'}}).html;
-    expect(html).toContain('Không thể đọc file sao lưu.');
+    const html=renderSettings('en',{state:'error',error:{kind:'known',code:'backup.file_read_failed',params:{}}}).html;
+    expect(html).toContain('The backup file could not be read.');
+    expect(html).not.toContain('Không thể đọc file sao lưu.');
   });
 
   it('formats export/import success counts and plurals in the active locale',async()=>{
@@ -97,7 +98,7 @@ describe('I18N-4 checkpoint 1 Backup settings',()=>{
   });
 });
 
-describe('I18N-4 checkpoint 1 Import preview',()=>{
+describe('I18N-4 checkpoint 2 Import preview',()=>{
   it('switches preview copy and date-time formatting while preserving preview, mode, apply-theme, and confirmation state',async()=>{
     const before=structuredClone(preview);
     await initializeI18n('vi');const vietnamese=renderPreview();
@@ -109,7 +110,8 @@ describe('I18N-4 checkpoint 1 Import preview',()=>{
     expect(english).toMatch(/<input(?=[^>]*value="merge")(?=[^>]*checked="")[^>]*>/);
     expect(vietnamese.html).toContain('Áp dụng cài đặt giao diện từ bản sao lưu');
     expect(english).toContain('Apply appearance settings from the backup');
-    expect(vietnamese.html).toContain(preview.warnings[0]);expect(english).toContain(preview.warnings[0]);
+    expect(vietnamese.html).toContain('Bản sao lưu được tạo bởi Done Today 0.1.0; bạn đang dùng 0.2.0.');
+    expect(english).toContain('This backup was created by Done Today 0.1.0; you are using 0.2.0.');
     expect(preview).toEqual(before);
     for(const callback of Object.values(vietnamese.callbacks))expect(callback).not.toHaveBeenCalled();
   });

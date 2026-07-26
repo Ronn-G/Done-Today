@@ -8,6 +8,7 @@ import{selectPreset,themePresets,updateThemeColor}from'../../domain/theme/preset
 import type{ThemePresetId}from'../../domain/theme/presets';
 import{translateThemeColorLabel}from'./themeColorTranslations';
 import type{ThemeCustomizerController}from'./themeCustomizerController';
+import{localizeAppError,toErrorTranslator}from'../../i18n/errorPresentation';
 
 const groups:readonly{id:'surfaces'|'text'|'controls'|'todayStats'|'statuses';open?:boolean;fields:readonly ThemeColorKey[]}[]=[
   {id:'surfaces',open:true,fields:['pageBackground','sidebarBackground','sidebarActiveBackground','cardBackground','tableHeaderBackground','editorHoverBackground']},
@@ -61,6 +62,7 @@ export function ThemePresetSettings({preferences,onSelect}:{preferences:ThemePre
 
 export function ThemeCustomizerContent({controller,compact=false}:{controller:ThemeCustomizerController;compact?:boolean}){
   const{t}=useTranslation('theme');
+  const{t:tErrors}=useTranslation('errors');
   const{mode,setMode,preferences,activePalette,saveState,error,commit,flush,retry,reset}=controller;
   const[editing,setEditing]=useState<PaletteMode>(activePalette);
   const palette=editing==='light'?preferences.lightColors:preferences.darkColors;const warnings=lowContrastPairs(palette);
@@ -81,7 +83,7 @@ export function ThemeCustomizerContent({controller,compact=false}:{controller:Th
       {warnings.length>0&&<div className="contrast-warning" role="alert">{t('warnings.contrast',{pairs:warningPairs})}</div>}
       <div className="color-groups">{groups.map(group=><details key={group.id} open={group.open}><summary>{groupLabels[group.id]}</summary><div className="color-grid">{group.fields.map(key=><ColorControl key={`${editing}-${key}`} colorKey={key} label={colorLabel(key)} value={palette[key]} onCommit={change} onFlush={()=>void flush()}/>)}</div></details>)}</div>
       <div className="radius-control" role="group" aria-label={t('radius.heading')}><strong>{t('radius.heading')}</strong>{(['square','subtle','rounded','soft']as const).map(value=><button type="button" key={value} className={preferences.borderRadius===value?'selected':''} aria-pressed={preferences.borderRadius===value} onClick={()=>commit({...preferences,borderRadius:value,selectedPresetId:'custom',updatedAt:new Date().toISOString()})}>{radiusLabels[value]}</button>)}</div>
-      <div className="settings-actions"><button type="button" className="reset-theme" onClick={reset}><RotateCcw aria-hidden="true" size={16}/> {t('actions.reset')}</button><span className={`theme-save ${saveState}`} role="status" aria-live="polite">{saveState==='saving'?t('status.saving'):saveState==='saved'?t('status.saved'):saveState==='error'?t('status.error'):t('status.idle')}</span>{saveState==='error'&&<button type="button" onClick={()=>void retry()}>{t('common:actions.retry')}</button>}</div>{error&&<div className="page-error" role="alert">{error}</div>}
+      <div className="settings-actions"><button type="button" className="reset-theme" onClick={reset}><RotateCcw aria-hidden="true" size={16}/> {t('actions.reset')}</button><span className={`theme-save ${saveState}`} role="status" aria-live="polite">{saveState==='saving'?t('status.saving'):saveState==='saved'?t('status.saved'):saveState==='error'?t('status.error'):t('status.idle')}</span>{saveState==='error'&&<button type="button" onClick={()=>void retry()}>{t('common:actions.retry')}</button>}</div>{error&&<div className="page-error" role="alert">{localizeAppError(error,toErrorTranslator(tErrors))}</div>}
     </section>
   </div>;
 }

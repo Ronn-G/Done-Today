@@ -21,4 +21,5 @@ export default {
     openDay:'Open {{date}}: {{summary}}',
     completionRateForDay:'Completion rate for {{date}}',
   },
+  backendErrors:{paginationInvalid:'The requested history page is invalid.'},
 } as const;

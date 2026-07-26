@@ -4,15 +4,17 @@ import type{TFunction}from'i18next';
 import{ArchiveRestore,Download,LoaderCircle,ShieldAlert,Upload}from'lucide-react';
 import{BackupService}from'../../application/backup/backupService';
 import type{BackupDialogPresentation}from'../../application/backup/backupRepository';
+import{normalizeAppError}from'../../application/errors/errorNormalizer';
+import type{NormalizedAppError}from'../../domain/errors/appError';
 import{compatibilityLocale,normalizeLocale,type AppLocale}from'../../domain/localization/locale';
 import type{ExportResult,ImportMode,ImportPreview,ImportResult}from'../../domain/backup/preview';
+import{localizeAppError,localizeAppWarning,toErrorTranslator}from'../../i18n/errorPresentation';
 import{formatDateTime,formatList}from'../../i18n/formatters';
 import{TauriBackupRepository}from'../../infrastructure/backup/tauriBackupRepository';
 
 type Props={flushTheme:()=>Promise<void>;onImported:()=>void};
 export type BackupOperation='idle'|'preparing'|'choosing'|'validating'|'importing'|'success'|'error';
 export type BackupResult={kind:'export';value:ExportResult}|{kind:'import';value:ImportResult};
-const safeBackendBackupErrorCodes=new Set(['unknown','validation','file_read','file_too_large','unsupported_version','checksum_mismatch','file_write','conflict']);
 
 export function backupDialogPresentation(t:TFunction<'backup'>):{export:BackupDialogPresentation;import:BackupDialogPresentation}{
   const filterName=t('dialog.filterName');
@@ -22,11 +24,7 @@ export function backupDialogPresentation(t:TFunction<'backup'>):{export:BackupDi
   };
 }
 export function backupErrorMessage(error:unknown,t:TFunction<'errors'>):string{
-  if(typeof error==='object'&&error&&'code'in error&&'message'in error&&
-    typeof error.code==='string'&&safeBackendBackupErrorCodes.has(error.code)&&typeof error.message==='string'&&error.message.trim()){
-    return error.message;
-  }
-  return t('messages.unknown');
+  return localizeAppError(error,(key,options)=>t(key,options));
 }
 const exportSummary=(value:ExportResult,t:TFunction<'backup'>,locale:AppLocale)=>t('export.success',{fileName:value.fileName,summary:formatList([
   t('export.summary.dailyLogs',{count:value.counts.dailyLogs}),
@@ -47,7 +45,7 @@ export function BackupSettings({flushTheme,onImported}:Props){
   const{t,i18n}=useTranslation('backup');
   const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   const service=useMemo(()=>new BackupService(new TauriBackupRepository(),flushTheme,onImported),[flushTheme,onImported]);
-  const[state,setState]=useState<BackupOperation>('idle');const[error,setError]=useState<unknown>(null);
+  const[state,setState]=useState<BackupOperation>('idle');const[error,setError]=useState<NormalizedAppError|null>(null);
   const[result,setResult]=useState<BackupResult|null>(null);const[selected,setSelected]=useState<{path:string;preview:ImportPreview}|null>(null);
   const[mode,setMode]=useState<ImportMode>('merge');const[applyTheme,setApplyTheme]=useState(false);
   const[replaceConfirmed,setReplaceConfirmed]=useState(false);const[reimportConfirmed,setReimportConfirmed]=useState(false);
@@ -57,7 +55,7 @@ export function BackupSettings({flushTheme,onImported}:Props){
       setState('choosing');const value=await service.export(backupDialogPresentation(t).export);
       if(!value){setState('idle');return}
       setResult({kind:'export',value});setState('success');
-    }catch(reason){setError(reason);setState('error')}
+    }catch(reason){setError(normalizeAppError(reason));setState('error')}
   };
   const chooseImport=async()=>{
     setState('choosing');setError(null);setResult(null);
@@ -65,7 +63,7 @@ export function BackupSettings({flushTheme,onImported}:Props){
       setState('validating');const value=await service.chooseAndPreview(backupDialogPresentation(t).import);
       if(!value){setState('idle');return}
       setSelected(value);setMode('merge');setApplyTheme(false);setReplaceConfirmed(false);setReimportConfirmed(false);setState('idle');
-    }catch(reason){setError(reason);setState('error')}
+    }catch(reason){setError(normalizeAppError(reason));setState('error')}
   };
   const runImport=async()=>{
     if(!selected)return;
@@ -73,7 +71,7 @@ export function BackupSettings({flushTheme,onImported}:Props){
     try{
       const value=await service.import(selected.path,mode,applyTheme,reimportConfirmed);
       setSelected(null);setResult({kind:'import',value});setState('success');
-    }catch(reason){setError(reason);setState('error')}
+    }catch(reason){setError(normalizeAppError(reason));setState('error')}
   };
   return <><BackupSettingsView state={state} error={error} result={result} locale={locale}
     onExport={()=>void runExport()} onChooseImport={()=>void chooseImport()} onCloseError={()=>setState('idle')}/>
@@ -83,7 +81,7 @@ export function BackupSettings({flushTheme,onImported}:Props){
 }
 
 export function BackupSettingsView({state,error,result,locale,onExport,onChooseImport,onCloseError}:{
-  state:BackupOperation;error:unknown;result:BackupResult|null;locale:AppLocale;
+  state:BackupOperation;error:NormalizedAppError|null;result:BackupResult|null;locale:AppLocale;
   onExport:()=>void;onChooseImport:()=>void;onCloseError:()=>void;
 }){
   const{t}=useTranslation('backup');
@@ -108,7 +106,7 @@ export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme
   busy:boolean;cancel:()=>void;submit:()=>void;
 }){
   const{t,i18n}=useTranslation('backup');
-  const{t:tCommon}=useTranslation('common');const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
+  const{t:tCommon}=useTranslation('common');const{t:tErrors}=useTranslation('errors');const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   const titleId=useId(),fileId=useId(),mergeId=useId(),mergeDescriptionId=useId(),replaceId=useId(),replaceDescriptionId=useId();
   const replaceConfirmId=useId(),reimportConfirmId=useId(),applyThemeId=useId();
   const allowed=(mode==='merge'||replaceConfirmed)&&(!value.previouslyImportedAt||reimportConfirmed);
@@ -132,7 +130,7 @@ export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme
       <div><dt>{t('preview.metadata.checksum')}</dt><dd>{value.checksumValid?t('preview.checksum.valid'):t('preview.checksum.invalid')}</dd></div>
       <div><dt>{t('preview.metadata.data')}</dt><dd>{dataSummary}</dd></div>
       <div><dt>{t('preview.metadata.dryRun')}</dt><dd>{dryRunSummary}</dd></div></dl>
-    {value.warnings.map(warning=><p className="import-warning" key={warning}>{warning}</p>)}
+    {value.warnings.map((warning,index)=><p className="import-warning" key={`${warning.kind==='known'?warning.code:'unknown'}-${index}`}>{localizeAppWarning(warning,toErrorTranslator(tErrors))}</p>)}
     {value.previouslyImportedAt&&<label className="confirm-row" htmlFor={reimportConfirmId}><input id={reimportConfirmId} type="checkbox" checked={reimportConfirmed} onChange={event=>setReimportConfirmed(event.target.checked)}/>
       <span>{t('confirm.reimport',{dateTime:formatDateTime(new Date(value.previouslyImportedAt),locale)})}</span></label>}
     <fieldset><legend>{t('mode.legend')}</legend>

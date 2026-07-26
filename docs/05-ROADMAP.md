@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.2
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Document version:** 2.3
+**Last verified against baseline commit:** `c0f56fd7c88a980e3c7bc71575020146d4c7f7dc` (2026-07-26)
 
 ## 1. Cách đọc trạng thái
 
@@ -32,7 +32,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
-| I18N-4 | In progress — checkpoint complete | Checkpoint 1 hoàn tất presentation Backup/Restore và nhãn native Save/Open cho `vi`/`en`; structured backend errors và preview warning codes còn ở checkpoint sau |
+| I18N-4 | In progress — checkpoint complete | Checkpoint 1 hoàn tất Backup/Restore presentation; checkpoint 2 hoàn tất structured Rust errors/warnings và typed exhaustive frontend mapping cho `vi`/`en`; native Windows/accessibility acceptance cuối còn lại |
 | I18N-5 | Planned | Fresh-install detection và backup preference policy chỉ thực hiện sau quyết định contract riêng |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
@@ -87,7 +87,22 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Presentation boundary truyền title/filter đã dịch vào native Save/Open dialog; filename ASCII và
   hành vi JSON/cancel không đổi.
 - Backup envelope v1, checksum, planner, Merge/Replace, receipt và transaction không đổi.
-- Structured Rust errors, preview warning codes và native Windows acceptance còn ở checkpoint sau.
+- Native Windows acceptance được chuyển sang checkpoint cuối.
+
+### I18N-4 checkpoint 2
+
+- Toàn bộ Tauri command families hiện hành dùng error code namespaced và scalar `params`; safe
+  compatibility `message` không còn được frontend dùng để hiển thị hay quyết định behavior.
+- Backup preview warnings dùng `{code, params}`; app-version và previously-imported conditions,
+  receipt semantics và re-import confirmation không đổi.
+- Frontend có runtime normalizer, typed exhaustive error/warning registries và shared Rust/TypeScript
+  contract matrix; unknown/malformed payload luôn dùng localized safe fallback.
+- Resources được đặt theo namespace Today, History, Settings/Categories, Theme, Backup và shared
+  Errors; đổi locale dịch lại payload đang hiển thị mà không chạy lại command.
+- Backup v1, checksum, planner, Merge/Replace, transaction, database schema và business rules không
+  đổi.
+- Automated gates đã đạt; I18N-4 vẫn `In progress — checkpoint complete` cho tới khi native
+  Windows/accessibility regression được người dùng nghiệm thu.
 
 ## 4. I18N-1 đã hoàn thành
 

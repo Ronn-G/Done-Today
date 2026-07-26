@@ -6,6 +6,8 @@ import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,Che
 import {JournalService} from '../application/journal/journalService';
 import {JOURNAL_AUTOSAVE_DELAY_MS,SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
+import{normalizeAppError}from'../application/errors/errorNormalizer';
+import type{NormalizedAppError}from'../domain/errors/appError';
 import {workStatusSchema,type DailyLog,type DailyLogSummary,type UpdateWorkItem,type WorkItem,type WorkStatus} from '../domain/journal/models';
 import{groupDailyItems,parseCollapsedCategoryState,type CategoryGroup,type WorkCategory}from'../domain/journal/categories';
 import {calculateStatistics} from '../domain/journal/statistics';
@@ -23,6 +25,7 @@ import{LanguageSettings}from'../features/settings/LanguageSettings';
 import{getRowActionDestinations,moveItemAfterFlush,positionRowActionMenu}from'../features/daily-log/rowActionMenu';
 import {compatibilityLocale,normalizeLocale} from '../domain/localization/locale';
 import {formatCount,formatPercent} from '../i18n/formatters';
+import{localizeAppError,toErrorTranslator}from'../i18n/errorPresentation';
 import {addLocalDays,formatLongLocalDate,formatShortLocalDate,formatWeekdayLocalDate,isValidLocalDate,localDateKey} from '../shared/date';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
@@ -46,18 +49,13 @@ function initialTheme():ThemeMode{
   const saved=localStorage.getItem('done-today-theme');
   return saved==='light'||saved==='dark'||saved==='system'?saved:'system';
 }
-function friendlyError(error:unknown){
-  if(typeof error==='object'&&error&&'message' in error&&typeof error.message==='string')return error.message;
-  return'Đã có lỗi xảy ra. Vui lòng thử lại.';
-}
-
 export function App(){
   const{t:tTheme}=useTranslation('theme');
   const[route,setRoute]=useState<Route>(parseRoute);
   const[theme,setTheme]=useState<ThemeMode>(initialTheme);
   const[themePreferences,setThemePreferences]=useState<ThemePreferences>(defaultThemePreferences);
   const[themeSaveState,setThemeSaveState]=useState<ThemeSaveState>('idle');
-  const[themeSaveError,setThemeSaveError]=useState(false);
+  const[themeSaveError,setThemeSaveError]=useState<NormalizedAppError|null>(null);
   const[floatingThemePanel,setFloatingThemePanel]=useState(initialFloatingThemePanelState);
   const[dataRevision,setDataRevision]=useState(0);
   const[systemDark,setSystemDark]=useState(()=>matchMedia('(prefers-color-scheme: dark)').matches);
@@ -78,10 +76,10 @@ export function App(){
   useEffect(()=>{void themeRepository.load().then(saved=>{if(saved)setThemePreferences(saved)}).catch(()=>setThemePreferences(defaultThemePreferences()))},[]);
   useEffect(()=>()=>{void themeCoordinator.flush().catch(()=>undefined);themeCoordinator.cancel()},[themeCoordinator]);
   useEffect(()=>{const flush=()=>void themeCoordinator.flush().catch(()=>undefined);window.addEventListener('beforeunload',flush);return()=>window.removeEventListener('beforeunload',flush)},[themeCoordinator]);
-  const commitTheme=useCallback((next:ThemePreferences)=>{setThemePreferences(next);setThemeSaveError(false);themeCoordinator.schedule(next)},[themeCoordinator]);
-  const flushTheme=useCallback(async()=>{try{await themeCoordinator.flush();setThemeSaveError(false)}catch{setThemeSaveError(true);throw new Error(tTheme('errors.save'))}},[themeCoordinator,tTheme]);
+  const commitTheme=useCallback((next:ThemePreferences)=>{setThemePreferences(next);setThemeSaveError(null);themeCoordinator.schedule(next)},[themeCoordinator]);
+  const flushTheme=useCallback(async()=>{try{await themeCoordinator.flush();setThemeSaveError(null)}catch(reason){const error=normalizeAppError(reason);setThemeSaveError(error);throw error}},[themeCoordinator]);
   const resetTheme=useCallback(()=>{if(confirm(tTheme('actions.resetConfirmation')))commitTheme(defaultThemePreferences())},[commitTheme,tTheme]);
-  const themeController:ThemeCustomizerController={mode:theme,setMode:setTheme,preferences:themePreferences,setPreferences:setThemePreferences,activePalette,saveState:themeSaveState,error:themeSaveError?tTheme('errors.save'):null,commit:commitTheme,flush:flushTheme,retry:flushTheme,reset:resetTheme};
+  const themeController:ThemeCustomizerController={mode:theme,setMode:setTheme,preferences:themePreferences,setPreferences:setThemePreferences,activePalette,saveState:themeSaveState,error:themeSaveError,commit:commitTheme,flush:flushTheme,retry:flushTheme,reset:resetTheme};
   const openThemePanel=()=>setFloatingThemePanel(current=>{const next={...current,open:true};localStorage.setItem('done-today-floating-theme-panel',JSON.stringify(next));return next});
   return <div className="app-shell"><aside className="sidebar">
     <div className="brand"><span className="brand-mark"><CheckCircle2 size={20}/></span><span>Done Today</span></div>
@@ -104,9 +102,10 @@ function Nav({active,onClick,icon,children}:{active:boolean;onClick:()=>void;ico
 
 function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const {t}=useTranslation('today');
+  const{t:tErrors}=useTranslation('errors');
   const[log,setLog]=useState<DailyLog|null>(null);
   const[loading,setLoading]=useState(true);
-  const[error,setError]=useState<string|null>(null);
+  const[error,setError]=useState<NormalizedAppError|null>(null);
   const[creating,setCreating]=useState(false);
   const[focusId,setFocusId]=useState<string|null>(null);
   const[categories,setCategories]=useState<WorkCategory[]>([]);
@@ -116,7 +115,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
     try{await service.initialize();const[nextLog,nextCategories,nextStreak]=await Promise.all([service.getDailyLog(date),service.listCategories(true),service.getCurrentStreak(today())]);setLog(nextLog);setCategories(nextCategories);setCurrentStreak(nextStreak);setCollapsed(parseCollapsedCategoryState(localStorage.getItem('done-today-collapsed-categories'),nextCategories.map(category=>category.id)).collapsedCategoryIds)}
-    catch(reason){setError(friendlyError(reason))}
+    catch(reason){setError(normalizeAppError(reason))}
     finally{setLoading(false)}
   },[date]);
   useEffect(()=>{void load()},[load]);
@@ -131,7 +130,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
         id:item.dailyLogId,logDate:date,createdAt:item.createdAt,updatedAt:item.updatedAt,items:[item],
       });
       setFocusId(item.id);
-    }catch(reason){setError(friendlyError(reason))}
+    }catch(reason){setError(normalizeAppError(reason))}
     finally{setCreating(false)}
   },[creating,date]);
   useEffect(()=>{
@@ -141,21 +140,21 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const updateLocal=useCallback((item:WorkItem)=>setLog(previous=>previous?{...previous,items:previous.items.map(entry=>entry.id===item.id?item:entry)}:previous),[]);
   const remove=async(item:WorkItem)=>{
     try{await service.deleteWorkItem(item.id);setLog(previous=>previous?{...previous,items:previous.items.filter(entry=>entry.id!==item.id)}:previous)}
-    catch{setError(t('item.errors.delete'));return}
-    if(item.task.trim())void refreshStreak().catch(reason=>setError(friendlyError(reason)));
+    catch(reason){setError(normalizeAppError(reason));return}
+    if(item.task.trim())void refreshStreak().catch(reason=>setError(normalizeAppError(reason)));
   };
   const move=async(bucket:WorkItem[],index:number,direction:-1|1)=>{
     if(!log)return;const target=index+direction;if(target<0||target>=bucket.length)return;
     const ordered=[...bucket];[ordered[index],ordered[target]]=[ordered[target],ordered[index]];
     try{const saved=await service.reorderWorkItems(log.id,ordered.map(item=>item.id));setLog(current=>current?{...current,items:current.items.map(item=>saved.find(value=>value.id===item.id)??item)}:current)}
-    catch{setError(t('item.errors.reorder'));void load()}
+    catch(reason){const failure=normalizeAppError(reason);void load().finally(()=>setError(failure))}
   };
   const toggleGroup=(id:string|null)=>{const key=id??'__other__';setCollapsed(current=>{const next=current.includes(key)?current.filter(value=>value!==key):[...current,key];localStorage.setItem('done-today-collapsed-categories',JSON.stringify({schemaVersion:1,collapsedCategoryIds:next}));return next})};
-  const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(t('item.errors.move'));throw reason}};
+  const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(normalizeAppError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
     <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}/>
-    {error&&<div className="page-error">{error}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
+    {error&&<div className="page-error">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
       <div className="table-scroll"><table><TodayTableHeader/>
       <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<TodayCategoryHeader key={`header-${key}`} group={group} hidden={hidden} onAddItem={addItem} onToggle={toggleGroup}/>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}
@@ -369,15 +368,15 @@ export function mergeHistorySummaries(previous:DailyLogSummary[],next:DailyLogSu
 function HistoryPage(){
   const[items,setItems]=useState<DailyLogSummary[]>([]);
   const[page,setPage]=useState(1);const[hasMore,setHasMore]=useState(false);
-  const[loading,setLoading]=useState(true);const[loadingMore,setLoadingMore]=useState(false);const[error,setError]=useState(false);
+  const[loading,setLoading]=useState(true);const[loadingMore,setLoadingMore]=useState(false);const[error,setError]=useState<NormalizedAppError|null>(null);
   const load=useCallback(async(targetPage:number,append:boolean)=>{
     if(append)setLoadingMore(true);else setLoading(true);
-    setError(false);
+    setError(null);
     try{
       const result=await service.listHistory(targetPage,20);
       setItems(previous=>mergeHistorySummaries(previous,result.items,append));
       setPage(result.page);setHasMore(result.hasMore);
-    }catch{setError(true)}
+    }catch(reason){setError(normalizeAppError(reason))}
     finally{setLoading(false);setLoadingMore(false)}
   },[]);
   useEffect(()=>{void load(1,false)},[load]);
@@ -387,14 +386,15 @@ function HistoryPage(){
 }
 
 export function HistoryView({items,loading,loadingMore,error,hasMore,onRetry,onLoadMore,onOpenDay,onGoToday}:{
-  items:DailyLogSummary[];loading:boolean;loadingMore:boolean;error:boolean;hasMore:boolean;
+  items:DailyLogSummary[];loading:boolean;loadingMore:boolean;error:boolean|NormalizedAppError|null;hasMore:boolean;
   onRetry:()=>void;onLoadMore:()=>void;onOpenDay:(date:string)=>void;onGoToday:()=>void;
 }){
   const {t,i18n}=useTranslation('history');
+  const{t:tErrors}=useTranslation('errors');
   const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   return <div className="content"><header><p className="eyebrow">{t('heading.eyebrow')}</p><h1>{t('heading.title')}</h1><p className="subtitle">{t('heading.subtitle')}</p></header>
     {loading?<div className="history-loading" role="status" aria-live="polite" aria-atomic="true"><LoaderCircle className="spin"/> {t('status.loading')}</div>:
-    error?<div className="page-error" role="alert">{t('errors.load')}<button type="button" onClick={onRetry}>{t('common:actions.retry')}</button></div>:
+    error?<div className="page-error" role="alert">{typeof error==='object'?localizeAppError(error,toErrorTranslator(tErrors)):t('errors.load')}<button type="button" onClick={onRetry}>{t('common:actions.retry')}</button></div>:
     items.length===0?<div className="empty-state"><History size={28}/><h2>{t('emptyState.title')}</h2><p>{t('emptyState.body')}</p><button type="button" onClick={onGoToday}>{t('actions.goToToday')}</button></div>:
     <section className="history-list" aria-label={t('accessibility.list')}>{items.map(summary=>{
       const date=formatLongLocalDate(summary.logDate,locale);

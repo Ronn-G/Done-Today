@@ -94,6 +94,15 @@ export default {
     error:'Lưu thất bại',
   },
   errors:{save:'Không thể lưu giao diện.'},
+  backendErrors:{
+    invalid:'Cài đặt giao diện không hợp lệ.',
+    tooLarge:'Cài đặt giao diện không được lớn hơn {{maxKiB}} KiB.',
+    schemaUnsupported:'Schema giao diện {{version}} chưa được hỗ trợ. Ứng dụng hỗ trợ schema {{supportedVersion}}.',
+    paletteInvalid:'Bảng màu giao diện không hợp lệ.',
+    paletteIncomplete:'Bảng màu giao diện đang thiếu màu bắt buộc.',
+    colorInvalid:'Một hoặc nhiều màu giao diện không hợp lệ.',
+    storedCorrupt:'Giao diện đã lưu bị hỏng. Hãy đặt lại rồi thử lại.',
+  },
   settings:{tip:'Bạn cũng có thể tùy chỉnh trực tiếp trên màn hình Hôm nay.'},
   floating:{
     label:'Bảng tùy chỉnh giao diện',

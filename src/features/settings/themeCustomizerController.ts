@@ -1,5 +1,6 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {ThemeSaveState} from '../../application/theme/themeSaveCoordinator';
+import type{NormalizedAppError}from'../../domain/errors/appError';
 import type {PaletteMode,ThemeMode,ThemePreferences} from '../../domain/theme/models';
 
 export type ThemeCustomizerController={
@@ -9,7 +10,7 @@ export type ThemeCustomizerController={
   setPreferences:Dispatch<SetStateAction<ThemePreferences>>;
   activePalette:PaletteMode;
   saveState:ThemeSaveState;
-  error:string|null;
+  error:NormalizedAppError|null;
   commit:(next:ThemePreferences)=>void;
   flush:()=>Promise<void>;
   retry:()=>Promise<void>;

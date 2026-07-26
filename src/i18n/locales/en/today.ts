@@ -64,4 +64,12 @@ export default {
     failed:'Couldn’t save',
     accessibility:{retry:'Retry saving changes'},
   },
+  backendErrors:{
+    taskTooLong:'The task must be no longer than {{max}} characters.',
+    resultTooLong:'The result must be no longer than {{max}} characters.',
+    nextActionTooLong:'The next action must be no longer than {{max}} characters.',
+    statusInvalid:'The selected task status is invalid.',
+    reorderEmpty:'There are no tasks to reorder.',
+    reorderInvalid:'The task order is invalid. Refresh and try again.',
+  },
 } as const;
