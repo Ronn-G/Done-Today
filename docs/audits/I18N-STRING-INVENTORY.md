@@ -2,6 +2,8 @@
 
 Audit date: 2026-07-23  
 Scope: Sprint I18N-0, repository state `eb17d1d`.
+Checkpoint update: 2026-07-26 — I18N-4 checkpoint 1 localized Backup/Restore UI and native dialog
+presentation; structured backend errors and preview warnings remain open.
 
 ## Method and exclusions
 
@@ -65,13 +67,13 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 
 | Location | Current strings | Type | Translate | Proposed key(s) | Priority | Notes / risk |
 |---|---|---|---|---|---|---|
-| `src/features/backup/BackupSettings.tsx:8` | Generic fallback error | ui | Yes | `common.errors.generic` | P0 | Backend `message` is otherwise displayed directly. |
-| `src/features/backup/BackupSettings.tsx:15,17` | Export success and restore success summaries | ui | Yes | `backup.export.success`, `backup.import.success`, `backup.import.remapped` | P0 | Multiple counts require pluralization; file name is interpolation. |
-| `src/features/backup/BackupSettings.tsx:19-22` | Backup heading/body/privacy warning; export/import buttons; preparing/restoring; close | ui | Yes | `backup.settings.*`, `backup.export.privacyWarning`, `backup.export.action`, `backup.import.action`, `backup.status.preparing`, `backup.status.restoring`, `common.actions.close` | P0 | Copy review required for button labels; native visual review required. |
-| `src/features/backup/BackupSettings.tsx:34-45` | Preview heading and labels; checksum state; data/dry-run summaries; import modes; confirmations; apply theme; cancel/import | ui / validation | Yes | `backup.preview.*`, `backup.mode.merge`, `backup.mode.replace`, `backup.confirm.*`, `backup.options.applyTheme`, `common.actions.cancel`, `backup.import.submit` | P0 | Backend warnings are currently already-localized strings. Copy review required for backup confirmation; native visual review required. |
-| `src/features/backup/BackupSettings.tsx:35,40` | `toLocaleString('vi-VN')` for export/import timestamps | ui | Yes, via formatter | `format.dateTime` policy | P0 | Locale is hard-coded. |
-| `src/infrastructure/backup/tauriBackupRepository.ts:16-21` | Export/import native dialog titles and filter name | ui | Yes | `backup.dialog.exportTitle`, `backup.dialog.importTitle`, `backup.dialog.filterName` | P0 | Dialog adapter must receive translated labels from application/UI; repository should not import translator singleton. Copy review required; native Windows visual review required. |
-| `src/infrastructure/backup/tauriBackupRepository.ts:16` | `done-today-backup-<UTC stamp>.json` | file name | Usually no translation | `backup.file.defaultName` only if policy changes | P2 | Stable ASCII file name is portable. Stamp is UTC compact digits, not user-facing date prose. |
+| `src/features/backup/BackupSettings.tsx` | Generic fallback error | ui | Completed for checkpoint 1 | `errors.messages.unknown` | P0 | Unknown/untrusted failures use the localized safe fallback. Existing allow-listed safe backend messages remain visible until the structured error checkpoint; SQL/path-shaped unknown detail is not rendered. |
+| `src/features/backup/BackupSettings.tsx` | Export and restore success summaries | ui | Completed | `backup.export.success`, `backup.import.success`, `backup.import.summary.remapped` | P0 | Counts use i18next plural forms and integer formatting; list order is locale-aware and the stable file name is interpolation. |
+| `src/features/backup/BackupSettings.tsx` | Heading/body/privacy warning; export/import actions; preparing/restoring; close | ui / accessibility | Completed | `backup.settings.*`, `backup.export.*`, `backup.import.*`, `backup.status.*`, `common.actions.close` | P0 | Visible labels, status live regions, region/dialog names and decorative icon semantics are localized. Native visual review remains required. |
+| `src/features/backup/BackupSettings.tsx` | Preview metadata/checksum/summaries; Merge/Replace; confirmations; apply theme; cancel/import | ui / validation / accessibility | Presentation completed | `backup.preview.*`, `backup.mode.*`, `backup.confirm.*`, `backup.options.*`, `common.actions.cancel` | P0 | Stable `merge`/`replace` values and confirmation behavior are unchanged. Backend `warnings: string[]` remain untranslated pending structured warning codes. |
+| `src/features/backup/BackupSettings.tsx` | Export/import and prior-import timestamps | ui | Completed via formatter | `formatDateTime` policy | P0 | Uses the active locale with explicit `Intl` formatters; stored RFC3339 values are unchanged. |
+| `src/application/backup/backupRepository.ts`, `src/infrastructure/backup/tauriBackupRepository.ts` | Native Save/Open title and filter label | ui | Completed | `backup.dialog.exportTitle`, `backup.dialog.importTitle`, `backup.dialog.filterName` | P0 | A typed presentation object crosses the application/infrastructure boundary. Infrastructure imports neither React hooks nor a translator singleton; native Windows review remains required. |
+| `src/infrastructure/backup/tauriBackupRepository.ts` | `done-today-backup-<UTC stamp>.json` | file name | No | N/A | Stable ASCII filename, UTC compact stamp, `.json` extension and cancel behavior remain unchanged. |
 
 ## Frontend: date, status, validation and domain-facing text
 

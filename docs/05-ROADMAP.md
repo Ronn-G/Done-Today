@@ -32,7 +32,8 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
-| I18N-4 đến I18N-5 | Planned | Thực hiện theo task contract và checkpoint của quy trình mới |
+| I18N-4 | In progress — checkpoint complete | Checkpoint 1 hoàn tất presentation Backup/Restore và nhãn native Save/Open cho `vi`/`en`; structured backend errors và preview warning codes còn ở checkpoint sau |
+| I18N-5 | Planned | Fresh-install detection và backup preference policy chỉ thực hiện sau quyết định contract riêng |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -78,6 +79,15 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Export, dry-run preview, Merge và Replace all trong transaction.
 - Receipt cảnh báo nhập lặp và UI xác nhận an toàn.
 - Schema authoritative chỉ nằm trong `08-BACKUP-RESTORE.md`.
+
+### I18N-4 checkpoint 1
+
+- Backup/Restore UI dùng resource `backup`/`common` cho visible và accessibility copy ở `vi`/`en`.
+- Timestamp, số đếm, plural và success/preview summary dùng formatter theo active locale.
+- Presentation boundary truyền title/filter đã dịch vào native Save/Open dialog; filename ASCII và
+  hành vi JSON/cancel không đổi.
+- Backup envelope v1, checksum, planner, Merge/Replace, receipt và transaction không đổi.
+- Structured Rust errors, preview warning codes và native Windows acceptance còn ở checkpoint sau.
 
 ## 4. I18N-1 đã hoàn thành
 

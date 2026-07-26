@@ -381,9 +381,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .import-dialog h2 { margin-top:0; }.import-dialog dl { display:grid;gap:7px;padding:14px;background:var(--bg-editor-hover);border-radius:var(--radius-control); }
 .import-dialog dl div { display:grid;grid-template-columns:150px 1fr;gap:10px; }.import-dialog dt { color:var(--text-secondary); }.import-dialog dd { margin:0;overflow-wrap:anywhere; }
 .import-dialog fieldset { display:grid;gap:10px;margin-top:16px;padding:14px;border:1px solid var(--border); }.import-dialog label { color:var(--text-secondary); }
+.import-dialog fieldset label { display:flex;align-items:flex-start;gap:8px; }.choice-description { display:block;margin-top:2px;overflow-wrap:anywhere; }
 .confirm-row { display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-control); }
 .danger-choice,.danger-box,.import-warning { color:var(--error-text)!important; }.danger-box { border-color:var(--error-border);background:var(--error-bg); }
-.dialog-actions { display:flex;justify-content:flex-end;gap:9px;margin-top:20px; }.dialog-actions .danger-button { color:var(--error-text);border-color:var(--error-border); }
+.dialog-actions { display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:20px; }.dialog-actions .danger-button { color:var(--error-text);border-color:var(--error-border); }
 .dialog-actions button:disabled,.backup-actions button:disabled { opacity:.55;cursor:not-allowed; }
 @media (max-width: 1000px) {
   .settings-stack { margin-top: 18px; }

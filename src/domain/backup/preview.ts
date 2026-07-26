@@ -1,6 +1,8 @@
 import type {BackupEnvelopeV1,BackupPayloadV1}from'./models';
 export type ImportMode='merge'|'replace';
 export type BackupCounts={dailyLogs:number;workItems:number;workCategories:number;theme:boolean};
+export type ExportResult={fileName:string;counts:BackupCounts};
+export type ImportResult={mode:ImportMode;counts:BackupCounts;remapped:number};
 export type ImportPreview={fileName:string;format:string;version:number;exportedAt:string;appVersion:string;checksum:string;
   checksumValid:boolean;counts:BackupCounts;existingIds:number;newRecords:number;conflicts:number;unchanged:number;
   previouslyImportedAt:string|null;warnings:string[]};

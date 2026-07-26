@@ -805,6 +805,19 @@ accessibility audit, resource completeness and native Windows regression.
 Main files: backup React/application/infrastructure files, `src-tauri/src/lib.rs`,
 `src-tauri/src/backup.rs`, error adapters and tests.
 
+Delivery status: **In progress — checkpoint 1 complete** on 2026-07-26. Checkpoint 1 localized the
+existing Backup/Restore presentation surface for `vi` and `en`, including visible and accessibility
+copy, locale-aware timestamp/count/plural summaries, and native Save/Open dialog titles and filter
+labels supplied through a typed presentation object. Locale switching re-renders an open preview
+without changing preview data, Merge/Replace identity, apply-theme choice or the installation-local
+active locale. The stable ASCII default filename and backup v1 envelope/checksum/planner/import
+contracts are unchanged.
+
+Structured Rust `{code, params}` errors, structured preview warning codes, exhaustive frontend
+error/warning mapping and native Windows regression remain for later I18N-4 checkpoints. Until that
+migration, existing safe backend warning/message text is preserved and unknown errors use the
+localized generic fallback; checkpoint 1 does not claim complete backend error localization.
+
 Risks: cross-language Rust/TS contract, keeping fallback compatibility, destructive-flow clarity.
 
 Acceptance: backup/restore works in vi/en; frontend never depends on Vietnamese backend messages;

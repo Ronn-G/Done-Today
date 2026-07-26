@@ -1,7 +1,8 @@
 import{invoke}from'@tauri-apps/api/core';
 import{open,save}from'@tauri-apps/plugin-dialog';
 import{z}from'zod';
-import type{ImportMode,ImportPreview}from'../../domain/backup/preview';
+import type{BackupDialogPresentation,BackupRepository}from'../../application/backup/backupRepository';
+import type{ExportResult,ImportMode,ImportPreview,ImportResult}from'../../domain/backup/preview';
 
 const counts=z.object({dailyLogs:z.number().int().nonnegative(),workItems:z.number().int().nonnegative(),workCategories:z.number().int().nonnegative(),theme:z.boolean()});
 const previewSchema=z.object({fileName:z.string(),format:z.literal('done-today-backup'),version:z.literal(1),exportedAt:z.string(),
@@ -10,20 +11,25 @@ const previewSchema=z.object({fileName:z.string(),format:z.literal('done-today-b
   previouslyImportedAt:z.string().nullable(),warnings:z.array(z.string())});
 const exportSchema=z.object({fileName:z.string(),counts});
 const importSchema=z.object({mode:z.enum(['merge','replace']),counts,remapped:z.number().int().nonnegative()});
-export type ExportResult=z.infer<typeof exportSchema>;
-export type ImportResult=z.infer<typeof importSchema>;
-export class TauriBackupRepository{
-  async chooseExportPath(){
-    const stamp=new Date().toISOString().replace(/\D/g,'').slice(0,14);
-    return await save({title:'Xuất bản sao lưu Done Today',defaultPath:`done-today-backup-${stamp}.json`,filters:[{name:'Done Today backup',extensions:['json']}]});
+type SaveDialog=typeof save;
+type OpenDialog=typeof open;
+type InvokeCommand=(command:string,args?:Record<string,unknown>)=>Promise<unknown>;
+export class TauriBackupRepository implements BackupRepository{
+  private readonly saveDialog:SaveDialog;private readonly openDialog:OpenDialog;private readonly invokeCommand:InvokeCommand;
+  constructor(saveDialog:SaveDialog=save,openDialog:OpenDialog=open,invokeCommand:InvokeCommand=(command,args)=>invoke(command,args)){
+    this.saveDialog=saveDialog;this.openDialog=openDialog;this.invokeCommand=invokeCommand;
   }
-  async chooseImportPath(){
-    const selected=await open({title:'Khôi phục từ bản sao lưu',multiple:false,directory:false,filters:[{name:'Done Today backup',extensions:['json']}]});
+  async chooseExportPath(presentation:BackupDialogPresentation){
+    const stamp=new Date().toISOString().replace(/\D/g,'').slice(0,14);
+    return await this.saveDialog({title:presentation.title,defaultPath:`done-today-backup-${stamp}.json`,filters:[{name:presentation.filterName,extensions:['json']}]});
+  }
+  async chooseImportPath(presentation:BackupDialogPresentation){
+    const selected=await this.openDialog({title:presentation.title,multiple:false,directory:false,filters:[{name:presentation.filterName,extensions:['json']}]});
     return typeof selected==='string'?selected:null;
   }
-  async export(path:string){return exportSchema.parse(await invoke<unknown>('export_backup',{path}))}
-  async preview(path:string):Promise<ImportPreview>{return previewSchema.parse(await invoke<unknown>('preview_backup',{path}))}
-  async import(path:string,mode:ImportMode,applyTheme:boolean,confirmReimport:boolean){
-    return importSchema.parse(await invoke<unknown>('import_backup',{path,mode,applyTheme,confirmReimport}));
+  async export(path:string):Promise<ExportResult>{return exportSchema.parse(await this.invokeCommand('export_backup',{path}))}
+  async preview(path:string):Promise<ImportPreview>{return previewSchema.parse(await this.invokeCommand('preview_backup',{path}))}
+  async import(path:string,mode:ImportMode,applyTheme:boolean,confirmReimport:boolean):Promise<ImportResult>{
+    return importSchema.parse(await this.invokeCommand('import_backup',{path,mode,applyTheme,confirmReimport}));
   }
 }
