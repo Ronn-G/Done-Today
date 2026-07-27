@@ -173,11 +173,6 @@ impl AppError {
             .insert(name.into(), AppErrorParam::Number(value));
         self
     }
-    pub(crate) fn with_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.params
-            .insert(name.into(), AppErrorParam::String(value.into()));
-        self
-    }
     #[allow(dead_code)]
     pub(crate) fn with_boolean(mut self, name: &str, value: bool) -> Self {
         self.params
@@ -457,9 +452,7 @@ fn load_locale(connection: &Connection) -> AppResult<Option<String>> {
 
 fn save_locale(connection: &Connection, locale: &str) -> AppResult<()> {
     if !matches!(locale, "vi" | "en") {
-        return Err(
-            AppError::new(error_code::LOCALIZATION_UNSUPPORTED).with_string("locale", locale)
-        );
+        return Err(AppError::new(error_code::LOCALIZATION_UNSUPPORTED));
     }
     connection.execute(
         "INSERT INTO app_settings (key,value,updated_at) VALUES (?1,?2,?3)
@@ -1188,10 +1181,7 @@ mod tests {
         assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
         let error = save_locale(&db, "fr").unwrap_err();
         assert_eq!(error.code, error_code::LOCALIZATION_UNSUPPORTED);
-        assert_eq!(
-            error.params.get("locale"),
-            Some(&AppErrorParam::String("fr".into()))
-        );
+        assert!(error.params.is_empty());
         assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
     }
     #[test]

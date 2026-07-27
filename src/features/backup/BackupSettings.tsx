@@ -1,4 +1,4 @@
-import{useId,useMemo,useState}from'react';
+import{useEffect,useId,useMemo,useRef,useState}from'react';
 import{useTranslation}from'react-i18next';
 import type{TFunction}from'i18next';
 import{ArchiveRestore,Download,LoaderCircle,ShieldAlert,Upload}from'lucide-react';
@@ -73,11 +73,12 @@ export function BackupSettings({flushTheme,onImported}:Props){
       setSelected(null);setResult({kind:'import',value});setState('success');
     }catch(reason){setError(normalizeAppError(reason));setState('error')}
   };
-  return <><BackupSettingsView state={state} error={error} result={result} locale={locale}
-    onExport={()=>void runExport()} onChooseImport={()=>void chooseImport()} onCloseError={()=>setState('idle')}/>
+  const closeError=()=>{setError(null);setState('idle')};
+  return <><BackupSettingsView state={state} error={selected?null:error} result={result} locale={locale}
+    onExport={()=>void runExport()} onChooseImport={()=>void chooseImport()} onCloseError={closeError}/>
     {selected&&<ImportPreviewDialog value={selected.preview} mode={mode} setMode={value=>{setMode(value);setReplaceConfirmed(false)}} applyTheme={applyTheme} setApplyTheme={setApplyTheme}
       replaceConfirmed={replaceConfirmed} setReplaceConfirmed={setReplaceConfirmed} reimportConfirmed={reimportConfirmed} setReimportConfirmed={setReimportConfirmed}
-      busy={state==='importing'} cancel={()=>setSelected(null)} submit={()=>void runImport()}/>}</>;
+      busy={state==='importing'} error={error} onCloseError={closeError} cancel={()=>setSelected(null)} submit={()=>void runImport()}/>}</>;
 }
 
 export function BackupSettingsView({state,error,result,locale,onExport,onChooseImport,onCloseError}:{
@@ -100,15 +101,39 @@ export function BackupSettingsView({state,error,result,locale,onExport,onChooseI
   </section>;
 }
 
-export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme,replaceConfirmed,setReplaceConfirmed,reimportConfirmed,setReimportConfirmed,busy,cancel,submit}:{
+export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme,replaceConfirmed,setReplaceConfirmed,reimportConfirmed,setReimportConfirmed,busy,error,onCloseError,cancel,submit}:{
   value:ImportPreview;mode:ImportMode;setMode:(value:ImportMode)=>void;applyTheme:boolean;setApplyTheme:(value:boolean)=>void;
   replaceConfirmed:boolean;setReplaceConfirmed:(value:boolean)=>void;reimportConfirmed:boolean;setReimportConfirmed:(value:boolean)=>void;
-  busy:boolean;cancel:()=>void;submit:()=>void;
+  busy:boolean;error:NormalizedAppError|null;onCloseError:()=>void;cancel:()=>void;submit:()=>void;
 }){
   const{t,i18n}=useTranslation('backup');
   const{t:tCommon}=useTranslation('common');const{t:tErrors}=useTranslation('errors');const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   const titleId=useId(),fileId=useId(),mergeId=useId(),mergeDescriptionId=useId(),replaceId=useId(),replaceDescriptionId=useId();
   const replaceConfirmId=useId(),reimportConfirmId=useId(),applyThemeId=useId();
+  const dialogRef=useRef<HTMLElement>(null),initialFocusRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{
+    const returnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    initialFocusRef.current?.focus();
+    return()=>returnFocus?.focus();
+  },[]);
+  const handleDialogKeyDown=(event:React.KeyboardEvent<HTMLElement>)=>{
+    if(event.key==='Escape'){
+      event.preventDefault();
+      if(!busy)cancel();
+      return;
+    }
+    if(event.key!=='Tab')return;
+    const focusable=[...(dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+    )??[])].filter(element=>!element.hasAttribute('hidden'));
+    if(focusable.length===0){event.preventDefault();return}
+    const first=focusable[0],last=focusable.at(-1);
+    if(event.shiftKey&&document.activeElement===first){
+      event.preventDefault();last?.focus();
+    }else if(!event.shiftKey&&document.activeElement===last){
+      event.preventDefault();first.focus();
+    }
+  };
   const allowed=(mode==='merge'||replaceConfirmed)&&(!value.previouslyImportedAt||reimportConfirmed);
   const dataSummary=formatList([
     t('preview.data.dailyLogs',{count:value.counts.dailyLogs}),
@@ -122,7 +147,7 @@ export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme
     t('preview.dryRun.conflicts',{count:value.conflicts}),
     t('preview.dryRun.unchanged',{count:value.unchanged}),
   ],locale);
-  return <div className="dialog-backdrop" role="presentation"><section className="import-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={fileId}>
+  return <div className="dialog-backdrop" role="presentation"><section ref={dialogRef} className="import-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={fileId} onKeyDown={handleDialogKeyDown}>
     <h2 id={titleId}>{t('preview.title')}</h2><p id={fileId}><strong>{value.fileName}</strong></p>
     <dl><div><dt>{t('preview.metadata.format')}</dt><dd>{value.format} v{value.version}</dd></div>
       <div><dt>{t('preview.metadata.exportedAt')}</dt><dd>{formatDateTime(new Date(value.exportedAt),locale)}</dd></div>
@@ -131,6 +156,7 @@ export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme
       <div><dt>{t('preview.metadata.data')}</dt><dd>{dataSummary}</dd></div>
       <div><dt>{t('preview.metadata.dryRun')}</dt><dd>{dryRunSummary}</dd></div></dl>
     {value.warnings.map((warning,index)=><p className="import-warning" key={`${warning.kind==='known'?warning.code:'unknown'}-${index}`}>{localizeAppWarning(warning,toErrorTranslator(tErrors))}</p>)}
+    {error!=null&&<div className="page-error" role="alert"><span>{backupErrorMessage(error,tErrors)}</span><button type="button" onClick={onCloseError}>{String(tCommon('actions.close'))}</button></div>}
     {value.previouslyImportedAt&&<label className="confirm-row" htmlFor={reimportConfirmId}><input id={reimportConfirmId} type="checkbox" checked={reimportConfirmed} onChange={event=>setReimportConfirmed(event.target.checked)}/>
       <span>{t('confirm.reimport',{dateTime:formatDateTime(new Date(value.previouslyImportedAt),locale)})}</span></label>}
     <fieldset><legend>{t('mode.legend')}</legend>
@@ -143,7 +169,7 @@ export function ImportPreviewDialog({value,mode,setMode,applyTheme,setApplyTheme
       <span>{t('options.applyTheme')}</span></label>}
     {mode==='replace'&&<label className="confirm-row danger-box" htmlFor={replaceConfirmId}><input id={replaceConfirmId} type="checkbox" checked={replaceConfirmed} onChange={event=>setReplaceConfirmed(event.target.checked)}/>
       <span><strong>{t('confirm.replace.title')}</strong><span className="choice-description">{t('confirm.replace.body')}</span></span></label>}
-    <div className="dialog-actions"><button type="button" disabled={busy} onClick={cancel}>{String(tCommon('actions.cancel'))}</button>
+    <div className="dialog-actions"><button ref={initialFocusRef} type="button" disabled={busy} onClick={cancel}>{String(tCommon('actions.cancel'))}</button>
       <button type="button" className={mode==='replace'?'danger-button':''} disabled={!allowed||busy} aria-busy={busy} onClick={submit}>{busy?t('import.submitting'):t('import.submit')}</button></div>
   </section></div>;
 }

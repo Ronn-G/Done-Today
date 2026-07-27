@@ -805,7 +805,7 @@ accessibility audit, resource completeness and native Windows regression.
 Main files: backup React/application/infrastructure files, `src-tauri/src/lib.rs`,
 `src-tauri/src/backup.rs`, error adapters and tests.
 
-Delivery status: **In progress — checkpoint 2 complete** on 2026-07-26. Checkpoint 1 localized the
+Delivery status: **Completed** on 2026-07-27. Checkpoint 1 (`c0f56fd`) localized the
 existing Backup/Restore presentation surface for `vi` and `en`, including visible and accessibility
 copy, locale-aware timestamp/count/plural summaries, and native Save/Open dialog titles and filter
 labels supplied through a typed presentation object. Locale switching re-renders an open preview
@@ -813,7 +813,7 @@ without changing preview data, Merge/Replace identity, apply-theme choice or the
 active locale. The stable ASCII default filename and backup v1 envelope/checksum/planner/import
 contracts are unchanged.
 
-Checkpoint 2 migrated journal/daily log/work item, History, categories/reorder, Theme persistence,
+Checkpoint 2 (`0155154`) migrated journal/daily log/work item, History, categories/reorder, Theme persistence,
 locale persistence, database/not-found and all Backup export/preview/import/receipt failures to
 stable namespaced `{code, params, message?}` payloads. Backup preview warnings now use
 `{code, params}`. A runtime boundary normalizes invoke rejections, and exhaustive typed registries
@@ -821,8 +821,17 @@ map every known error/warning to static `vi`/`en` resource keys. Known codes ign
 messages; unknown/malformed payloads never expose raw code, message, SQL, stack or paths.
 Re-import remains driven by `previouslyImportedAt`/receipt state, not localized wording.
 
-Native Windows and final accessibility regression remain for a later I18N-4 checkpoint, so the
-feature is not marked Completed.
+The final checkpoint, based on baseline `c5d787b`, constrained warning params at the Rust boundary,
+completed semantic error announcement and Backup preview dialog focus/keyboard behavior, and
+re-ran the full frontend/Rust quality gates. On 2026-07-27 the user confirmed native Windows
+acceptance for both locales, native dialogs, structured errors/warnings, locale-preserved preview
+state, Merge/Replace/re-import, light/dark/custom themes, supported window sizes and keyboard/focus
+behavior. Accessibility evidence consists of source audit, automated keyboard tests and native
+keyboard/visual review; screen-reader tooling was not claimed.
+
+I18N-4 completion does not change backup v1, checksum/canonicalization, Merge/Replace/receipt
+semantics, database schema, business rules or user-entered data. It does not start I18N-5, Day Theme
+or release packaging.
 
 Risks: cross-language Rust/TS contract, keeping fallback compatibility, destructive-flow clarity.
 

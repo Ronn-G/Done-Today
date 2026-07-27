@@ -17,14 +17,15 @@ const preview:ImportPreview={
 };
 const actions=()=>({
   setMode:vi.fn(),setApplyTheme:vi.fn(),setReplaceConfirmed:vi.fn(),setReimportConfirmed:vi.fn(),
-  cancel:vi.fn(),submit:vi.fn(),
+  onCloseError:vi.fn(),cancel:vi.fn(),submit:vi.fn(),
 });
 const renderPreview=(overrides:Partial<React.ComponentProps<typeof ImportPreviewDialog>>={})=>{
   const callbacks=actions();
   const props:React.ComponentProps<typeof ImportPreviewDialog>={
     value:preview,mode:'merge',setMode:callbacks.setMode,applyTheme:true,setApplyTheme:callbacks.setApplyTheme,
     replaceConfirmed:false,setReplaceConfirmed:callbacks.setReplaceConfirmed,reimportConfirmed:true,
-    setReimportConfirmed:callbacks.setReimportConfirmed,busy:false,cancel:callbacks.cancel,submit:callbacks.submit,...overrides,
+    setReimportConfirmed:callbacks.setReimportConfirmed,busy:false,error:null,onCloseError:callbacks.onCloseError,
+    cancel:callbacks.cancel,submit:callbacks.submit,...overrides,
   };
   return{html:renderToStaticMarkup(<ImportPreviewDialog {...props}/>),callbacks,props};
 };
@@ -141,5 +142,13 @@ describe('I18N-4 checkpoint 2 Import preview',()=>{
     await initializeI18n('vi');
     const{html}=renderPreview({mode:'replace',replaceConfirmed:true,busy:true});
     expect(html).toContain('Đang nhập…');expect(html).toContain('aria-busy="true"');expect(html).toContain('disabled=""');
+  });
+
+  it('presents an import failure inside the open modal with a localized close action',async()=>{
+    await initializeI18n('en');
+    const{html}=renderPreview({error:{kind:'known',code:'backup.checksum_mismatch',params:{}}});
+    expect(html).toContain('role="dialog"');expect(html).toContain('role="alert"');
+    expect(html).toContain('The backup checksum does not match.');
+    expect(html).toContain('>Close</button>');
   });
 });

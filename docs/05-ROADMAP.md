@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.3
-**Last verified against baseline commit:** `c0f56fd7c88a980e3c7bc71575020146d4c7f7dc` (2026-07-26)
+**Document version:** 2.4
+**Last verified against baseline commit:** `c5d787b718032edb078a5c5b11056df466843041` (2026-07-27)
 
 ## 1. Cách đọc trạng thái
 
@@ -32,7 +32,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
-| I18N-4 | In progress — checkpoint complete | Checkpoint 1 hoàn tất Backup/Restore presentation; checkpoint 2 hoàn tất structured Rust errors/warnings và typed exhaustive frontend mapping cho `vi`/`en`; native Windows/accessibility acceptance cuối còn lại |
+| I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
 | I18N-5 | Planned | Fresh-install detection và backup preference policy chỉ thực hiện sau quyết định contract riêng |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
@@ -103,6 +103,25 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   đổi.
 - Automated gates đã đạt; I18N-4 vẫn `In progress — checkpoint complete` cho tới khi native
   Windows/accessibility regression được người dùng nghiệm thu.
+
+### I18N-4 final acceptance
+
+- Checkpoint 1 nằm trong commit `c0f56fd7c88a980e3c7bc71575020146d4c7f7dc`; checkpoint 2 nằm
+  trong commit `0155154a4db633aa0b4f7bc65f2abeaae515e14c`; regression autosave liên quan nằm trong commit
+  `c5d787b718032edb078a5c5b11056df466843041`.
+- Final hardening giữ error/warning params trong allow-list scalar, chặn `appVersion` không hợp lệ
+  trước presentation boundary, và hoàn thiện semantic error announcement cùng keyboard/focus
+  contract cho Backup preview dialog.
+- Targeted tests và toàn bộ frontend/Rust quality gates đã đạt. Backup v1, checksum,
+  canonicalization, Merge/Replace, receipt, transaction, database schema và business rules không
+  đổi.
+- Người dùng xác nhận native Windows acceptance ngày 2026-07-27 cho `vi`/`en`, native Open/Save
+  dialog, localized errors/warnings, locale switch giữ state, Merge/Replace/re-import, light/dark/
+  custom theme, cửa sổ nhỏ/vừa/lớn và keyboard/focus.
+- Accessibility được xác minh bằng source audit, automated keyboard tests và native keyboard/
+  visual review. Không tuyên bố đã kiểm tra bằng screen-reader tooling.
+- I18N-4 được đánh dấu **Completed**. I18N-5, Day Theme và release packaging không thuộc checkpoint
+  này và không được đánh dấu hoàn thành.
 
 ## 4. I18N-1 đã hoàn thành
 

@@ -154,7 +154,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const go=(next:string)=>navigate({page:'day',date:next});
   return <div className="content">
     <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}/>
-    {error&&<div className="page-error">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
+    {error&&<div className="page-error" role="alert">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
       <div className="table-scroll"><table><TodayTableHeader/>
       <tbody>{groups.flatMap(group=>{const key=group.id??'__other__';const hidden=collapsed.includes(key);return[<TodayCategoryHeader key={`header-${key}`} group={group} hidden={hidden} onAddItem={addItem} onToggle={toggleGroup}/>,...(hidden?[]:group.items.map((item,index)=>{const bucket=group.items.filter(value=>(value.status==='completed')===(item.status==='completed'));const bucketIndex=bucket.findIndex(value=>value.id===item.id);return <WorkRow key={item.id} item={item} categories={categories.filter(value=>value.isActive)} autoFocus={focusId===item.id} onFocused={()=>setFocusId(null)}

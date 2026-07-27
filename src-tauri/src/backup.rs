@@ -293,6 +293,9 @@ fn read(path: &Path) -> AppResult<BackupEnvelopeV1> {
     }
     let envelope: BackupEnvelopeV1 = serde_json::from_value(value)
         .map_err(|_| AppError::new(error_code::BACKUP_STRUCTURE_INVALID))?;
+    if envelope.app_version.trim().is_empty() || envelope.app_version.chars().count() > 40 {
+        return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
+    }
     if envelope.format != FORMAT {
         return Err(AppError::new(error_code::BACKUP_FORMAT_INVALID));
     }
@@ -870,6 +873,19 @@ mod tests {
         let serialized = serde_json::to_value(warning).unwrap();
         assert_eq!(serialized["code"], warning_code::APP_VERSION);
         assert!(serialized["params"].is_object());
+    }
+    #[test]
+    fn oversized_app_version_is_rejected_before_it_reaches_warning_params() {
+        let file = write_envelope(empty_payload());
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
+        value["appVersion"] = "x".repeat(41).into();
+        fs::write(file.path(), serde_json::to_vec(&value).unwrap()).unwrap();
+
+        assert_eq!(
+            read(file.path()).unwrap_err().code,
+            error_code::BACKUP_STRUCTURE_INVALID
+        );
     }
     #[test]
     fn invalid_json_is_rejected() {

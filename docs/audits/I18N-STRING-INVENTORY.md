@@ -1,10 +1,11 @@
 # I18N string inventory
 
-Audit date: 2026-07-26
-Scope: I18N-4 checkpoint 2, baseline repository state `c0f56fd`.
-Checkpoint update: 2026-07-26 — I18N-4 checkpoint 2 localized all current Tauri error families,
-converted Backup preview warnings to structured payloads and added exhaustive `vi`/`en` mapping.
-Native Windows/accessibility regression remains open.
+Audit date: 2026-07-27
+Scope: completed I18N-4 implementation, baseline repository state `c5d787b`.
+Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
+localized all current Tauri error families, converted Backup preview warnings to structured
+payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
+Windows visual/keyboard/accessibility acceptance. Screen-reader tooling was not claimed.
 
 ## Method and exclusions
 
@@ -70,10 +71,10 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 |---|---|---|---|---|---|---|
 | `src/features/backup/BackupSettings.tsx` | Known and generic backend failures | ui | Completed | `backup.backendErrors.*`, `errors.messages.unknown` | P0 | Known stable codes ignore compatibility messages. Unknown/malformed failures use localized safe fallback and never render raw code/message/SQL/path. |
 | `src/features/backup/BackupSettings.tsx` | Export and restore success summaries | ui | Completed | `backup.export.success`, `backup.import.success`, `backup.import.summary.remapped` | P0 | Counts use i18next plural forms and integer formatting; list order is locale-aware and the stable file name is interpolation. |
-| `src/features/backup/BackupSettings.tsx` | Heading/body/privacy warning; export/import actions; preparing/restoring; close | ui / accessibility | Completed | `backup.settings.*`, `backup.export.*`, `backup.import.*`, `backup.status.*`, `common.actions.close` | P0 | Visible labels, status live regions, region/dialog names and decorative icon semantics are localized. Native visual review remains required. |
-| `src/features/backup/BackupSettings.tsx` | Preview metadata/checksum/summaries; warnings; Merge/Replace; confirmations; apply theme; cancel/import | ui / validation / accessibility | Completed through checkpoint 2 | `backup.preview.*`, `backup.backendWarnings.*`, `backup.mode.*`, `backup.confirm.*`, `backup.options.*`, `common.actions.cancel` | P0 | Warnings are `{code, params}` and localized at render. Stable `merge`/`replace` values and confirmation behavior are unchanged. |
+| `src/features/backup/BackupSettings.tsx` | Heading/body/privacy warning; export/import actions; preparing/restoring; close | ui / accessibility | Completed | `backup.settings.*`, `backup.export.*`, `backup.import.*`, `backup.status.*`, `common.actions.close` | P0 | Visible labels, status live regions, region/dialog names and decorative icon semantics are localized. Native visual review passed for `vi`/`en`. |
+| `src/features/backup/BackupSettings.tsx` | Preview metadata/checksum/summaries; warnings; Merge/Replace; confirmations; apply theme; cancel/import | ui / validation / accessibility | Completed | `backup.preview.*`, `backup.backendWarnings.*`, `backup.mode.*`, `backup.confirm.*`, `backup.options.*`, `common.actions.cancel` | P0 | Warnings are `{code, params}` and localized at render. Focus entry/trap/return and Escape behavior are regression-tested; stable `merge`/`replace` values and confirmation behavior are unchanged. |
 | `src/features/backup/BackupSettings.tsx` | Export/import and prior-import timestamps | ui | Completed via formatter | `formatDateTime` policy | P0 | Uses the active locale with explicit `Intl` formatters; stored RFC3339 values are unchanged. |
-| `src/application/backup/backupRepository.ts`, `src/infrastructure/backup/tauriBackupRepository.ts` | Native Save/Open title and filter label | ui | Completed | `backup.dialog.exportTitle`, `backup.dialog.importTitle`, `backup.dialog.filterName` | P0 | A typed presentation object crosses the application/infrastructure boundary. Infrastructure imports neither React hooks nor a translator singleton; native Windows review remains required. |
+| `src/application/backup/backupRepository.ts`, `src/infrastructure/backup/tauriBackupRepository.ts` | Native Save/Open title and filter label | ui | Completed | `backup.dialog.exportTitle`, `backup.dialog.importTitle`, `backup.dialog.filterName` | P0 | A typed presentation object crosses the application/infrastructure boundary. Infrastructure imports neither React hooks nor a translator singleton; native Windows review passed and Cancel remains a non-error. |
 | `src/infrastructure/backup/tauriBackupRepository.ts` | `done-today-backup-<UTC stamp>.json` | file name | No | N/A | Stable ASCII filename, UTC compact stamp, `.json` extension and cancel behavior remain unchanged. |
 
 ## Frontend: date, status, validation and domain-facing text
@@ -128,10 +129,17 @@ never renders compatibility `message` or warning text from Rust.
 | Rust tests | Primarily assert stable error codes and data | test-only | No | Continue code assertions; add params and ensure fallback message contains no sensitive details. | P1 |
 | Current repository | Focused mapper, provider and rendered component tests | test-only | N/A | Keep focused semantic tests and avoid large localized snapshots. | P2 |
 
-## Current checkpoint-2 result
+## Completed I18N-4 result
 
 - 41 stable error codes and 2 stable warning codes are shared through the reviewed contract fixture.
 - No current Tauri command family relies on a raw backend message for frontend presentation.
 - Remaining Vietnamese Rust literals are editable category seed data, not UI/error copy, and are
   intentionally outside translation/migration scope.
-- Native Windows and final accessibility regression remain manual I18N-4 work.
+- Resource, formatter, Rust/TypeScript contract, destructive-flow and accessibility audits have no
+  blocking finding.
+- The user confirmed native Windows acceptance on 2026-07-27 for `vi`/`en`, native dialogs,
+  structured errors/warnings, locale-preserved state, Merge/Replace/re-import, themes, responsive
+  window sizes and keyboard/focus behavior.
+- Accessibility evidence is source audit, automated keyboard regression and native keyboard/visual
+  review. No screen-reader tooling result is claimed.
+- I18N-4 is **Completed**; I18N-5, Day Theme and release packaging remain outside this checkpoint.
