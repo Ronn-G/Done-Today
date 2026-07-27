@@ -12,13 +12,22 @@ describe('SaveCoordinator',()=>{
     expect(saved).toEqual(['b']);expect(states).toEqual(['saving','saved']);
     await coordinator.flush();expect(save).toHaveBeenCalledTimes(1);coordinator.cancel();
   });
-  it('does not let an older response win',async()=>{
-    const resolvers:Array<()=>void>=[];const states:SaveState[]=[];
-    const committed:string[]=[];
-    const coordinator=new SaveCoordinator<string>(value=>new Promise<string>(resolve=>{resolvers.push(()=>resolve(value))}),value=>committed.push(value),state=>states.push(state));
-    coordinator.schedule('a');const first=coordinator.flush();coordinator.schedule('b');const second=coordinator.flush();
-    resolvers[1]();await second;resolvers[0]();await first;
-    expect(states.at(-1)).toBe('saved');expect(states.filter(s=>s==='saved')).toHaveLength(1);expect(committed).toEqual(['b']);
+  it('serializes writes, coalesces the queued revision and only marks the newest revision saved',async()=>{
+    const resolvers:Array<()=>void>=[];const states:SaveState[]=[];const payloads:string[]=[];const committed:string[]=[];
+    let active=0;let maximumActive=0;
+    const coordinator=new SaveCoordinator<string>(value=>new Promise<string>(resolve=>{
+      payloads.push(value);active++;maximumActive=Math.max(maximumActive,active);
+      resolvers.push(()=>{active--;resolve(value)});
+    }),value=>committed.push(value),state=>states.push(state));
+    coordinator.schedule('a');const first=coordinator.flush();
+    coordinator.schedule('b');const queued=coordinator.flush();
+    coordinator.schedule('c');const coalesced=coordinator.flush();
+    expect(payloads).toEqual(['a']);expect(maximumActive).toBe(1);
+    resolvers[0]();await vi.waitFor(()=>expect(payloads).toEqual(['a','c']));
+    expect(maximumActive).toBe(1);
+    resolvers[1]();await Promise.all([first,queued,coalesced]);
+    expect(states.at(-1)).toBe('saved');expect(states.filter(s=>s==='saved')).toHaveLength(1);
+    expect(committed).toEqual(['c']);expect(maximumActive).toBe(1);
     coordinator.cancel();
   });
   it('keeps a failed draft available and retries the same repository payload',async()=>{
@@ -26,7 +35,7 @@ describe('SaveCoordinator',()=>{
     const coordinator=new SaveCoordinator<string>(async value=>{payloads.push(value);if(attempts++===0)throw new Error('work_item.update_failed');return value},onPersisted,state=>states.push(state));
     coordinator.schedule('draft mới nhất');await expect(coordinator.flush()).rejects.toThrow('work_item.update_failed');
     expect(states).toEqual(['saving','error']);expect(payloads).toEqual(['draft mới nhất']);expect(onPersisted).not.toHaveBeenCalled();
-    await coordinator.flush();expect(payloads).toEqual(['draft mới nhất','draft mới nhất']);expect(states.at(-1)).toBe('saved');expect(onPersisted).toHaveBeenCalledWith('draft mới nhất');
+    await coordinator.flush();expect(payloads).toEqual(['draft mới nhất','draft mới nhất']);expect(states.at(-1)).toBe('saved');expect(onPersisted).toHaveBeenCalledWith('draft mới nhất','draft mới nhất');
     coordinator.cancel();
   });
   it('retries a newer draft when the user continues typing after a failure',async()=>{
@@ -42,6 +51,7 @@ describe('SaveCoordinator',()=>{
     coordinator.schedule('draft');await vi.advanceTimersByTimeAsync(JOURNAL_AUTOSAVE_DELAY_MS);
     expect(states).toEqual(['saving','saved']);
     await vi.advanceTimersByTimeAsync(10_000);expect(states).toEqual(['saving','saved']);expect(save).toHaveBeenCalledOnce();
+    coordinator.schedule('new revision');expect(states.at(-1)).toBe('idle');
     coordinator.cancel();
   });
 });

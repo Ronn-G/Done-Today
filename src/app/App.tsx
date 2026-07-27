@@ -262,14 +262,16 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
   const {t}=useTranslation('today');
   const[state,setState]=useState<SaveState>('idle');
   const latest=useRef(item);
+  const composing=useRef(false);
   const[initialPersistedTask]=useState(()=>item.task);
   useEffect(()=>{latest.current=item},[item]);
   const trackEligibility=useMemo(()=>createJournalEligibilityTracker(initialPersistedTask),[initialPersistedTask]);
   const coordinator=useMemo(()=>{
     return new SaveCoordinator<UpdateWorkItem,WorkItem>(
       input=>service.updateWorkItem(input),
-      saved=>{
-        const eligibilityChanged=trackEligibility(saved.task);onChange(saved);
+      (saved,draft)=>{
+        const reconciled={...saved,task:draft.task,result:draft.result,nextAction:draft.nextAction,status:draft.status};
+        const eligibilityChanged=trackEligibility(saved.task);onChange(reconciled);
         if(eligibilityChanged)void onJournalActivityChanged();
       },
       setState,
@@ -287,7 +289,18 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
     coordinator.schedule(input);
     if(immediate)void coordinator.flush().catch(()=>undefined);
   };
-  const changeText=(field:'task'|'result'|'nextAction',value:string)=>schedule({...latest.current,[field]:value});
+  const changeText=(field:'task'|'result'|'nextAction',value:string)=>{
+    const next={...latest.current,[field]:value};
+    latest.current=next;onChange(next);
+    if(!composing.current){
+      const input={id:next.id,task:next.task,result:next.result,nextAction:next.nextAction,status:next.status};
+      coordinator.schedule(input);
+    }
+  };
+  const compositionStart=()=>{composing.current=true;coordinator.suspend()};
+  const compositionEnd=(field:'task'|'result'|'nextAction',event:React.CompositionEvent<HTMLTextAreaElement>)=>{
+    composing.current=false;changeText(field,event.currentTarget.value);
+  };
   const flush=()=>void coordinator.flush().catch(()=>undefined);
   const flushBeforeAction=()=>coordinator.flush();
   const escape=(event:React.KeyboardEvent)=>{if(event.key==='Escape')(event.currentTarget as HTMLElement).blur()};
@@ -299,9 +312,9 @@ export function WorkRow({item,categories,dataIndex,autoFocus,onFocused,onChange,
   };
   return <tr className="editable-row" data-group-index={dataIndex}>
     <td className="reorder-cell"><button aria-label={t('common:actions.moveUp')} title={t('common:actions.moveUp')} disabled={!canMoveUp} onClick={onMoveUp}><ChevronUp size={14}/></button><button aria-label={t('common:actions.moveDown')} title={t('common:actions.moveDown')} disabled={!canMoveDown} onClick={onMoveDown}><ChevronDown size={14}/></button></td>
-    <td><textarea className="work-item-editor task-editor" aria-label={t('fields.task.label')} placeholder={t('fields.task.placeholder')} value={item.task} maxLength={500} rows={2} autoFocus={autoFocus} onFocus={onFocused} onChange={e=>changeText('task',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
-    <td><textarea className="work-item-editor result-editor" aria-label={t('fields.result.label')} placeholder={t('fields.result.placeholder')} value={item.result} maxLength={2000} rows={2} onChange={e=>changeText('result',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
-    <td><textarea className="work-item-editor next-action-editor" aria-label={t('fields.nextAction.label')} placeholder={t('fields.nextAction.placeholder')} value={item.nextAction} maxLength={1000} rows={2} onChange={e=>changeText('nextAction',e.target.value)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><textarea className="work-item-editor task-editor" aria-label={t('fields.task.label')} placeholder={t('fields.task.placeholder')} value={item.task} maxLength={500} rows={2} autoFocus={autoFocus} onFocus={onFocused} onChange={e=>changeText('task',e.target.value)} onCompositionStart={compositionStart} onCompositionEnd={e=>compositionEnd('task',e)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><textarea className="work-item-editor result-editor" aria-label={t('fields.result.label')} placeholder={t('fields.result.placeholder')} value={item.result} maxLength={2000} rows={2} onChange={e=>changeText('result',e.target.value)} onCompositionStart={compositionStart} onCompositionEnd={e=>compositionEnd('result',e)} onBlur={flush} onKeyDown={escape}/></td>
+    <td><textarea className="work-item-editor next-action-editor" aria-label={t('fields.nextAction.label')} placeholder={t('fields.nextAction.placeholder')} value={item.nextAction} maxLength={1000} rows={2} onChange={e=>changeText('nextAction',e.target.value)} onCompositionStart={compositionStart} onCompositionEnd={e=>compositionEnd('nextAction',e)} onBlur={flush} onKeyDown={escape}/></td>
     <td><select aria-label={t('fields.status.label')} className={`status-select ${item.status}`} value={item.status} onChange={e=>submitWorkStatusSelection(e.target.value,status=>schedule({...latest.current,status},true))}>
       {workStatusSchema.options.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select>
       <SaveIndicator state={state} retry={flush}/></td>

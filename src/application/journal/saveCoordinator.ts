@@ -9,34 +9,54 @@ export async function flushPendingJournalSaves(){
 export class SaveCoordinator<T,R=T>{
   private sequence=0;
   private timer:ReturnType<typeof setTimeout>|null=null;
-  private pending:T|null=null;
+  private pending:{revision:number;value:T}|null=null;
+  private ready=false;
+  private drainPromise:Promise<void>|null=null;
+  private state:SaveState='idle';
   private readonly save:(value:T)=>Promise<R>;
-  private readonly onSaved:(value:R)=>void;
+  private readonly onSaved:(value:R,input:T)=>void;
   private readonly onState:(state:SaveState)=>void;
   private readonly delay:number;
-  constructor(save:(value:T)=>Promise<R>,onSaved:(value:R)=>void,onState:(state:SaveState)=>void,delay=JOURNAL_AUTOSAVE_DELAY_MS){
+  constructor(save:(value:T)=>Promise<R>,onSaved:(value:R,input:T)=>void,onState:(state:SaveState)=>void,delay=JOURNAL_AUTOSAVE_DELAY_MS){
     this.save=save;this.onSaved=onSaved;this.onState=onState;this.delay=delay;
     activeCoordinators.add(this as unknown as SaveCoordinator<unknown,unknown>);
   }
   schedule(value:T){
     this.sequence++;
-    this.pending=value;
+    this.pending={revision:this.sequence,value};
+    if(this.state==='saved')this.setState('idle');
     if(this.timer)clearTimeout(this.timer);
-    this.timer=setTimeout(()=>void this.flush(),this.delay);
+    this.timer=setTimeout(()=>void this.flush().catch(()=>undefined),this.delay);
   }
-  async flush(){
+  suspend(){
     if(this.timer){clearTimeout(this.timer);this.timer=null}
-    if(this.pending===null)return;
-    const value=this.pending;this.pending=null;
-    const current=this.sequence;this.onState('saving');
-    try{
-      const request=this.save(value);inFlightSaves.add(request);
-      const saved=await request.finally(()=>inFlightSaves.delete(request));
-      if(current===this.sequence){this.onSaved(saved);this.onState('saved')}
-    }catch(error){
-      if(current===this.sequence){this.pending=value;this.onState('error')}
-      throw error;
+  }
+  flush(){
+    this.suspend();this.ready=true;
+    if(!this.drainPromise){
+      const drain=this.drain();
+      this.drainPromise=drain;
+      void drain.finally(()=>{if(this.drainPromise===drain)this.drainPromise=null}).catch(()=>undefined);
+    }
+    return this.drainPromise;
+  }
+  private async drain(){
+    while(this.ready&&this.pending){
+      this.ready=false;
+      const pending=this.pending;this.pending=null;
+      if(pending.revision===this.sequence)this.setState('saving');
+      try{
+        const request=this.save(pending.value);inFlightSaves.add(request);
+        const saved=await request.finally(()=>inFlightSaves.delete(request));
+        if(pending.revision===this.sequence){this.onSaved(saved,pending.value);this.setState('saved')}
+      }catch(error){
+        if(pending.revision===this.sequence){
+          if(this.pending===null)this.pending=pending;
+          this.setState('error');throw error;
+        }
+      }
     }
   }
+  private setState(state:SaveState){this.state=state;this.onState(state)}
   cancel(){if(this.timer)clearTimeout(this.timer);this.timer=null;activeCoordinators.delete(this as unknown as SaveCoordinator<unknown,unknown>)}
 }
