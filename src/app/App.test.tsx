@@ -22,7 +22,7 @@ describe('I18N-2 app shell and Today overview',()=>{
     ['en','Daily journal','Previous day','Completion rate','Customize appearance'],
   ] as const)('renders localized dates, controls and statistics in %s',async(locale,eyebrow,previous,completionRate,customizeAppearance)=>{
     await initializeI18n(locale);
-    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()}/>);
+    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     expect(html).toContain(eyebrow);
     expect(html).toContain(`aria-label="${previous}"`);
     expect(html).toContain(`aria-label="${customizeAppearance}"`);
@@ -34,7 +34,7 @@ describe('I18N-2 app shell and Today overview',()=>{
 
   it('renders the fourth statistic in Vietnamese without a raw key',async()=>{
     await initializeI18n('vi');
-    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:0,completed:0,percentage:0}} currentStreak={0} onGo={vi.fn()} onOpenTheme={vi.fn()}/>);
+    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:0,completed:0,percentage:0}} currentStreak={0} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     expect(html).toContain('aria-label="Thống kê trong ngày"');
     expect(html).toContain('class="stat streak-stat"');
     expect(html).toContain('Chuỗi ngày ghi nhật ký');expect(html).toContain('0 ngày');
@@ -43,8 +43,8 @@ describe('I18N-2 app shell and Today overview',()=>{
 
   it('uses English singular and plural streak values while preserving existing stats',async()=>{
     await initializeI18n('en');
-    const one=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={1} onGo={vi.fn()} onOpenTheme={vi.fn()}/>);
-    const many=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()}/>);
+    const one=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={1} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
+    const many=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     for(const text of ['Total tasks','Completed','Completion rate','Journal streak','1 day'])expect(one).toContain(text);
     expect(one).not.toContain('1 days');expect(many).toContain('6 days');
     expect(many).toContain('role="progressbar"');expect(many).not.toContain('today.');
@@ -110,4 +110,22 @@ describe('Day Theme foundation integration',()=>{
     expect(scopeBlock).not.toMatch(/:root|html|body/);
     expect(styles).toContain('@media (prefers-reduced-motion: reduce)');
   });
+
+  it.each(['done-today-default','sakura','coffee','rainy'])(
+    'renders the Today cover for %s through registry resolution',
+    themeId => {
+      const html=renderToStaticMarkup(<TodayOverview
+        date="2026-01-02"
+        stats={{total:2,completed:1,percentage:50}}
+        currentStreak={2}
+        onGo={vi.fn()}
+        onOpenTheme={vi.fn()}
+        resolvedTheme={dayThemeRegistry.resolve(themeId,1)}
+      />);
+      expect(html).toContain('class="day-cover"');
+      expect(html).toContain('data-day-cover-asset-state="fallback"');
+      expect(html.match(/<h1>/g)).toHaveLength(1);
+      expect(html).not.toContain(`theme:dayTheme.${themeId}`);
+    },
+  );
 });

@@ -143,6 +143,19 @@ nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 main { min-width: 0; }
 .day-theme-scope {
   min-height: 100vh;
+  --day-page-background: var(--day-light-page-background);
+  --day-surface: var(--day-light-surface);
+  --day-surface-raised: var(--day-light-surface-raised);
+  --day-text: var(--day-light-text);
+  --day-text-muted: var(--day-light-text-muted);
+  --day-border: var(--day-light-border);
+  --day-accent: var(--day-light-accent);
+  --day-accent-hover: var(--day-light-accent-hover);
+  --day-accent-soft: var(--day-light-accent-soft);
+  --day-focus-ring: var(--day-light-focus-ring);
+  --day-cover-gradient: var(--day-light-cover-gradient);
+  --day-cover-overlay: var(--day-light-cover-overlay);
+  --day-cover-text: var(--day-light-cover-text);
   color: var(--day-text);
   background: var(--day-page-background);
   --bg-page: var(--day-page-background);
@@ -168,6 +181,21 @@ main { min-width: 0; }
   --stats-text-secondary: var(--day-text-muted);
   --stats-progress-track: var(--day-border);
   --stats-progress-fill: var(--day-accent);
+}
+.dark .day-theme-scope {
+  --day-page-background: var(--day-dark-page-background);
+  --day-surface: var(--day-dark-surface);
+  --day-surface-raised: var(--day-dark-surface-raised);
+  --day-text: var(--day-dark-text);
+  --day-text-muted: var(--day-dark-text-muted);
+  --day-border: var(--day-dark-border);
+  --day-accent: var(--day-dark-accent);
+  --day-accent-hover: var(--day-dark-accent-hover);
+  --day-accent-soft: var(--day-dark-accent-soft);
+  --day-focus-ring: var(--day-dark-focus-ring);
+  --day-cover-gradient: var(--day-dark-cover-gradient);
+  --day-cover-overlay: var(--day-dark-cover-overlay);
+  --day-cover-text: var(--day-dark-cover-text);
 }
 .day-theme-scope h1 { font-weight: var(--day-heading-weight); }
 .content { max-width: 1320px; margin: 0 auto; padding: 46px 52px 64px; }
@@ -267,11 +295,19 @@ tbody tr:hover { background: var(--bg-row-hover); }
 .add-row:disabled { opacity: .58; cursor: not-allowed; }
 .shortcut-hint { display: inline-block; margin: 0; color: var(--text-secondary); opacity: .88; font-size: 13px; font-weight: 600; }
 
-.day-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.day-cover { position: relative; min-height: 172px; display: flex; overflow: hidden; color: var(--day-cover-text); background: var(--day-cover-gradient); border: 1px solid var(--day-border); border-radius: 20px; box-shadow: var(--shadow-panel), inset 0 1px 0 var(--highlight-edge); isolation: isolate; }
+.day-cover-overlay,.day-cover-motif { position: absolute; inset: 0; pointer-events: none; }
+.day-cover-overlay { z-index: 1; background: var(--day-cover-overlay); }
+.day-cover-motif { z-index: 0; background-position: right center; background-repeat: no-repeat; background-size: auto 100%; opacity: .9; }
+.day-cover-content { position: relative; z-index: 2; width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 30px 32px; }
+.day-cover-copy { min-width: 0; max-width: 650px; }
+.day-cover .eyebrow,.day-cover h1,.day-cover .subtitle { color: inherit; text-shadow: 0 1px 1px color-mix(in srgb, var(--day-page-background) 24%, transparent); }
+.day-cover .eyebrow { opacity: .86; }
+.day-cover .subtitle { opacity: .82; }
 .date-nav { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
-.date-nav > button, .date-picker, .today-button { min-height: 38px; border: 1px solid var(--border-soft); background: var(--surface-raised); color: var(--text-secondary); border-radius: 9px; box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 6%, transparent); }
+.day-cover .date-nav > button,.day-cover .date-picker,.day-cover .today-button { min-height: 38px; border: 1px solid color-mix(in srgb, var(--day-cover-text) 28%, transparent); background: color-mix(in srgb, var(--day-surface) 82%, transparent); color: var(--day-text); border-radius: 9px; box-shadow: 0 1px 2px color-mix(in srgb, var(--day-text) 8%, transparent); }
 .date-nav > button { width: 38px; display: grid; place-items: center; cursor: pointer; }
-.date-nav > button:hover, .date-picker:hover { background: var(--bg-interactive-hover); border-color: var(--accent); color: var(--accent); }
+.day-cover .date-nav > button:hover,.day-cover .date-picker:hover { background: var(--day-surface); border-color: var(--day-focus-ring); color: var(--day-accent); }
 .date-nav .today-button { width: auto; padding: 0 12px; font-weight: 650; }
 .date-picker { position: relative; display: flex; align-items: center; padding: 0 11px; font-size: 14px; font-weight: 650; white-space: nowrap; }
 .date-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -327,8 +363,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar .nav-item:focus-visible { outline-color: var(--text-on-sidebar-active); }
 
 @media (max-width: 1100px) {
-  .day-header { display: block; }
-  .date-nav { justify-content: flex-start; margin-top: 22px; }
+  .day-cover { min-height: 148px; }
+  .day-cover-content { display: block; padding: 24px 26px; }
+  .date-nav { justify-content: flex-start; margin-top: 18px; }
   .empty-cell { text-align: left; }
   .stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .stats .stat:nth-child(3) { border-left: 0; }
@@ -344,8 +381,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .content { padding: 38px 30px; }
   .stat { padding: 14px 16px; }
 }
+@media (max-width: 720px) {
+  .day-cover { min-height: 124px; border-radius: 14px; }
+  .day-cover-content { padding: 20px; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media (forced-colors: active) {
+  .day-cover { color: CanvasText; background: Canvas; border-color: CanvasText; box-shadow: none; }
+  .day-cover-overlay,.day-cover-motif { display: none; }
+  .day-cover .date-nav > button,.day-cover .date-picker,.day-cover .today-button { color: ButtonText; background: ButtonFace; border-color: ButtonText; }
 }
 
 /* Semantic theme customization */

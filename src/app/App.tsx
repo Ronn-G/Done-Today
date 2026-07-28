@@ -29,6 +29,8 @@ import{localizeAppError,toErrorTranslator}from'../i18n/errorPresentation';
 import {addLocalDays,formatLongLocalDate,formatShortLocalDate,formatWeekdayLocalDate,isValidLocalDate,localDateKey} from '../shared/date';
 import {dayThemeRegistry} from '../domain/day-theme/registry';
 import {DayThemeScope} from '../features/daily-log/DayThemeScope';
+import type {ResolvedDayTheme} from '../domain/day-theme/models';
+import {DayCover} from '../features/daily-log/DayCover';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
 type AppPage=Route['page'];
@@ -164,7 +166,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(normalizeAppError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <DayThemeScope resolvedTheme={resolvedDayTheme}><div className="content">
-    <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}/>
+    <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme} resolvedTheme={resolvedDayTheme}/>
     {error&&<div className="page-error" role="alert">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
       <div className="table-scroll"><table><TodayTableHeader/>
@@ -177,24 +179,25 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   </div></DayThemeScope>;
 }
 
-export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme}:{
-  date:string;stats:ReturnType<typeof calculateStatistics>;currentStreak:number;onGo:(date:string)=>void;onOpenTheme:()=>void;
+export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme,resolvedTheme}:{
+  date:string;stats:ReturnType<typeof calculateStatistics>;currentStreak:number;onGo:(date:string)=>void;onOpenTheme:()=>void;resolvedTheme:ResolvedDayTheme;
 }){
   const {t,i18n}=useTranslation('today');
   const {t:tTheme}=useTranslation('theme');
   const locale=normalizeLocale(i18n.resolvedLanguage??i18n.language)??compatibilityLocale;
   const current=date===today();
   const formattedDate=formatLongLocalDate(date,locale);
-  return <><header className="day-header"><div><p className="eyebrow">{current?t('eyebrow.today'):t('eyebrow.archive')}</p>
-    <h1>{current?t('heading.prompt'):formattedDate}</h1>
-    <p className="subtitle">{current?t('subtitle.today'):t('subtitle.past')}</p></div>
-    <div className="date-nav">
+  return <><DayCover resolvedTheme={resolvedTheme}
+    eyebrow={current?t('eyebrow.today'):t('eyebrow.archive')}
+    heading={current?t('heading.prompt'):formattedDate}
+    subtitle={current?t('subtitle.today'):t('subtitle.past')}
+    actions={<div className="date-nav">
       <button aria-label={t('dateControls.previous')} title={t('dateControls.previous')} onClick={()=>onGo(addLocalDays(date,-1))}><ChevronLeft size={18}/></button>
       <label className="date-picker"><span>{formattedDate}</span><input aria-label={t('dateControls.choose')} type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&onGo(event.target.value)}/></label>
       <button aria-label={t('dateControls.next')} title={t('dateControls.next')} onClick={()=>onGo(addLocalDays(date,1))}><ChevronRight size={18}/></button>
       {!current&&<button className="today-button" onClick={()=>onGo(today())}>{t('dateControls.today')}</button>}
       <button aria-label={tTheme('customizer.open')} title={tTheme('customizer.open')} onClick={onOpenTheme}><Palette size={18}/></button>
-    </div></header>
+    </div>}/>
     <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
       <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div>
       <Stat className="streak-stat" label={t('stats.streak')} value={t('stats.streakValue',{count:currentStreak})}/></section></>;
