@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.2
+**Phiên bản:** 1.3
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `461df3f63b75a82aaba4ed577b3878e1c1c7c5df` (2026-07-28)
+**Last verified against implementation commit:** `4d8d2c9f829fef5e745ac3b68216d8469fb515e1` (2026-07-28)
 
 ---
 
@@ -1215,10 +1215,9 @@ Day Theme Checkpoint 1 — Foundation được đóng **Completed**. Toàn bộ 
 
 ---
 
-# 33. Checkpoint 2 — First Themes implementation
+# 33. Checkpoint 2 — First Themes implementation and acceptance
 
-Trạng thái: **In progress — implementation complete; native visual acceptance pending**
-(2026-07-28).
+Trạng thái: **Completed** (2026-07-28).
 
 Implementation hiện hành chốt:
 
@@ -1236,11 +1235,24 @@ Implementation hiện hành chốt:
 - Backup envelope/checksum vẫn version `1`, round-trip ba ID mới; database schema, migration,
   Merge/Replace, autosave và journal business rules không đổi.
 
-Checkpoint này không có Theme Picker, Calendar/History indicator, personalization, theme pack,
-dependency bump hoặc release packaging. Native Windows visual/keyboard review vẫn bắt buộc cho
-light/dark/custom App Theme, `vi`/`en`, kích thước 900×600/default/maximize, bốn theme, chuyển ngày,
-editor/autosave và asset fallback trước khi đổi trạng thái checkpoint thành **Completed**.
+Người dùng đã hoàn tất native Windows visual/functional acceptance ngày 2026-07-28:
 
-Checkpoint 1: **Completed**. Checkpoint 2: **In progress — implementation complete; native visual
-acceptance pending**. Checkpoint 3 và các phase sau: **Not started**. Toàn bộ Day Theme &
-Personalization: **In progress**.
+- `done-today-default@1`, `sakura@1`, `coffee@1` và `rainy@1` đúng định hướng, dễ đọc và không có
+  lỗi thị giác nghiêm trọng;
+- Day Cover compact ở cửa sổ 900×600, mặc định và maximize, không clipping/khoảng trống bất thường;
+  motif không che nội dung hoặc cản trở thao tác;
+- app shell, sidebar, navigation và journal structure không bị Day Theme thay đổi;
+- App Theme light/dark/custom hoạt động độc lập; `vi`/`en` không có raw translation key;
+- date controls, chuyển ngày, journal editor/autosave, keyboard navigation và focus visible hoạt
+  động bình thường; chuyển ngày không để theme trước nháy hoặc giữ lại thành lỗi kéo dài.
+
+Accessibility evidence gồm automated/source audit trong implementation và native
+keyboard/focus/visual review; decorative motif/overlay không gây cản trở trong phạm vi kiểm tra áp
+dụng. Không tuyên bố đã kiểm tra bằng Accessibility tree, screen reader, forced-colors manual hoặc
+deliberate asset-load failure manual.
+
+Checkpoint này không có Theme Picker, Calendar/History indicator, personalization, theme pack,
+dependency bump hoặc release packaging.
+
+Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3 và các phase sau:
+**Not started**. Toàn bộ Day Theme & Personalization: **In progress**.

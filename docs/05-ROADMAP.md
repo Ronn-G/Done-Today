@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.7
-**Last verified against implementation commit:** `461df3f63b75a82aaba4ed577b3878e1c1c7c5df` (2026-07-28)
+**Document version:** 2.8
+**Last verified against implementation commit:** `4d8d2c9f829fef5e745ac3b68216d8469fb515e1` (2026-07-28)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 Completed; Checkpoint 2 implementation complete, native visual acceptance pending; Checkpoint 3+ Not started |
+| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 và Checkpoint 2 Completed; Checkpoint 3+ Not started |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -170,7 +170,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 
 ### Day Theme Checkpoint 2 — First Themes
 
-- Trạng thái: **In progress — implementation complete; native visual acceptance pending**.
+- Trạng thái: **Completed** (2026-07-28).
 - Production registry có đúng bốn built-in version 1 theo thứ tự curated:
   `done-today-default`, `sakura`, `coffee`, `rainy`.
 - Ba theme mới là adaptive, có palette light/dark riêng, semantic tokens, cover gradient và motif
@@ -183,8 +183,14 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Backup v1 tiếp tục dùng version 1 và round-trip `sakura@1`, `coffee@1`, `rainy@1`; không có
   migration, dependency bump, personalization, Theme Picker, Calendar/History indicator hoặc
   release packaging trong checkpoint này.
-- Automated tests và quality gates là điều kiện implementation; checkpoint chỉ được đóng
-  **Completed** sau khi người dùng xác nhận native Windows visual/keyboard acceptance.
+- Automated/source audit đã đạt trong ba commit implementation `d3cab48`, `461df3f`, `4d8d2c9`.
+- Người dùng xác nhận native Windows visual/functional acceptance ngày 2026-07-28 cho bốn theme,
+  `vi`/`en`, App Theme light/dark/custom, cửa sổ 900×600/default/maximize, date controls/chuyển ngày,
+  journal editor/autosave và keyboard/focus. Cover giữ compact, không clipping hoặc khoảng trống
+  bất thường; motif không che nội dung; app shell/sidebar/navigation và journal structure giữ nguyên.
+- Accessibility evidence gồm automated/source audit và native keyboard/focus/visual review;
+  decorative motif/overlay không gây cản trở trong phạm vi kiểm tra áp dụng. Không tuyên bố đã
+  kiểm tra bằng Accessibility tree hoặc screen-reader tooling.
 - Checkpoint 3 và các phase sau: **Not started**.
 
 ## 4. I18N-1 đã hoàn thành
@@ -213,9 +219,8 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 2 đang
-**In progress — implementation complete; native visual acceptance pending**; Checkpoint 3 và các
-phase sau **Not started**.
+Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1 và
+Checkpoint 2 đã **Completed**; Checkpoint 3 và các phase sau **Not started**.
 
 ## 6. Release packaging
 
