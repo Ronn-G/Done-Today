@@ -1,5 +1,11 @@
 export default {
   foundation:{ready:'Ready'},
+  dayTheme:{
+    doneTodayDefault:{
+      name:'Done Today Default',
+      description:'A calm, familiar foundation that follows your app appearance.',
+    },
+  },
   customizer:{open:'Customize appearance'},
   mode:{
     heading:'Display mode',

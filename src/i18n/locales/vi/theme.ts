@@ -1,5 +1,11 @@
 export default {
   foundation:{ready:'Sẵn sàng'},
+  dayTheme:{
+    doneTodayDefault:{
+      name:'Done Today Mặc định',
+      description:'Nền tảng quen thuộc, điềm tĩnh và hài hòa với giao diện ứng dụng.',
+    },
+  },
   customizer:{open:'Tùy chỉnh giao diện'},
   mode:{
     heading:'Chế độ hiển thị',

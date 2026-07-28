@@ -27,6 +27,8 @@ import {compatibilityLocale,normalizeLocale} from '../domain/localization/locale
 import {formatCount,formatPercent} from '../i18n/formatters';
 import{localizeAppError,toErrorTranslator}from'../i18n/errorPresentation';
 import {addLocalDays,formatLongLocalDate,formatShortLocalDate,formatWeekdayLocalDate,isValidLocalDate,localDateKey} from '../shared/date';
+import {dayThemeRegistry} from '../domain/day-theme/registry';
+import {DayThemeScope} from '../features/daily-log/DayThemeScope';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
 type AppPage=Route['page'];
@@ -122,6 +124,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const items=useMemo(()=>log?.items??[],[log]);
   const stats=useMemo(()=>calculateStatistics(items),[items]);
   const groups=useMemo(()=>groupDailyItems(items,categories),[items,categories]);
+  const resolvedDayTheme=useMemo(()=>dayThemeRegistry.resolve(null,null),[]);
   const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);
     try{
@@ -152,7 +155,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const toggleGroup=(id:string|null)=>{const key=id??'__other__';setCollapsed(current=>{const next=current.includes(key)?current.filter(value=>value!==key):[...current,key];localStorage.setItem('done-today-collapsed-categories',JSON.stringify({schemaVersion:1,collapsedCategoryIds:next}));return next})};
   const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(normalizeAppError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
-  return <div className="content">
+  return <DayThemeScope resolvedTheme={resolvedDayTheme}><div className="content">
     <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}/>
     {error&&<div className="page-error" role="alert">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
@@ -163,7 +166,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
       {!items.length&&<TodayEmptyState/>}</tbody></table></div>}
       <AddRowFooter categories={categories} onAddItem={addItem}/>
     </section>
-  </div>;
+  </div></DayThemeScope>;
 }
 
 export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme}:{

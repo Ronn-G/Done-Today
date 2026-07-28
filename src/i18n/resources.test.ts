@@ -30,6 +30,8 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].today)).toHaveProperty('stats.streakValue_other');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('mode.system');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.doneToday.name');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.doneTodayDefault.name');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.doneTodayDefault.description');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.warmSand.description');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('customize.heading');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('colors.pageBackground');

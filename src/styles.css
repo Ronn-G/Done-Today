@@ -61,6 +61,16 @@
   --shadow-panel: 0 1px 2px color-mix(in srgb, var(--text-primary) 5%, transparent), 0 8px 22px color-mix(in srgb, var(--text-primary) 5%, transparent);
   --shadow-table: 0 2px 4px color-mix(in srgb, var(--text-primary) 4%, transparent), 0 14px 34px color-mix(in srgb, var(--text-primary) 7%, transparent);
   --shadow-overlay: 0 8px 18px color-mix(in srgb, var(--text-primary) 10%, transparent), 0 24px 60px color-mix(in srgb, var(--text-primary) 15%, transparent);
+  --app-page-background: var(--bg-page);
+  --app-day-surface: var(--bg-card);
+  --app-day-surface-raised: var(--surface-raised);
+  --app-day-text: var(--text-primary);
+  --app-day-text-muted: var(--text-secondary);
+  --app-day-border: var(--border);
+  --app-day-accent: var(--accent);
+  --app-day-accent-hover: var(--accent);
+  --app-day-accent-soft: var(--bg-interactive-hover);
+  --app-day-focus-ring: var(--focus-ring);
 }
 
 .dark {
@@ -131,6 +141,35 @@ nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .nav-item.active { background: var(--bg-sidebar-active); color: var(--text-on-sidebar-active); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
 .nav-item svg { flex: 0 0 auto; }
 main { min-width: 0; }
+.day-theme-scope {
+  min-height: 100vh;
+  color: var(--day-text);
+  background: var(--day-page-background);
+  --bg-page: var(--day-page-background);
+  --bg-card: var(--day-surface);
+  --surface-page: var(--day-page-background);
+  --surface-panel: var(--day-surface);
+  --surface-raised: var(--day-surface-raised);
+  --text-primary: var(--day-text);
+  --text-secondary: var(--day-text-muted);
+  --text-muted: color-mix(in srgb, var(--day-text-muted) 78%, transparent);
+  --border: var(--day-border);
+  --border-soft: color-mix(in srgb, var(--day-border) 78%, transparent);
+  --accent: var(--day-accent);
+  --focus-ring: var(--day-focus-ring);
+  --bg-interactive-hover: var(--day-accent-soft);
+  --bg-table-header: var(--day-surface-raised);
+  --bg-row-hover: color-mix(in srgb, var(--day-accent-soft) 72%, var(--day-surface));
+  --bg-row-focus: var(--day-accent-soft);
+  --bg-editor-hover: var(--day-accent-soft);
+  --stats-bg: var(--day-surface-raised);
+  --stats-border: var(--day-border);
+  --stats-text-primary: var(--day-text);
+  --stats-text-secondary: var(--day-text-muted);
+  --stats-progress-track: var(--day-border);
+  --stats-progress-fill: var(--day-accent);
+}
+.day-theme-scope h1 { font-weight: var(--day-heading-weight); }
 .content { max-width: 1320px; margin: 0 auto; padding: 46px 52px 64px; }
 .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: 14px; font-weight: 750; text-transform: uppercase; letter-spacing: .09em; }
 h1 { margin: 0; color: var(--text-primary); font-size: 32px; line-height: 1.15; letter-spacing: -.035em; }
