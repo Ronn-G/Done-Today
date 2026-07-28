@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.6
-**Last verified against baseline commit:** `455a974c39cdb57085b32082dee8e4518ba5039a` (2026-07-28)
+**Document version:** 2.7
+**Last verified against implementation commit:** `461df3f63b75a82aaba4ed577b3878e1c1c7c5df` (2026-07-28)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 — Foundation đã Completed sau native Windows acceptance ngày 2026-07-28; Theme Picker và các phase sau chưa bắt đầu |
+| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 Completed; Checkpoint 2 implementation complete, native visual acceptance pending; Checkpoint 3+ Not started |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -165,8 +165,27 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   Không tuyên bố đã kiểm tra bằng Accessibility tree hoặc screen-reader tooling.
 - Day Theme Checkpoint 1 — Foundation được đánh dấu **Completed**. Toàn bộ Day Theme &
   Personalization vẫn **In progress — checkpoint complete**.
-- Theme Picker, Day Cover mới, theme thứ hai, Calendar/History integration, personalization,
-  theme packs và release packaging chưa bắt đầu.
+- Tại thời điểm đóng Checkpoint 1, Theme Picker, Day Cover mới, theme thứ hai,
+  Calendar/History integration, personalization, theme packs và release packaging chưa bắt đầu.
+
+### Day Theme Checkpoint 2 — First Themes
+
+- Trạng thái: **In progress — implementation complete; native visual acceptance pending**.
+- Production registry có đúng bốn built-in version 1 theo thứ tự curated:
+  `done-today-default`, `sakura`, `coffee`, `rainy`.
+- Ba theme mới là adaptive, có palette light/dark riêng, semantic tokens, cover gradient và motif
+  SVG nhỏ được tải theo logical asset ID chỉ khi theme hiện tại cần.
+- Today dùng một Day Cover compact/responsive, giữ nguyên date navigation và App Theme customizer;
+  decoration là decorative-only, có gradient fallback, forced-colors fallback và reduced-motion
+  compatibility.
+- Day Theme vẫn chỉ nằm trong `DayThemeScope`; App Theme light/dark/custom, journal business rules,
+  editor, autosave, chuyển ngày và Backup v1 không đổi ownership hoặc semantics.
+- Backup v1 tiếp tục dùng version 1 và round-trip `sakura@1`, `coffee@1`, `rainy@1`; không có
+  migration, dependency bump, personalization, Theme Picker, Calendar/History indicator hoặc
+  release packaging trong checkpoint này.
+- Automated tests và quality gates là điều kiện implementation; checkpoint chỉ được đóng
+  **Completed** sau khi người dùng xác nhận native Windows visual/keyboard acceptance.
+- Checkpoint 3 và các phase sau: **Not started**.
 
 ## 4. I18N-1 đã hoàn thành
 
@@ -194,8 +213,9 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme & Personalization vẫn là **In progress — checkpoint complete**; Checkpoint 2 và các phase
-sau không phải công việc mặc định kế tiếp nếu chưa có quyết định ưu tiên.
+Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 2 đang
+**In progress — implementation complete; native visual acceptance pending**; Checkpoint 3 và các
+phase sau **Not started**.
 
 ## 6. Release packaging
 

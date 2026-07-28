@@ -21,6 +21,37 @@ describe('backup v1',()=>{
     expect(parsed.dailyLogs[0]).toMatchObject({themeId:'future-theme',themeVersion:7});
     expect(canonicalPayload(parsed)).toContain('"themeId":"future-theme"');
   });
+  it('round trips every Checkpoint 2 Day Theme through the unchanged Backup v1 shape',async()=>{
+    const themedPayload:BackupPayloadV1={
+      ...payload,
+      dailyLogs:['sakura','coffee','rainy'].map((themeId,index)=>({
+        id:`theme-log-${index}`,
+        logDate:`2026-07-${20+index}`,
+        createdAt:now,
+        updatedAt:now,
+        themeId,
+        themeVersion:1,
+      })),
+      workItems:[],
+    };
+    const canonical=canonicalPayload(themedPayload);
+    const parsed=backupPayloadSchema.parse(JSON.parse(canonical));
+    expect(parsed.dailyLogs.map(log=>[log.themeId,log.themeVersion])).toEqual([
+      ['sakura',1],
+      ['coffee',1],
+      ['rainy',1],
+    ]);
+    expect(canonicalPayload(parsed)).toBe(canonical);
+    expect(await checksumPayload(parsed)).toBe(await checksumPayload(themedPayload));
+    expect(backupEnvelopeSchema.safeParse({
+      format:'done-today-backup',
+      version:1,
+      exportedAt:now,
+      appVersion:'0.1.0',
+      payload:parsed,
+      checksum:await checksumPayload(parsed),
+    }).success).toBe(true);
+  });
   it.each([
     {themeId:'valid-theme',themeVersion:null},
     {themeId:null,themeVersion:1},
