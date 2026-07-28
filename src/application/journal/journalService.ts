@@ -15,6 +15,9 @@ export class JournalService {
     const value=updateDayThemeMetadataSchema.parse({dailyLogId,themeId:null,themeVersion:null});
     return this.repository.updateDayThemeMetadata(value.dailyLogId,dayThemeMetadataSchema.parse(value));
   }
+  async setDayThemeForDate(date:string,metadata:unknown){
+    return this.repository.setDayThemeForDate(localDateSchema.parse(date),dayThemeMetadataSchema.parse(metadata));
+  }
   async createWorkItem(date:string,categoryId:string|null=null){return this.repository.createWorkItem(localDateSchema.parse(date),categoryId)}
   async updateWorkItem(input:unknown){return this.repository.updateWorkItem(updateWorkItemSchema.parse(input))}
   async deleteWorkItem(id:string){return this.repository.deleteWorkItem(id)}

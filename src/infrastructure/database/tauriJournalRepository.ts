@@ -18,6 +18,11 @@ export class TauriJournalRepository implements JournalRepository {
       dailyLogId,themeId:metadata.themeId,themeVersion:metadata.themeVersion,
     }));
   }
+  async setDayThemeForDate(date:string,metadata:DayThemeMetadata){
+    return dailyLogSchema.parse(await invokeTauriCommand<unknown>('set_daily_log_day_theme',{
+      date,themeId:metadata.themeId,themeVersion:metadata.themeVersion,
+    }));
+  }
   async createWorkItem(date:string,categoryId:string|null=null){return workItemSchema.parse(await invokeTauriCommand<unknown>('create_work_item',{date,categoryId}))}
   async updateWorkItem(item:UpdateWorkItem){return workItemSchema.parse(await invokeTauriCommand<unknown>('update_work_item',{input:item}))}
   async deleteWorkItem(itemId:string){await invokeTauriCommand('delete_work_item',{itemId})}

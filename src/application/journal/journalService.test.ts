@@ -9,6 +9,7 @@ const repositoryWithActivityDates=(dates:string[])=>{
     initialize:async()=>undefined,
     getDailyLog:async()=>null,
     updateDayThemeMetadata:unused,
+    setDayThemeForDate:unused,
     createWorkItem:unused,
     updateWorkItem:unused,
     deleteWorkItem:async()=>undefined,
@@ -50,6 +51,29 @@ describe('JournalService Day Theme metadata',()=>{
     await expect(service.clearDayTheme('log-1')).resolves.toEqual({themeId:null,themeVersion:null});
     expect(updateDayThemeMetadata).toHaveBeenNthCalledWith(1,'log-1',{themeId:'future-theme',themeVersion:2});
     expect(updateDayThemeMetadata).toHaveBeenNthCalledWith(2,'log-1',{themeId:null,themeVersion:null});
+  });
+
+  it('validates a date-scoped selection before persistence',async()=>{
+    const savedLog={
+      id:'log-1',logDate:'2026-07-29',createdAt:'now',updatedAt:'now',
+      themeId:'rainy',themeVersion:1,items:[],
+    };
+    const setDayThemeForDate=vi.fn(async()=>savedLog);
+    const{repository}=repositoryWithActivityDates([]);
+    const service=new JournalService({...repository,setDayThemeForDate});
+    await expect(service.setDayThemeForDate('2026-07-29',{
+      themeId:'rainy',themeVersion:1,
+    })).resolves.toEqual(savedLog);
+    expect(setDayThemeForDate).toHaveBeenCalledWith('2026-07-29',{
+      themeId:'rainy',themeVersion:1,
+    });
+    await expect(service.setDayThemeForDate('bad-date',{
+      themeId:'rainy',themeVersion:1,
+    })).rejects.toThrow();
+    await expect(service.setDayThemeForDate('2026-07-29',{
+      themeId:'rainy',themeVersion:null,
+    })).rejects.toThrow();
+    expect(setDayThemeForDate).toHaveBeenCalledOnce();
   });
 
   it.each([

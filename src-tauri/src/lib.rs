@@ -810,6 +810,28 @@ fn update_day_theme_metadata(
     transaction.commit()?;
     Ok(metadata)
 }
+fn set_day_theme_for_date(
+    connection: &mut Connection,
+    date: &str,
+    metadata: DayThemeMetadata,
+) -> AppResult<DailyLog> {
+    validate_day_theme_metadata(metadata.theme_id.as_deref(), metadata.theme_version)?;
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let daily_log_id = ensure_daily_log(&transaction, date)?;
+    transaction.execute(
+        "UPDATE daily_logs
+         SET theme_id=?1,theme_version=?2,updated_at=?3
+         WHERE id=?4",
+        params![
+            metadata.theme_id.as_deref(),
+            metadata.theme_version,
+            Utc::now().to_rfc3339(),
+            daily_log_id
+        ],
+    )?;
+    transaction.commit()?;
+    find_daily_log(connection, date)?.ok_or_else(AppError::not_found)
+}
 fn create_item(
     connection: &mut Connection,
     date: &str,
@@ -1159,6 +1181,22 @@ fn update_daily_log_day_theme(
     )
 }
 #[tauri::command]
+fn set_daily_log_day_theme(
+    app: tauri::AppHandle,
+    date: String,
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
+) -> AppResult<DailyLog> {
+    set_day_theme_for_date(
+        &mut open_database(&database_path(&app)?)?,
+        &date,
+        DayThemeMetadata {
+            theme_id,
+            theme_version,
+        },
+    )
+}
+#[tauri::command]
 fn create_work_item(
     app: tauri::AppHandle,
     date: String,
@@ -1303,6 +1341,7 @@ pub fn run() {
             initialize_locale_preference,
             get_daily_log,
             update_daily_log_day_theme,
+            set_daily_log_day_theme,
             create_work_item,
             list_work_categories,
             create_work_category,
@@ -1584,6 +1623,56 @@ mod tests {
         let log = find_daily_log(&db, "2026-07-18").unwrap().unwrap();
         assert_eq!((log.theme_id, log.theme_version), (None, None));
         assert_eq!(log.items.len(), 1);
+    }
+    #[test]
+    fn date_scoped_day_theme_write_creates_only_one_minimal_log() {
+        let mut db = memory();
+        let first = set_day_theme_for_date(
+            &mut db,
+            "2026-07-29",
+            DayThemeMetadata {
+                theme_id: Some("rainy".into()),
+                theme_version: Some(1),
+            },
+        )
+        .unwrap();
+        assert_eq!(first.log_date, "2026-07-29");
+        assert_eq!(first.theme_id.as_deref(), Some("rainy"));
+        assert_eq!(first.theme_version, Some(1));
+        assert!(first.items.is_empty());
+
+        let second = set_day_theme_for_date(
+            &mut db,
+            "2026-07-29",
+            DayThemeMetadata {
+                theme_id: Some("coffee".into()),
+                theme_version: Some(1),
+            },
+        )
+        .unwrap();
+        assert_eq!(second.id, first.id);
+        assert_eq!(second.theme_id.as_deref(), Some("coffee"));
+        assert_eq!(
+            db.query_row(
+                "SELECT COUNT(*) FROM daily_logs WHERE log_date='2026-07-29'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+
+        let cleared = set_day_theme_for_date(
+            &mut db,
+            "2026-07-29",
+            DayThemeMetadata {
+                theme_id: None,
+                theme_version: None,
+            },
+        )
+        .unwrap();
+        assert_eq!((cleared.theme_id, cleared.theme_version), (None, None));
+        assert!(cleared.items.is_empty());
     }
     #[test]
     fn day_theme_metadata_rejects_invalid_pairs_without_changing_the_log() {

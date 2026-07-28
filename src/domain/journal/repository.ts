@@ -4,6 +4,7 @@ export interface JournalRepository {
   initialize(): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
   updateDayThemeMetadata(dailyLogId:string,metadata:DayThemeMetadata):Promise<DayThemeMetadata>;
+  setDayThemeForDate(date:string,metadata:DayThemeMetadata):Promise<DailyLog>;
   createWorkItem(date:string,categoryId?:string|null):Promise<WorkItem>;
   updateWorkItem(item:UpdateWorkItem):Promise<WorkItem>;
   deleteWorkItem(itemId:string):Promise<void>;

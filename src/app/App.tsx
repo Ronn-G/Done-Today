@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect -- async route loads intentionally initialize screen state */
-import {useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
+import {lazy,Suspense,useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
 import{createPortal}from'react-dom';
 import {useTranslation} from 'react-i18next';
-import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Palette,Settings,Trash2} from 'lucide-react';
+import {CalendarDays,Check,CheckCircle2,ChevronDown,ChevronLeft,ChevronRight,ChevronUp,History,LoaderCircle,MoreHorizontal,Settings,SlidersHorizontal,Sparkles,Trash2} from 'lucide-react';
 import {JournalService} from '../application/journal/journalService';
 import {JOURNAL_AUTOSAVE_DELAY_MS,SaveCoordinator,type SaveState} from '../application/journal/saveCoordinator';
 import {ThemeSaveCoordinator,type ThemeSaveState} from '../application/theme/themeSaveCoordinator';
 import{normalizeAppError}from'../application/errors/errorNormalizer';
 import type{NormalizedAppError}from'../domain/errors/appError';
-import {workStatusSchema,type DailyLog,type DailyLogSummary,type UpdateWorkItem,type WorkItem,type WorkStatus} from '../domain/journal/models';
+import {workStatusSchema,type DailyLog,type DailyLogSummary,type DayThemeMetadata,type UpdateWorkItem,type WorkItem,type WorkStatus} from '../domain/journal/models';
 import{groupDailyItems,parseCollapsedCategoryState,type CategoryGroup,type WorkCategory}from'../domain/journal/categories';
 import {calculateStatistics} from '../domain/journal/statistics';
 import {TauriJournalRepository} from '../infrastructure/database/tauriJournalRepository';
@@ -34,11 +34,15 @@ import {DayCover} from '../features/daily-log/DayCover';
 
 type Route={page:'day';date:string}|{page:'history'}|{page:'settings'};
 type AppPage=Route['page'];
+const LazyDayThemePicker=lazy(()=>import('../features/daily-log/DayThemePicker'));
 const service=new JournalService(new TauriJournalRepository());
 const themeRepository=new TauriThemeRepository();
 const today=()=>localDateKey();
 export function resolveDayThemeForLog(log:Pick<DailyLog,'themeId'|'themeVersion'>|null){
   return dayThemeRegistry.resolve(log?.themeId??null,log?.themeVersion??null);
+}
+export function shouldPersistDayTheme(log:DailyLog|null,metadata:DayThemeMetadata){
+  return log!==null||Object.values(metadata).some(value=>value!==null);
 }
 function parseRoute():Route{
   const hash=location.hash.slice(1);
@@ -110,6 +114,7 @@ function Nav({active,onClick,icon,children}:{active:boolean;onClick:()=>void;ico
 function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const {t}=useTranslation('today');
   const{t:tErrors}=useTranslation('errors');
+  const{t:tTheme}=useTranslation('theme');
   const[log,setLog]=useState<DailyLog|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<NormalizedAppError|null>(null);
@@ -118,6 +123,11 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const[categories,setCategories]=useState<WorkCategory[]>([]);
   const[collapsed,setCollapsed]=useState<string[]>([]);
   const[currentStreak,setCurrentStreak]=useState(0);
+  const[dayThemePickerOpen,setDayThemePickerOpen]=useState(false);
+  const[previewDayTheme,setPreviewDayTheme]=useState<DayThemeMetadata|null>(null);
+  const[dayThemeFeedback,setDayThemeFeedback]=useState<string|null>(null);
+  const activeDate=useRef<string|null>(date);
+  useEffect(()=>()=>{activeDate.current=null},[]);
   const refreshStreak=useCallback(async()=>setCurrentStreak(await service.getCurrentStreak(today())),[]);
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
@@ -129,12 +139,32 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const items=useMemo(()=>log?.items??[],[log]);
   const stats=useMemo(()=>calculateStatistics(items),[items]);
   const groups=useMemo(()=>groupDailyItems(items,categories),[items,categories]);
-  const dayThemeId=log?.themeId??null;
-  const dayThemeVersion=log?.themeVersion??null;
+  const persistedDayTheme=useMemo<DayThemeMetadata>(()=>({
+    themeId:log?.themeId??null,
+    themeVersion:log?.themeVersion??null,
+  }),[log?.themeId,log?.themeVersion]);
+  const activeDayTheme=previewDayTheme??persistedDayTheme;
   const resolvedDayTheme=useMemo(
-    ()=>resolveDayThemeForLog({themeId:dayThemeId,themeVersion:dayThemeVersion}),
-    [dayThemeId,dayThemeVersion],
+    ()=>dayThemeRegistry.resolve(activeDayTheme.themeId,activeDayTheme.themeVersion),
+    [activeDayTheme],
   );
+  const openDayThemePicker=()=>{
+    setPreviewDayTheme(null);setDayThemeFeedback(null);setDayThemePickerOpen(true);
+  };
+  const closeDayThemePicker=()=>{
+    setPreviewDayTheme(null);setDayThemePickerOpen(false);
+  };
+  const applyDayTheme=async(metadata:DayThemeMetadata)=>{
+    if(!shouldPersistDayTheme(log,metadata))return;
+    const saved=await service.setDayThemeForDate(date,metadata);
+    if(activeDate.current!==date)return;
+    setLog(current=>current?{
+      ...current,
+      updatedAt:saved.updatedAt,
+      themeId:saved.themeId,
+      themeVersion:saved.themeVersion,
+    }:saved);
+  };
   const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);
     try{
@@ -166,7 +196,8 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const changeCategory=async(item:WorkItem,categoryId:string|null)=>{try{const saved=await service.moveWorkItemToCategory(item.id,categoryId);updateLocal(saved)}catch(reason){setError(normalizeAppError(reason));throw reason}};
   const go=(next:string)=>navigate({page:'day',date:next});
   return <DayThemeScope resolvedTheme={resolvedDayTheme}><div className="content">
-    <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme} resolvedTheme={resolvedDayTheme}/>
+    <TodayOverview date={date} stats={stats} currentStreak={currentStreak} onGo={go} onOpenTheme={onOpenTheme}
+      onOpenDayTheme={openDayThemePicker} dayThemeFeedback={dayThemeFeedback} resolvedTheme={resolvedDayTheme}/>
     {error&&<div className="page-error" role="alert">{localizeAppError(error,toErrorTranslator(tErrors))}<button onClick={()=>void load()}>{t('common:actions.retry')}</button></div>}
     <section className="table-card">{loading?<div className="message"><LoaderCircle className="spin" size={20}/> {t('status.loading')}</div>:
       <div className="table-scroll"><table><TodayTableHeader/>
@@ -176,11 +207,19 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
       {!items.length&&<TodayEmptyState/>}</tbody></table></div>}
       <AddRowFooter categories={categories} onAddItem={addItem}/>
     </section>
-  </div></DayThemeScope>;
+  </div>{dayThemePickerOpen&&<Suspense fallback={null}><LazyDayThemePicker
+    persisted={persistedDayTheme}
+    onPreview={setPreviewDayTheme}
+    onRollbackPreview={()=>setPreviewDayTheme(null)}
+    onApply={applyDayTheme}
+    onApplied={()=>{setPreviewDayTheme(null);setDayThemePickerOpen(false);setDayThemeFeedback(tTheme('dayTheme.picker.saved'))}}
+    onCancel={closeDayThemePicker}
+  /></Suspense>}</DayThemeScope>;
 }
 
-export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme,resolvedTheme}:{
-  date:string;stats:ReturnType<typeof calculateStatistics>;currentStreak:number;onGo:(date:string)=>void;onOpenTheme:()=>void;resolvedTheme:ResolvedDayTheme;
+export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme,onOpenDayTheme,dayThemeFeedback,resolvedTheme}:{
+  date:string;stats:ReturnType<typeof calculateStatistics>;currentStreak:number;onGo:(date:string)=>void;onOpenTheme:()=>void;
+  onOpenDayTheme:()=>void;dayThemeFeedback?:string|null;resolvedTheme:ResolvedDayTheme;
 }){
   const {t,i18n}=useTranslation('today');
   const {t:tTheme}=useTranslation('theme');
@@ -196,8 +235,10 @@ export function TodayOverview({date,stats,currentStreak,onGo,onOpenTheme,resolve
       <label className="date-picker"><span>{formattedDate}</span><input aria-label={t('dateControls.choose')} type="date" value={date} onChange={event=>isValidLocalDate(event.target.value)&&onGo(event.target.value)}/></label>
       <button aria-label={t('dateControls.next')} title={t('dateControls.next')} onClick={()=>onGo(addLocalDays(date,1))}><ChevronRight size={18}/></button>
       {!current&&<button className="today-button" onClick={()=>onGo(today())}>{t('dateControls.today')}</button>}
-      <button aria-label={tTheme('customizer.open')} title={tTheme('customizer.open')} onClick={onOpenTheme}><Palette size={18}/></button>
+      <button className="day-theme-trigger" onClick={onOpenDayTheme}><Sparkles aria-hidden="true" size={17}/><span>{tTheme('dayTheme.picker.trigger')}</span></button>
+      <button aria-label={tTheme('customizer.open')} title={tTheme('customizer.open')} onClick={onOpenTheme}><SlidersHorizontal aria-hidden="true" size={18}/></button>
     </div>}/>
+    {dayThemeFeedback&&<span className="day-theme-feedback" role="status" aria-live="polite">{dayThemeFeedback}</span>}
     <section className="stats" aria-label={t('stats.label')}><Stat label={t('stats.total')} value={formatCount(stats.total,locale).value}/><Stat label={t('stats.completed')} value={formatCount(stats.completed,locale).value}/>
       <div className="stat progress-stat"><span>{t('stats.completionRate')}</span><strong>{formatPercent(stats.percentage/100,locale)}</strong><div className="progress" role="progressbar" aria-label={t('stats.completionRate')} aria-valuenow={stats.percentage} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${stats.percentage}%`}}/></div></div>
       <Stat className="streak-stat" label={t('stats.streak')} value={t('stats.streakValue',{count:currentStreak})}/></section></>;

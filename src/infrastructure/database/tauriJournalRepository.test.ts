@@ -44,4 +44,18 @@ describe('TauriJournalRepository Day Theme metadata',()=>{
       themeId:'future-theme',themeVersion:7,
     })).rejects.toThrow();
   });
+
+  it('sets a day theme by date and parses the complete daily log',async()=>{
+    const saved={
+      id:'log-1',logDate:'2026-07-29',createdAt:'now',updatedAt:'now',
+      themeId:'coffee',themeVersion:1,items:[],
+    };
+    vi.mocked(invoke).mockResolvedValue(saved);
+    await expect(new TauriJournalRepository().setDayThemeForDate('2026-07-29',{
+      themeId:'coffee',themeVersion:1,
+    })).resolves.toEqual(saved);
+    expect(invoke).toHaveBeenCalledWith('set_daily_log_day_theme',{
+      date:'2026-07-29',themeId:'coffee',themeVersion:1,
+    });
+  });
 });

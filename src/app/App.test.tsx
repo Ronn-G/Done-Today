@@ -5,7 +5,7 @@ import {initializeI18n} from '../i18n';
 import {dayThemeRegistry} from '../domain/day-theme/registry';
 import {DayThemeScope} from '../features/daily-log/DayThemeScope';
 import {i18next} from '../i18n';
-import {AppNavigation,resolveDayThemeForLog,TodayOverview} from './App';
+import {AppNavigation,resolveDayThemeForLog,shouldPersistDayTheme,TodayOverview} from './App';
 
 describe('I18N-2 app shell and Today overview',()=>{
   it.each([
@@ -18,14 +18,15 @@ describe('I18N-2 app shell and Today overview',()=>{
   });
 
   it.each([
-    ['vi','Nhật ký theo ngày','Ngày trước','Tỷ lệ hoàn thành','Tùy chỉnh giao diện'],
-    ['en','Daily journal','Previous day','Completion rate','Customize appearance'],
-  ] as const)('renders localized dates, controls and statistics in %s',async(locale,eyebrow,previous,completionRate,customizeAppearance)=>{
+    ['vi','Nhật ký theo ngày','Ngày trước','Tỷ lệ hoàn thành','Giao diện ứng dụng','Chủ đề của ngày'],
+    ['en','Daily journal','Previous day','Completion rate','App appearance','Day theme'],
+  ] as const)('renders localized dates, controls and statistics in %s',async(locale,eyebrow,previous,completionRate,appAppearance,dayTheme)=>{
     await initializeI18n(locale);
-    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
+    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} onOpenDayTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     expect(html).toContain(eyebrow);
     expect(html).toContain(`aria-label="${previous}"`);
-    expect(html).toContain(`aria-label="${customizeAppearance}"`);
+    expect(html).toContain(`aria-label="${appAppearance}"`);
+    expect(html).toContain(`<span>${dayTheme}</span>`);
     expect(html).toContain(completionRate);
     expect(html).toContain('50%');
     if(locale==='en')expect(html).toContain('Friday, January 2, 2026');
@@ -34,7 +35,7 @@ describe('I18N-2 app shell and Today overview',()=>{
 
   it('renders the fourth statistic in Vietnamese without a raw key',async()=>{
     await initializeI18n('vi');
-    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:0,completed:0,percentage:0}} currentStreak={0} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
+    const html=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:0,completed:0,percentage:0}} currentStreak={0} onGo={vi.fn()} onOpenTheme={vi.fn()} onOpenDayTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     expect(html).toContain('aria-label="Thống kê trong ngày"');
     expect(html).toContain('class="stat streak-stat"');
     expect(html).toContain('Chuỗi ngày ghi nhật ký');expect(html).toContain('0 ngày');
@@ -43,8 +44,8 @@ describe('I18N-2 app shell and Today overview',()=>{
 
   it('uses English singular and plural streak values while preserving existing stats',async()=>{
     await initializeI18n('en');
-    const one=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={1} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
-    const many=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
+    const one=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={1} onGo={vi.fn()} onOpenTheme={vi.fn()} onOpenDayTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
+    const many=renderToStaticMarkup(<TodayOverview date="2026-01-02" stats={{total:2,completed:1,percentage:50}} currentStreak={6} onGo={vi.fn()} onOpenTheme={vi.fn()} onOpenDayTheme={vi.fn()} resolvedTheme={dayThemeRegistry.resolve(null,null)}/>);
     for(const text of ['Total tasks','Completed','Completion rate','Journal streak','1 day'])expect(one).toContain(text);
     expect(one).not.toContain('1 days');expect(many).toContain('6 days');
     expect(many).toContain('role="progressbar"');expect(many).not.toContain('today.');
@@ -59,6 +60,11 @@ describe('I18N-2 app shell and Today overview',()=>{
 });
 
 describe('Day Theme foundation integration',()=>{
+  it('does not create a log when applying the default to an untouched day',()=>{
+    expect(shouldPersistDayTheme(null,{themeId:null,themeVersion:null})).toBe(false);
+    expect(shouldPersistDayTheme(null,{themeId:'sakura',themeVersion:1})).toBe(true);
+  });
+
   it('resolves null, known and unknown metadata without mutating the original reference',()=>{
     const unknown={themeId:'future-theme',themeVersion:7};
     expect(resolveDayThemeForLog(null)).toMatchObject({source:'default',requested:null});
@@ -120,6 +126,7 @@ describe('Day Theme foundation integration',()=>{
         currentStreak={2}
         onGo={vi.fn()}
         onOpenTheme={vi.fn()}
+        onOpenDayTheme={vi.fn()}
         resolvedTheme={dayThemeRegistry.resolve(themeId,1)}
       />);
       expect(html).toContain('class="day-cover"');
