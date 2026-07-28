@@ -1,6 +1,7 @@
-import { dailyLogSchema,historyPageSchema,journalActivityDatesSchema,workItemSchema } from '../../domain/journal/models';
+import { dailyLogSchema,dayThemeMetadataSchema,historyPageSchema,journalActivityDatesSchema,workItemSchema } from '../../domain/journal/models';
 import{workCategorySchema,type CategoryInput,type CategoryUpdate}from'../../domain/journal/categories';
 import type { UpdateWorkItem } from '../../domain/journal/models';
+import type {DayThemeMetadata} from '../../domain/journal/models';
 import type { JournalRepository } from '../../domain/journal/repository';
 import{invokeTauriCommand}from'../tauri/invoke';
 export class TauriJournalRepository implements JournalRepository {
@@ -11,6 +12,11 @@ export class TauriJournalRepository implements JournalRepository {
   async getDailyLog(date:string) {
     const result=await invokeTauriCommand<unknown>('get_daily_log',{date});
     return result===null?null:dailyLogSchema.parse(result);
+  }
+  async updateDayThemeMetadata(dailyLogId:string,metadata:DayThemeMetadata){
+    return dayThemeMetadataSchema.parse(await invokeTauriCommand<unknown>('update_daily_log_day_theme',{
+      dailyLogId,themeId:metadata.themeId,themeVersion:metadata.themeVersion,
+    }));
   }
   async createWorkItem(date:string,categoryId:string|null=null){return workItemSchema.parse(await invokeTauriCommand<unknown>('create_work_item',{date,categoryId}))}
   async updateWorkItem(item:UpdateWorkItem){return workItemSchema.parse(await invokeTauriCommand<unknown>('update_work_item',{input:item}))}

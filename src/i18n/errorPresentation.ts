@@ -38,6 +38,7 @@ export const appErrorPresentation = {
   'category.color_invalid': {key: 'settings:categories.backendErrors.colorInvalid'},
   'category.reorder_invalid': {key: 'settings:categories.backendErrors.reorderInvalid'},
   'history.pagination_invalid': {key: 'history:backendErrors.paginationInvalid'},
+  'day_theme.metadata_invalid': {key: 'theme:backendErrors.dayThemeMetadataInvalid'},
   'theme.invalid': {key: 'theme:backendErrors.invalid'},
   'theme.too_large': {key: 'theme:backendErrors.tooLarge', required: ['maxKiB'], paramTypes: {maxKiB: 'number'}},
   'theme.schema_unsupported': {

@@ -1,6 +1,6 @@
 use crate::{
-    error_code, validate_theme_preferences, AppError, AppErrorParam, AppErrorParams, AppResult,
-    STATUSES, THEME_KEY,
+    error_code, validate_day_theme_metadata, validate_theme_preferences, AppError, AppErrorParam,
+    AppErrorParams, AppResult, STATUSES, THEME_KEY,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
@@ -32,6 +32,10 @@ pub struct BackupDailyLogV1 {
     log_date: String,
     created_at: String,
     updated_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    theme_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    theme_version: Option<i64>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -198,6 +202,8 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
         if !valid_timestamp(&log.created_at) || !valid_timestamp(&log.updated_at) {
             return Err(AppError::new(error_code::BACKUP_TIMESTAMP_INVALID));
         }
+        validate_day_theme_metadata(log.theme_id.as_deref(), log.theme_version)
+            .map_err(|_| AppError::new(error_code::BACKUP_THEME_INVALID))?;
     }
     let log_ids: HashSet<_> = payload
         .daily_logs
@@ -312,7 +318,8 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
     let tx = connection.transaction()?;
     let daily_logs = {
         let mut statement = tx.prepare(
-            "SELECT id,log_date,created_at,updated_at FROM daily_logs ORDER BY log_date,id",
+            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version
+             FROM daily_logs ORDER BY log_date,id",
         )?;
         let rows = statement
             .query_map([], |row| {
@@ -321,6 +328,8 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
                     log_date: row.get(1)?,
                     created_at: row.get(2)?,
                     updated_at: row.get(3)?,
+                    theme_id: row.get(4)?,
+                    theme_version: row.get(5)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -620,8 +629,17 @@ fn insert_payload(
                 )?
         {
             tx.execute(
-                "INSERT INTO daily_logs(id,log_date,created_at,updated_at)VALUES(?1,?2,?3,?4)",
-                params![target, log.log_date, log.created_at, log.updated_at],
+                "INSERT INTO daily_logs(
+                    id,log_date,created_at,updated_at,theme_id,theme_version
+                 ) VALUES(?1,?2,?3,?4,?5,?6)",
+                params![
+                    target,
+                    log.log_date,
+                    log.created_at,
+                    log.updated_at,
+                    log.theme_id.as_deref(),
+                    log.theme_version
+                ],
             )?;
         }
         if target != &log.id {
@@ -762,6 +780,25 @@ mod tests {
             theme_preferences: None,
         }
     }
+    fn daily_log(id: &str, date: &str, theme: Option<(&str, i64)>) -> BackupDailyLogV1 {
+        BackupDailyLogV1 {
+            id: id.into(),
+            log_date: date.into(),
+            created_at: "2026-07-19T00:00:00Z".into(),
+            updated_at: "2026-07-19T00:00:00Z".into(),
+            theme_id: theme.map(|value| value.0.into()),
+            theme_version: theme.map(|value| value.1),
+        }
+    }
+    fn legacy_fixture() -> tempfile::NamedTempFile {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        fs::write(
+            file.path(),
+            include_bytes!("../tests/fixtures/backup-v1-legacy-no-day-theme.json"),
+        )
+        .unwrap();
+        file
+    }
     fn write_envelope(payload: BackupPayloadV1) -> tempfile::NamedTempFile {
         let file = tempfile::NamedTempFile::new().unwrap();
         let envelope = BackupEnvelopeV1 {
@@ -785,8 +822,252 @@ mod tests {
             log_date: "2026-07-19".into(),
             created_at: "2026-07-19T00:00:00Z".into(),
             updated_at: "2026-07-19T00:00:00Z".into(),
+            theme_id: None,
+            theme_version: None,
         });
         assert_ne!(first, checksum(&value).unwrap())
+    }
+    #[test]
+    fn legacy_v1_fixture_keeps_its_checksum_and_previews_without_day_theme_fields() {
+        let file = legacy_fixture();
+        let envelope = read(file.path()).unwrap();
+        assert_eq!(
+            envelope.checksum,
+            "sha256:4f9c8b211251d0d6b1797742bbfa90f7b6d0a5d6250c9171500af2b6ca201e6d"
+        );
+        assert_eq!(checksum(&envelope.payload).unwrap(), envelope.checksum);
+        assert_eq!(envelope.payload.daily_logs[0].theme_id, None);
+        assert_eq!(envelope.payload.daily_logs[0].theme_version, None);
+
+        let directory = tempfile::tempdir().unwrap();
+        let db_path = directory.path().join("preview.sqlite3");
+        let mut db = Connection::open(&db_path).unwrap();
+        migrate(&mut db).unwrap();
+        drop(db);
+        let preview_result = preview(&db_path, file.path()).unwrap();
+        assert!(preview_result.checksum_valid);
+        assert_eq!(preview_result.counts.daily_logs, 1);
+
+        let crlf_file = tempfile::NamedTempFile::new().unwrap();
+        let crlf = String::from_utf8(fs::read(file.path()).unwrap())
+            .unwrap()
+            .replace('\n', "\r\n");
+        fs::write(crlf_file.path(), crlf).unwrap();
+        assert_eq!(read(crlf_file.path()).unwrap().checksum, envelope.checksum);
+
+        let explicit_null_file = tempfile::NamedTempFile::new().unwrap();
+        let mut explicit_null: serde_json::Value =
+            serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
+        explicit_null["payload"]["dailyLogs"][0]["themeId"] = serde_json::Value::Null;
+        explicit_null["payload"]["dailyLogs"][0]["themeVersion"] = serde_json::Value::Null;
+        fs::write(
+            explicit_null_file.path(),
+            serde_json::to_vec(&explicit_null).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            read(explicit_null_file.path()).unwrap().checksum,
+            envelope.checksum
+        );
+    }
+    #[test]
+    fn malformed_day_theme_pair_is_rejected_with_a_safe_backup_error() {
+        let file = legacy_fixture();
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(file.path()).unwrap()).unwrap();
+        value["payload"]["dailyLogs"][0]["themeId"] = "valid-theme".into();
+        fs::write(file.path(), serde_json::to_vec(&value).unwrap()).unwrap();
+        let error = read(file.path()).unwrap_err();
+        assert_eq!(error.code, error_code::BACKUP_THEME_INVALID);
+        let encoded = serde_json::to_string(&error).unwrap().to_lowercase();
+        for unsafe_fragment in ["sqlite", "select ", "c:\\", "stack"] {
+            assert!(!encoded.contains(unsafe_fragment));
+        }
+    }
+    #[test]
+    fn export_import_round_trip_preserves_explicit_unknown_day_theme_metadata() {
+        let source_directory = tempfile::tempdir().unwrap();
+        let source_path = source_directory.path().join("source.sqlite3");
+        let daily_log_id = {
+            let mut db = Connection::open(&source_path).unwrap();
+            migrate(&mut db).unwrap();
+            db.execute(
+                "INSERT INTO daily_logs(
+                    id,log_date,created_at,updated_at,theme_id,theme_version
+                 ) VALUES('themed-log','2026-07-19','2026-07-19T00:00:00Z',
+                    '2026-07-19T00:00:00Z','future-theme',7)",
+                [],
+            )
+            .unwrap();
+            "themed-log".to_string()
+        };
+        let backup_path = source_directory.path().join("round-trip.json");
+        export(&source_path, &backup_path).unwrap();
+        let encoded = String::from_utf8(fs::read(&backup_path).unwrap()).unwrap();
+        assert!(encoded.contains("\"themeId\": \"future-theme\""));
+        assert!(encoded.contains("\"themeVersion\": 7"));
+
+        let target_directory = tempfile::tempdir().unwrap();
+        let target_path = target_directory.path().join("target.sqlite3");
+        let mut target = Connection::open(&target_path).unwrap();
+        migrate(&mut target).unwrap();
+        drop(target);
+        import(
+            &target_path,
+            &backup_path,
+            ImportMode::Replace,
+            false,
+            false,
+        )
+        .unwrap();
+        let target = Connection::open(target_path).unwrap();
+        assert_eq!(
+            target
+                .query_row(
+                    "SELECT theme_id,theme_version FROM daily_logs WHERE id=?1",
+                    [&daily_log_id],
+                    |row| Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, Option<i64>>(1)?
+                    ))
+                )
+                .unwrap(),
+            (Some("future-theme".into()), Some(7))
+        );
+    }
+    #[test]
+    fn null_theme_export_does_not_invent_the_runtime_default() {
+        let mut db = memory();
+        db.execute(
+            "INSERT INTO daily_logs(id,log_date,created_at,updated_at)
+             VALUES('plain-log','2026-07-19','2026-07-19T00:00:00Z','2026-07-19T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        let payload = snapshot(&mut db).unwrap();
+        assert_eq!(payload.daily_logs[0].theme_id, None);
+        assert_eq!(payload.daily_logs[0].theme_version, None);
+        let encoded = canonical_payload(&payload).unwrap();
+        assert!(!encoded.contains("done-today-default"));
+        assert!(!encoded.contains("themeId"));
+    }
+    #[test]
+    fn merge_uses_the_existing_daily_log_winner_for_the_entire_theme_pair() {
+        let mut db = memory();
+        db.execute(
+            "INSERT INTO daily_logs(
+                id,log_date,created_at,updated_at,theme_id,theme_version
+             ) VALUES('local-log','2026-07-19','2026-07-19T00:00:00Z',
+                '2026-07-19T00:00:00Z','local-theme',3)",
+            [],
+        )
+        .unwrap();
+        let mut payload = empty_payload();
+        payload.daily_logs.push(daily_log(
+            "backup-log",
+            "2026-07-19",
+            Some(("backup-theme", 8)),
+        ));
+        let tx = db.transaction().unwrap();
+        let plan = make_plan(&tx, &payload).unwrap();
+        assert_eq!(plan.log_map["backup-log"], "local-log");
+        insert_payload(&tx, &payload, &plan, true).unwrap();
+        tx.commit().unwrap();
+        assert_eq!(
+            db.query_row(
+                "SELECT theme_id,theme_version FROM daily_logs WHERE id='local-log'",
+                [],
+                |row| Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<i64>>(1)?
+                ))
+            )
+            .unwrap(),
+            (Some("local-theme".into()), Some(3))
+        );
+    }
+    #[test]
+    fn legacy_merge_preserves_local_theme_and_legacy_replace_restores_null_pair() {
+        for mode in [ImportMode::Merge, ImportMode::Replace] {
+            let directory = tempfile::tempdir().unwrap();
+            let db_path = directory.path().join("legacy-import.sqlite3");
+            let mut db = Connection::open(&db_path).unwrap();
+            migrate(&mut db).unwrap();
+            db.execute(
+                "INSERT INTO daily_logs(
+                    id,log_date,created_at,updated_at,theme_id,theme_version
+                 ) VALUES('local-log','2026-07-19','2026-07-19T00:00:00Z',
+                    '2026-07-19T00:00:00Z','local-theme',3)",
+                [],
+            )
+            .unwrap();
+            drop(db);
+            let file = legacy_fixture();
+            import(&db_path, file.path(), mode, false, false).unwrap();
+            let db = Connection::open(&db_path).unwrap();
+            let pair = db
+                .query_row(
+                    "SELECT theme_id,theme_version FROM daily_logs WHERE log_date='2026-07-19'",
+                    [],
+                    |row| {
+                        Ok((
+                            row.get::<_, Option<String>>(0)?,
+                            row.get::<_, Option<i64>>(1)?,
+                        ))
+                    },
+                )
+                .unwrap();
+            let expected = match mode {
+                ImportMode::Merge => (Some("local-theme".into()), Some(3)),
+                ImportMode::Replace => (None, None),
+            };
+            assert_eq!(pair, expected);
+        }
+    }
+    #[test]
+    fn replace_rolls_back_day_theme_and_journal_when_receipt_write_fails() {
+        let directory = tempfile::tempdir().unwrap();
+        let db_path = directory.path().join("rollback.sqlite3");
+        let mut db = Connection::open(&db_path).unwrap();
+        migrate(&mut db).unwrap();
+        db.execute(
+            "INSERT INTO daily_logs(
+                id,log_date,created_at,updated_at,theme_id,theme_version
+             ) VALUES('local-log','2026-07-18','2026-07-18T00:00:00Z',
+                '2026-07-18T00:00:00Z','local-theme',3)",
+            [],
+        )
+        .unwrap();
+        db.execute_batch(
+            "CREATE TRIGGER fail_receipt
+             BEFORE INSERT ON backup_import_receipts
+             BEGIN SELECT RAISE(ABORT, 'receipt failure'); END;",
+        )
+        .unwrap();
+        drop(db);
+
+        let mut payload = empty_payload();
+        payload.daily_logs.push(daily_log(
+            "replacement-log",
+            "2026-07-19",
+            Some(("future-theme", 9)),
+        ));
+        let file = write_envelope(payload);
+        assert!(import(&db_path, file.path(), ImportMode::Replace, false, false,).is_err());
+        let db = Connection::open(db_path).unwrap();
+        assert_eq!(
+            db.query_row(
+                "SELECT id,theme_id,theme_version FROM daily_logs",
+                [],
+                |row| Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<i64>>(2)?
+                ))
+            )
+            .unwrap(),
+            ("local-log".into(), Some("local-theme".into()), Some(3))
+        );
     }
     #[test]
     fn invalid_references_are_rejected() {
@@ -844,7 +1125,7 @@ mod tests {
         );
     }
     #[test]
-    fn migration_v4_is_idempotent() {
+    fn latest_migration_is_idempotent() {
         let mut db = memory();
         migrate(&mut db).unwrap();
         assert_eq!(
@@ -853,7 +1134,7 @@ mod tests {
                 0
             ))
             .unwrap(),
-            4
+            5
         )
     }
     #[test]

@@ -9,6 +9,30 @@ describe('backup v1',()=>{
   it('validates a complete envelope',async()=>expect(backupEnvelopeSchema.safeParse({format:'done-today-backup',version:1,exportedAt:now,appVersion:'0.1.0',payload,checksum:await checksumPayload(payload)}).success).toBe(true));
   it('rejects wrong format and versions',()=>{expect(()=>parseBackupEnvelope({format:'bad',version:1})).toThrow();expect(()=>parseBackupEnvelope({version:2})).toThrow(/mới hơn/)});
   it('canonicalizes object and collection order',()=>expect(canonicalPayload({...payload,dailyLogs:[...payload.dailyLogs].reverse()})).toBe(canonicalPayload(payload)));
+  it('keeps legacy null metadata out of the v1 checksum shape',async()=>{
+    const explicitNull={...payload,dailyLogs:payload.dailyLogs.map(log=>({...log,themeId:null,themeVersion:null}))};
+    expect(canonicalPayload(explicitNull)).toBe(canonicalPayload(payload));
+    expect(await checksumPayload(explicitNull)).toBe(await checksumPayload(payload));
+    expect(canonicalPayload(payload)).not.toContain('themeId');
+  });
+  it('round trips explicit and unknown structurally valid Day Theme metadata',()=>{
+    const themed={...payload,dailyLogs:[{...payload.dailyLogs[0],themeId:'future-theme',themeVersion:7}]};
+    const parsed=backupPayloadSchema.parse(themed);
+    expect(parsed.dailyLogs[0]).toMatchObject({themeId:'future-theme',themeVersion:7});
+    expect(canonicalPayload(parsed)).toContain('"themeId":"future-theme"');
+  });
+  it.each([
+    {themeId:'valid-theme',themeVersion:null},
+    {themeId:null,themeVersion:1},
+    {themeId:'',themeVersion:1},
+    {themeId:'Bad ID',themeVersion:1},
+    {themeId:'x'.repeat(65),themeVersion:1},
+    {themeId:'valid-theme',themeVersion:0},
+    {themeId:'valid-theme',themeVersion:-1},
+    {themeId:'valid-theme',themeVersion:1.5},
+  ])('rejects malformed Day Theme metadata $themeId/$themeVersion',(metadata)=>{
+    expect(backupPayloadSchema.safeParse({...payload,dailyLogs:[{...payload.dailyLogs[0],...metadata}]}).success).toBe(false);
+  });
   it('has a stable and sensitive checksum',async()=>{expect(await checksumPayload(payload)).toBe(await checksumPayload({...payload,dailyLogs:[...payload.dailyLogs].reverse()}));expect(await checksumPayload(payload)).not.toBe(await checksumPayload({...payload,workItems:[{...payload.workItems[0],task:'Khác'}]}))});
   it('rejects invalid payload boundaries',()=>{
     expect(backupPayloadSchema.safeParse({...payload,dailyLogs:[payload.dailyLogs[0],payload.dailyLogs[0]]}).success).toBe(false);

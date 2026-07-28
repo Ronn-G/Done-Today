@@ -6,7 +6,7 @@ const CSS_VALUE_MAX_LENGTH = 512;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ASSET_ID_PATTERN = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
 const TRANSLATION_KEY_PATTERN = /^theme:[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2,}$/;
-const UNSAFE_CSS_PATTERN = /[;{}]|url\s*\(|expression\s*\(|@import|[\u0000-\u001f\u007f]/i;
+const UNSAFE_CSS_PATTERN = /[;{}]|url\s*\(|expression\s*\(|@import/i;
 
 export class DayThemeValidationError extends Error {
   readonly issues: readonly string[];
@@ -29,7 +29,11 @@ function validCssValue(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.length > 0
     && trimmed.length <= CSS_VALUE_MAX_LENGTH
-    && !UNSAFE_CSS_PATTERN.test(trimmed);
+    && !UNSAFE_CSS_PATTERN.test(trimmed)
+    && ![...trimmed].some(character => {
+      const code = character.charCodeAt(0);
+      return code <= 31 || code === 127;
+    });
 }
 
 function validGradient(value: string): boolean {

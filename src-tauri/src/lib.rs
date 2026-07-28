@@ -15,6 +15,7 @@ const MIGRATION_V1: &str = include_str!("../migrations/001_initial.sql");
 const MIGRATION_V2: &str = include_str!("../migrations/002_app_settings.sql");
 const MIGRATION_V3: &str = include_str!("../migrations/003_work_categories.sql");
 const MIGRATION_V4: &str = include_str!("../migrations/004_backup_receipts.sql");
+const MIGRATION_V5: &str = include_str!("../migrations/005_day_theme.sql");
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
 const LOCALE_KEY: &str = "localization.locale";
@@ -73,6 +74,7 @@ mod error_code {
     pub const CATEGORY_COLOR_INVALID: &str = "category.color_invalid";
     pub const CATEGORY_REORDER_INVALID: &str = "category.reorder_invalid";
     pub const HISTORY_PAGINATION_INVALID: &str = "history.pagination_invalid";
+    pub const DAY_THEME_METADATA_INVALID: &str = "day_theme.metadata_invalid";
     pub const THEME_INVALID: &str = "theme.invalid";
     pub const THEME_TOO_LARGE: &str = "theme.too_large";
     pub const THEME_SCHEMA_UNSUPPORTED: &str = "theme.schema_unsupported";
@@ -102,7 +104,7 @@ mod error_code {
     pub const BACKUP_RECEIPT_WRITE_FAILED: &str = "backup.receipt_write_failed";
 
     #[cfg(test)]
-    pub const ALL: [&str; 41] = [
+    pub const ALL: [&str; 42] = [
         DATA_NOT_FOUND,
         DATABASE_UNAVAILABLE,
         LOCALIZATION_UNSUPPORTED,
@@ -117,6 +119,7 @@ mod error_code {
         CATEGORY_COLOR_INVALID,
         CATEGORY_REORDER_INVALID,
         HISTORY_PAGINATION_INVALID,
+        DAY_THEME_METADATA_INVALID,
         THEME_INVALID,
         THEME_TOO_LARGE,
         THEME_SCHEMA_UNSUPPORTED,
@@ -243,7 +246,15 @@ struct DailyLog {
     log_date: String,
     created_at: String,
     updated_at: String,
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
     items: Vec<WorkItem>,
+}
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct DayThemeMetadata {
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -315,6 +326,7 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     apply_migration(&transaction, 2, MIGRATION_V2)?;
     apply_migration(&transaction, 3, MIGRATION_V3)?;
     apply_migration(&transaction, 4, MIGRATION_V4)?;
+    apply_migration(&transaction, 5, MIGRATION_V5)?;
     transaction.commit()
 }
 
@@ -670,6 +682,26 @@ fn validate_text(input: &UpdateWorkItem) -> AppResult<()> {
     }
     Ok(())
 }
+fn valid_day_theme_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        && !value.starts_with('-')
+        && !value.ends_with('-')
+        && !value.contains("--")
+}
+fn validate_day_theme_metadata(
+    theme_id: Option<&str>,
+    theme_version: Option<i64>,
+) -> AppResult<()> {
+    match (theme_id, theme_version) {
+        (None, None) => Ok(()),
+        (Some(id), Some(version)) if valid_day_theme_id(id) && version > 0 => Ok(()),
+        _ => Err(AppError::new(error_code::DAY_THEME_METADATA_INVALID)),
+    }
+}
 fn ensure_daily_log(transaction: &Transaction<'_>, date: &str) -> AppResult<String> {
     validate_date(date)?;
     if let Some(id) = transaction
@@ -719,12 +751,21 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
     validate_date(date)?;
     let header = connection
         .query_row(
-            "SELECT id,log_date,created_at,updated_at FROM daily_logs WHERE log_date=?1",
+            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version FROM daily_logs WHERE log_date=?1",
             [date],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            },
         )
         .optional()?;
-    let Some((id, log_date, created_at, updated_at)) = header else {
+    let Some((id, log_date, created_at, updated_at, theme_id, theme_version)) = header else {
         return Ok(None);
     };
     let mut statement = connection.prepare(
@@ -740,8 +781,34 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
         log_date,
         created_at,
         updated_at,
+        theme_id,
+        theme_version,
         items,
     }))
+}
+fn update_day_theme_metadata(
+    connection: &mut Connection,
+    daily_log_id: &str,
+    metadata: DayThemeMetadata,
+) -> AppResult<DayThemeMetadata> {
+    validate_day_theme_metadata(metadata.theme_id.as_deref(), metadata.theme_version)?;
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let changed = transaction.execute(
+        "UPDATE daily_logs
+         SET theme_id=?1,theme_version=?2,updated_at=?3
+         WHERE id=?4",
+        params![
+            metadata.theme_id.as_deref(),
+            metadata.theme_version,
+            Utc::now().to_rfc3339(),
+            daily_log_id
+        ],
+    )?;
+    if changed == 0 {
+        return Err(AppError::not_found());
+    }
+    transaction.commit()?;
+    Ok(metadata)
 }
 fn create_item(
     connection: &mut Connection,
@@ -1076,6 +1143,22 @@ fn get_daily_log(app: tauri::AppHandle, date: String) -> AppResult<Option<DailyL
     find_daily_log(&open_database(&database_path(&app)?)?, &date)
 }
 #[tauri::command]
+fn update_daily_log_day_theme(
+    app: tauri::AppHandle,
+    daily_log_id: String,
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
+) -> AppResult<DayThemeMetadata> {
+    update_day_theme_metadata(
+        &mut open_database(&database_path(&app)?)?,
+        &daily_log_id,
+        DayThemeMetadata {
+            theme_id,
+            theme_version,
+        },
+    )
+}
+#[tauri::command]
 fn create_work_item(
     app: tauri::AppHandle,
     date: String,
@@ -1219,6 +1302,7 @@ pub fn run() {
             initialize_database,
             initialize_locale_preference,
             get_daily_log,
+            update_daily_log_day_theme,
             create_work_item,
             list_work_categories,
             create_work_category,
@@ -1333,6 +1417,282 @@ mod tests {
                 .unwrap(),
             1
         );
+        assert_eq!(
+            db.query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            5
+        );
+    }
+    #[test]
+    fn migration_v5_upgrades_the_full_baseline_without_rewriting_data() {
+        let mut db = Connection::open_in_memory().unwrap();
+        {
+            let tx = db.transaction().unwrap();
+            tx.execute_batch(
+                "CREATE TABLE schema_migrations(
+                    version INTEGER PRIMARY KEY,
+                    applied_at TEXT NOT NULL
+                );",
+            )
+            .unwrap();
+            apply_migration(&tx, 1, MIGRATION_V1).unwrap();
+            apply_migration(&tx, 2, MIGRATION_V2).unwrap();
+            apply_migration(&tx, 3, MIGRATION_V3).unwrap();
+            apply_migration(&tx, 4, MIGRATION_V4).unwrap();
+            tx.commit().unwrap();
+        }
+        let now = "2026-07-19T00:00:00Z";
+        db.execute(
+            "INSERT INTO daily_logs(id,log_date,created_at,updated_at)
+             VALUES('log','2026-07-19',?1,?1)",
+            [now],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO work_categories(
+                id,name,color,position,is_active,created_at,updated_at
+             ) VALUES('category','Existing','#4F7CAC',0,1,?1,?1)",
+            [now],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO work_items(
+                id,daily_log_id,task,result,next_action,status,position,category_id,created_at,updated_at
+             ) VALUES('item','log','Task','Result','Next','completed',0,'category',?1,?1)",
+            [now],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO app_settings(key,value,updated_at)
+             VALUES('test.setting','preserved',?1)",
+            [now],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO backup_import_receipts(
+                id,checksum,imported_at,mode,source_exported_at,result_summary_json
+             ) VALUES('receipt','sha256:legacy',?1,'merge',?1,'{}')",
+            [now],
+        )
+        .unwrap();
+
+        migrate(&mut db).unwrap();
+        migrate(&mut db).unwrap();
+        let columns: Vec<String> = {
+            let mut statement = db.prepare("PRAGMA table_info(daily_logs)").unwrap();
+            statement
+                .query_map([], |row| row.get(1))
+                .unwrap()
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .unwrap()
+        };
+        assert!(columns.contains(&"theme_id".into()));
+        assert!(columns.contains(&"theme_version".into()));
+        assert_eq!(
+            db.query_row(
+                "SELECT theme_id,theme_version FROM daily_logs WHERE id='log'",
+                [],
+                |row| Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<i64>>(1)?
+                ))
+            )
+            .unwrap(),
+            (None, None)
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT task,result,next_action,status,position,category_id
+                 FROM work_items WHERE id='item'",
+                [],
+                |row| Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, i64>(4)?,
+                    row.get::<_, String>(5)?
+                ))
+            )
+            .unwrap(),
+            (
+                "Task".into(),
+                "Result".into(),
+                "Next".into(),
+                "completed".into(),
+                0,
+                "category".into()
+            )
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT value FROM app_settings WHERE key='test.setting'",
+                [],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+            "preserved"
+        );
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM backup_import_receipts", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            1
+        );
+    }
+    #[test]
+    fn day_theme_metadata_persists_unknown_valid_ids_and_clears_atomically() {
+        let mut db = memory();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
+        assert_eq!(
+            find_daily_log(&db, "2026-07-18").unwrap().unwrap().theme_id,
+            None
+        );
+        let saved = update_day_theme_metadata(
+            &mut db,
+            &item.daily_log_id,
+            DayThemeMetadata {
+                theme_id: Some("future-theme".into()),
+                theme_version: Some(7),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            saved,
+            DayThemeMetadata {
+                theme_id: Some("future-theme".into()),
+                theme_version: Some(7)
+            }
+        );
+        let log = find_daily_log(&db, "2026-07-18").unwrap().unwrap();
+        assert_eq!(log.theme_id.as_deref(), Some("future-theme"));
+        assert_eq!(log.theme_version, Some(7));
+        assert_eq!(log.items.len(), 1);
+
+        update_day_theme_metadata(
+            &mut db,
+            &item.daily_log_id,
+            DayThemeMetadata {
+                theme_id: None,
+                theme_version: None,
+            },
+        )
+        .unwrap();
+        let log = find_daily_log(&db, "2026-07-18").unwrap().unwrap();
+        assert_eq!((log.theme_id, log.theme_version), (None, None));
+        assert_eq!(log.items.len(), 1);
+    }
+    #[test]
+    fn day_theme_metadata_rejects_invalid_pairs_without_changing_the_log() {
+        let mut db = memory();
+        let item = create_item(&mut db, "2026-07-18", None).unwrap();
+        for metadata in [
+            DayThemeMetadata {
+                theme_id: Some("valid-theme".into()),
+                theme_version: None,
+            },
+            DayThemeMetadata {
+                theme_id: None,
+                theme_version: Some(1),
+            },
+            DayThemeMetadata {
+                theme_id: Some("".into()),
+                theme_version: Some(1),
+            },
+            DayThemeMetadata {
+                theme_id: Some("Bad ID".into()),
+                theme_version: Some(1),
+            },
+            DayThemeMetadata {
+                theme_id: Some("x".repeat(65)),
+                theme_version: Some(1),
+            },
+            DayThemeMetadata {
+                theme_id: Some("valid-theme".into()),
+                theme_version: Some(0),
+            },
+            DayThemeMetadata {
+                theme_id: Some("valid-theme".into()),
+                theme_version: Some(-1),
+            },
+        ] {
+            assert_eq!(
+                update_day_theme_metadata(&mut db, &item.daily_log_id, metadata)
+                    .unwrap_err()
+                    .code,
+                error_code::DAY_THEME_METADATA_INVALID
+            );
+        }
+        assert_eq!(
+            db.query_row(
+                "SELECT theme_id,theme_version FROM daily_logs WHERE id=?1",
+                [&item.daily_log_id],
+                |row| Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<i64>>(1)?
+                ))
+            )
+            .unwrap(),
+            (None, None)
+        );
+    }
+    #[test]
+    fn concurrent_day_theme_writes_never_leave_a_partial_pair() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        use std::time::Duration;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("concurrent-day-theme.sqlite3");
+        let daily_log_id = {
+            let mut db = open_database(&path).unwrap();
+            create_item(&mut db, "2026-07-18", None)
+                .unwrap()
+                .daily_log_id
+        };
+        let barrier = Arc::new(Barrier::new(3));
+        let mut handles = Vec::new();
+        for metadata in [
+            DayThemeMetadata {
+                theme_id: Some("future-theme".into()),
+                theme_version: Some(2),
+            },
+            DayThemeMetadata {
+                theme_id: None,
+                theme_version: None,
+            },
+        ] {
+            let path = path.clone();
+            let daily_log_id = daily_log_id.clone();
+            let barrier = Arc::clone(&barrier);
+            handles.push(thread::spawn(move || {
+                let mut db = Connection::open(path).unwrap();
+                db.busy_timeout(Duration::from_secs(2)).unwrap();
+                barrier.wait();
+                update_day_theme_metadata(&mut db, &daily_log_id, metadata)
+            }));
+        }
+        barrier.wait();
+        for handle in handles {
+            handle.join().unwrap().unwrap();
+        }
+        let db = Connection::open(path).unwrap();
+        let pair = db
+            .query_row(
+                "SELECT theme_id,theme_version FROM daily_logs WHERE id=?1",
+                [&daily_log_id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, Option<i64>>(1)?,
+                    ))
+                },
+            )
+            .unwrap();
+        validate_day_theme_metadata(pair.0.as_deref(), pair.1).unwrap();
     }
     #[test]
     fn locale_setting_persists_and_rejects_unsupported_values() {
@@ -1747,7 +2107,7 @@ mod tests {
                     0
                 ))
                 .unwrap(),
-            4
+            5
         );
         let error: AppError = rusqlite::Error::InvalidQuery.into();
         assert_eq!(error.code, error_code::DATABASE_UNAVAILABLE);
@@ -2018,7 +2378,7 @@ mod tests {
                 0
             ))
             .unwrap(),
-            4
+            5
         );
     }
     #[test]

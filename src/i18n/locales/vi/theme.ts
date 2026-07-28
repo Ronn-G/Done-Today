@@ -101,6 +101,7 @@ export default {
   },
   errors:{save:'Không thể lưu giao diện.'},
   backendErrors:{
+    dayThemeMetadataInvalid:'Lựa chọn chủ đề ngày không hợp lệ.',
     invalid:'Cài đặt giao diện không hợp lệ.',
     tooLarge:'Cài đặt giao diện không được lớn hơn {{maxKiB}} KiB.',
     schemaUnsupported:'Schema giao diện {{version}} chưa được hỗ trợ. Ứng dụng hỗ trợ schema {{supportedVersion}}.',

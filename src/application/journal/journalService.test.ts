@@ -8,6 +8,7 @@ const repositoryWithActivityDates=(dates:string[])=>{
   const repository={
     initialize:async()=>undefined,
     getDailyLog:async()=>null,
+    updateDayThemeMetadata:unused,
     createWorkItem:unused,
     updateWorkItem:unused,
     deleteWorkItem:async()=>undefined,
@@ -37,5 +38,32 @@ describe('JournalService current streak',()=>{
   it('handles malformed adapter strings safely instead of crashing the UI',async()=>{
     const{repository}=repositoryWithActivityDates(['not-a-date','2026-02-31','2026-07-24']);
     await expect(new JournalService(repository).getCurrentStreak('2026-07-24')).resolves.toBe(1);
+  });
+});
+
+describe('JournalService Day Theme metadata',()=>{
+  it('persists and clears a validated pair through the repository boundary',async()=>{
+    const updateDayThemeMetadata=vi.fn(async(_dailyLogId:string,metadata:{themeId:string|null;themeVersion:number|null})=>metadata);
+    const{repository}=repositoryWithActivityDates([]);
+    const service=new JournalService({...repository,updateDayThemeMetadata});
+    await expect(service.setDayTheme('log-1','future-theme',2)).resolves.toEqual({themeId:'future-theme',themeVersion:2});
+    await expect(service.clearDayTheme('log-1')).resolves.toEqual({themeId:null,themeVersion:null});
+    expect(updateDayThemeMetadata).toHaveBeenNthCalledWith(1,'log-1',{themeId:'future-theme',themeVersion:2});
+    expect(updateDayThemeMetadata).toHaveBeenNthCalledWith(2,'log-1',{themeId:null,themeVersion:null});
+  });
+
+  it.each([
+    ['',1],
+    ['Bad ID',1],
+    ['x'.repeat(65),1],
+    ['valid-theme',0],
+    ['valid-theme',-1],
+    ['valid-theme',1.5],
+  ])('rejects invalid metadata before persistence (%s, %s)',async(themeId,themeVersion)=>{
+    const updateDayThemeMetadata=vi.fn();
+    const{repository}=repositoryWithActivityDates([]);
+    const service=new JournalService({...repository,updateDayThemeMetadata});
+    await expect(service.setDayTheme('log-1',themeId,themeVersion)).rejects.toThrow();
+    expect(updateDayThemeMetadata).not.toHaveBeenCalled();
   });
 });

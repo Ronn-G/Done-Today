@@ -101,6 +101,7 @@ export default {
   },
   errors:{save:'Couldn’t save your appearance settings.'},
   backendErrors:{
+    dayThemeMetadataInvalid:'The day theme selection is invalid.',
     invalid:'The theme settings are invalid.',
     tooLarge:'Theme settings must be no larger than {{maxKiB}} KiB.',
     schemaUnsupported:'Theme schema {{version}} is not supported. This app supports schema {{supportedVersion}}.',

@@ -1,4 +1,4 @@
-import { localDateSchema,updateWorkItemSchema } from '../../domain/journal/models';
+import { dayThemeMetadataSchema,localDateSchema,updateDayThemeMetadataSchema,updateWorkItemSchema } from '../../domain/journal/models';
 import{categoryInputSchema,categoryUpdateSchema,groupDailyItems}from'../../domain/journal/categories';
 import {calculateCurrentStreak} from '../../domain/journal/statistics';
 import type { JournalRepository } from '../../domain/journal/repository';
@@ -7,6 +7,14 @@ export class JournalService {
   constructor(repository:JournalRepository){this.repository=repository}
   async initialize(){await this.repository.initialize()}
   async getDailyLog(date:string){return this.repository.getDailyLog(localDateSchema.parse(date))}
+  async setDayTheme(dailyLogId:string,themeId:string,themeVersion:number){
+    const value=updateDayThemeMetadataSchema.parse({dailyLogId,themeId,themeVersion});
+    return this.repository.updateDayThemeMetadata(value.dailyLogId,dayThemeMetadataSchema.parse(value));
+  }
+  async clearDayTheme(dailyLogId:string){
+    const value=updateDayThemeMetadataSchema.parse({dailyLogId,themeId:null,themeVersion:null});
+    return this.repository.updateDayThemeMetadata(value.dailyLogId,dayThemeMetadataSchema.parse(value));
+  }
   async createWorkItem(date:string,categoryId:string|null=null){return this.repository.createWorkItem(localDateSchema.parse(date),categoryId)}
   async updateWorkItem(input:unknown){return this.repository.updateWorkItem(updateWorkItemSchema.parse(input))}
   async deleteWorkItem(id:string){return this.repository.deleteWorkItem(id)}

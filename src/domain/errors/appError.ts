@@ -13,6 +13,7 @@ export const appErrorCodes = [
   'category.color_invalid',
   'category.reorder_invalid',
   'history.pagination_invalid',
+  'day_theme.metadata_invalid',
   'theme.invalid',
   'theme.too_large',
   'theme.schema_unsupported',

@@ -9,7 +9,11 @@ const sortBy=(keys:string[])=>(left:Record<string,unknown>,right:Record<string,u
   for(const key of keys){const a=left[key],b=right[key];const order=typeof a==='number'&&typeof b==='number'?a-b:String(a??'').localeCompare(String(b??''));if(order)return order}return 0;
 };
 export function canonicalPayload(payload:BackupPayloadV1):string{
-  const stable={dailyLogs:[...payload.dailyLogs].sort(sortBy(['logDate','id'])),
+  const dailyLogs=payload.dailyLogs.map(value=>{
+    const{themeId,themeVersion,...base}=value;
+    return themeId==null&&themeVersion==null?base:{...base,themeId,themeVersion};
+  });
+  const stable={dailyLogs:dailyLogs.sort(sortBy(['logDate','id'])),
     workItems:[...payload.workItems].sort(sortBy(['dailyLogId','position','id'])),
     workCategories:[...payload.workCategories].sort(sortBy(['position','id'])),
     themePreferences:payload.themePreferences}as unknown as Json;

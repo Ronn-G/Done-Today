@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {isValidDayThemeId, isValidDayThemeVersion} from '../day-theme/validation';
 export const localDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export type LocalDateKey=string;
 export const journalActivityDatesSchema=z.array(z.string());
@@ -15,9 +16,27 @@ export const updateWorkItemSchema=workItemSchema.pick({
   id:true,task:true,result:true,nextAction:true,status:true,
 });
 export type UpdateWorkItem=z.infer<typeof updateWorkItemSchema>;
+export const dayThemeMetadataSchema=z.object({
+  themeId:z.string().refine(isValidDayThemeId).nullable(),
+  themeVersion:z.number().refine(isValidDayThemeVersion).nullable(),
+}).superRefine((value,context)=>{
+  if((value.themeId===null)!==(value.themeVersion===null)){
+    context.addIssue({code:'custom',path:['themeId'],message:'Day Theme metadata must be a complete pair.'});
+  }
+});
+export type DayThemeMetadata=z.infer<typeof dayThemeMetadataSchema>;
+export const updateDayThemeMetadataSchema=dayThemeMetadataSchema.extend({
+  dailyLogId:z.string().trim().min(1),
+});
 export const dailyLogSchema = z.object({
   id:z.string(), logDate:localDateSchema,
   createdAt:z.string(), updatedAt:z.string(), items:z.array(workItemSchema),
+  themeId:z.string().refine(isValidDayThemeId).nullable(),
+  themeVersion:z.number().refine(isValidDayThemeVersion).nullable(),
+}).superRefine((value,context)=>{
+  if((value.themeId===null)!==(value.themeVersion===null)){
+    context.addIssue({code:'custom',path:['themeId'],message:'Day Theme metadata must be a complete pair.'});
+  }
 });
 export type DailyLog = z.infer<typeof dailyLogSchema>;
 export const dailyLogSummarySchema=z.object({

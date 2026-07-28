@@ -1,0 +1,20 @@
+{
+  "format": "done-today-backup",
+  "version": 1,
+  "exportedAt": "2026-07-19T00:00:00Z",
+  "appVersion": "0.1.0",
+  "payload": {
+    "dailyLogs": [
+      {
+        "id": "legacy-log",
+        "logDate": "2026-07-19",
+        "createdAt": "2026-07-19T00:00:00Z",
+        "updatedAt": "2026-07-19T00:00:00Z"
+      }
+    ],
+    "workItems": [],
+    "workCategories": [],
+    "themePreferences": null
+  },
+  "checksum": "sha256:4f9c8b211251d0d6b1797742bbfa90f7b6d0a5d6250c9171500af2b6ca201e6d"
+}

@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {themePreferencesSchema} from '../theme/models';
 import {workStatusSchema} from '../journal/models';
+import {isValidDayThemeId,isValidDayThemeVersion,validateDayThemeMetadata} from '../day-theme/validation';
 
 const id=z.string().trim().min(1).max(100);
 const timestamp=z.string().datetime({offset:true});
@@ -8,7 +9,15 @@ const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{
   const parsed=new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(parsed.valueOf())&&parsed.toISOString().slice(0,10)===value;
 });
-export const backupDailyLogSchema=z.object({id,logDate:date,createdAt:timestamp,updatedAt:timestamp}).strict();
+export const backupDailyLogSchema=z.object({
+  id,logDate:date,createdAt:timestamp,updatedAt:timestamp,
+  themeId:z.string().refine(isValidDayThemeId).nullable().optional(),
+  themeVersion:z.number().refine(isValidDayThemeVersion).nullable().optional(),
+}).strict().superRefine((value,context)=>{
+  if(!validateDayThemeMetadata(value.themeId??null,value.themeVersion??null)){
+    context.addIssue({code:'custom',path:['themeId'],message:'Day Theme metadata must be a complete pair.'});
+  }
+});
 export const backupWorkItemSchema=z.object({
   id,dailyLogId:id,categoryId:id.nullable(),task:z.string().max(500),result:z.string().max(2000),
   nextAction:z.string().max(1000),status:workStatusSchema,position:z.number().int().nonnegative(),

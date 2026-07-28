@@ -1,8 +1,9 @@
-import type { DailyLog,HistoryPage,LocalDateKey,UpdateWorkItem,WorkItem } from './models';
+import type { DailyLog,DayThemeMetadata,HistoryPage,LocalDateKey,UpdateWorkItem,WorkItem } from './models';
 import type{CategoryInput,CategoryUpdate,WorkCategory}from'./categories';
 export interface JournalRepository {
   initialize(): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
+  updateDayThemeMetadata(dailyLogId:string,metadata:DayThemeMetadata):Promise<DayThemeMetadata>;
   createWorkItem(date:string,categoryId?:string|null):Promise<WorkItem>;
   updateWorkItem(item:UpdateWorkItem):Promise<WorkItem>;
   deleteWorkItem(itemId:string):Promise<void>;

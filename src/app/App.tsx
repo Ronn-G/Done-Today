@@ -124,13 +124,13 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const items=useMemo(()=>log?.items??[],[log]);
   const stats=useMemo(()=>calculateStatistics(items),[items]);
   const groups=useMemo(()=>groupDailyItems(items,categories),[items,categories]);
-  const resolvedDayTheme=useMemo(()=>dayThemeRegistry.resolve(null,null),[]);
+  const resolvedDayTheme=useMemo(()=>dayThemeRegistry.resolve(log?.themeId??null,log?.themeVersion??null),[log?.themeId,log?.themeVersion]);
   const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);
     try{
       const item=await service.createWorkItem(date,categoryId);
       setLog(previous=>previous?{...previous,items:[...previous.items,item]}:{
-        id:item.dailyLogId,logDate:date,createdAt:item.createdAt,updatedAt:item.updatedAt,items:[item],
+        id:item.dailyLogId,logDate:date,createdAt:item.createdAt,updatedAt:item.updatedAt,themeId:null,themeVersion:null,items:[item],
       });
       setFocusId(item.id);
     }catch(reason){setError(normalizeAppError(reason))}

@@ -24,3 +24,24 @@ describe('TauriJournalRepository journal activity dates',()=>{
     await expect(new TauriJournalRepository().listJournalActivityDates()).rejects.toThrow();
   });
 });
+
+describe('TauriJournalRepository Day Theme metadata',()=>{
+  beforeEach(()=>vi.mocked(invoke).mockReset());
+
+  it('writes the pair with one typed command and accepts unknown valid IDs',async()=>{
+    vi.mocked(invoke).mockResolvedValue({themeId:'future-theme',themeVersion:7});
+    await expect(new TauriJournalRepository().updateDayThemeMetadata('log-1',{
+      themeId:'future-theme',themeVersion:7,
+    })).resolves.toEqual({themeId:'future-theme',themeVersion:7});
+    expect(invoke).toHaveBeenCalledWith('update_daily_log_day_theme',{
+      dailyLogId:'log-1',themeId:'future-theme',themeVersion:7,
+    });
+  });
+
+  it('rejects a malformed native pair',async()=>{
+    vi.mocked(invoke).mockResolvedValue({themeId:'future-theme',themeVersion:null});
+    await expect(new TauriJournalRepository().updateDayThemeMetadata('log-1',{
+      themeId:'future-theme',themeVersion:7,
+    })).rejects.toThrow();
+  });
+});
