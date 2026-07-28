@@ -1,9 +1,11 @@
 import type {DayThemeDefinition} from './models';
+import {defineDayTheme} from './defineDayTheme';
+import {firstDayThemes} from './firstThemes';
 
 export const DEFAULT_DAY_THEME_ID = 'done-today-default';
 export const DEFAULT_DAY_THEME_VERSION = 1;
 
-export const doneTodayDefaultDayTheme: DayThemeDefinition = {
+export const doneTodayDefaultDayTheme: DayThemeDefinition = defineDayTheme({
   id: DEFAULT_DAY_THEME_ID,
   version: DEFAULT_DAY_THEME_VERSION,
   nameKey: 'theme:dayTheme.doneTodayDefault.name',
@@ -37,4 +39,9 @@ export const doneTodayDefaultDayTheme: DayThemeDefinition = {
     category: 'minimal',
     builtIn: true,
   },
-};
+});
+
+export const builtInDayThemes: readonly DayThemeDefinition[] = Object.freeze([
+  doneTodayDefaultDayTheme,
+  ...firstDayThemes,
+]);

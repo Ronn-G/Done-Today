@@ -5,6 +5,18 @@ export default {
       name:'Done Today Default',
       description:'A calm, familiar foundation that follows your app appearance.',
     },
+    sakura:{
+      name:'Sakura',
+      description:'Soft, airy spring tones with a restrained blush accent.',
+    },
+    coffee:{
+      name:'Coffee',
+      description:'A warm, quiet journal corner with ivory paper and coffee tones.',
+    },
+    rainy:{
+      name:'Rainy',
+      description:'Gentle blue-gray tones and a quiet rain rhythm for reflective days.',
+    },
   },
   customizer:{open:'Customize appearance'},
   mode:{

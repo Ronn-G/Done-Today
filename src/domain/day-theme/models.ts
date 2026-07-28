@@ -16,6 +16,17 @@ export interface DayThemeTokens {
   readonly focusRing: string;
 }
 
+export interface DayThemeCoverStyle {
+  readonly fallbackGradient: string;
+  readonly overlay: string;
+  readonly textTone: DayThemeTextTone;
+}
+
+export interface DayThemeVariant {
+  readonly tokens: DayThemeTokens;
+  readonly cover: DayThemeCoverStyle;
+}
+
 export interface DayThemeDefinition {
   readonly id: string;
   readonly version: number;
@@ -23,12 +34,13 @@ export interface DayThemeDefinition {
   readonly descriptionKey: `theme:${string}`;
   readonly mode: DayThemeMode;
   readonly tokens: DayThemeTokens;
-  readonly cover: {
+  readonly cover: DayThemeCoverStyle & {
     readonly assetId?: string;
-    readonly fallbackGradient: string;
-    readonly overlay: string;
-    readonly textTone: DayThemeTextTone;
     readonly motifAssetId?: string;
+  };
+  readonly variants?: {
+    readonly light: DayThemeVariant;
+    readonly dark: DayThemeVariant;
   };
   readonly calendar: {
     readonly indicatorColor: string;

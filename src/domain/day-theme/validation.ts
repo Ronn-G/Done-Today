@@ -41,7 +41,7 @@ function validGradient(value: string): boolean {
   return validCssValue(trimmed) && /^(?:linear|radial)-gradient\(/i.test(trimmed);
 }
 
-function validAssetId(value: string | undefined): boolean {
+export function isValidDayThemeAssetId(value: string | undefined): boolean {
   return value === undefined
     || (value.length <= ASSET_ID_MAX_LENGTH && ASSET_ID_PATTERN.test(value));
 }
@@ -54,22 +54,34 @@ export function validateDayThemeDefinition(value: DayThemeDefinition): readonly 
   if (!TRANSLATION_KEY_PATTERN.test(value.descriptionKey)) issues.push('descriptionKey');
   if (!['light', 'dark', 'adaptive'].includes(value.mode)) issues.push('mode');
 
-  for (const [name, token] of Object.entries(value.tokens)) {
-    if (!validCssValue(token)) issues.push(`tokens.${name}`);
-  }
   const requiredTokenKeys = [
     'pageBackground', 'daySurface', 'daySurfaceRaised', 'dayText', 'dayTextMuted',
     'dayBorder', 'accent', 'accentHover', 'accentSoft', 'focusRing',
   ];
-  for (const name of requiredTokenKeys) {
-    if (!Object.hasOwn(value.tokens, name)) issues.push(`tokens.${name}`);
+  const validateTokens = (prefix: string, tokens: DayThemeDefinition['tokens']) => {
+    for (const [name, token] of Object.entries(tokens)) {
+      if (!validCssValue(token)) issues.push(`${prefix}.${name}`);
+    }
+    for (const name of requiredTokenKeys) {
+      if (!Object.hasOwn(tokens, name)) issues.push(`${prefix}.${name}`);
+    }
+  };
+  const validateCover = (prefix: string, cover: DayThemeDefinition['cover']) => {
+    if (!validGradient(cover.fallbackGradient)) issues.push(`${prefix}.fallbackGradient`);
+    if (!validCssValue(cover.overlay)) issues.push(`${prefix}.overlay`);
+    if (!['light', 'dark'].includes(cover.textTone)) issues.push(`${prefix}.textTone`);
+  };
+  validateTokens('tokens', value.tokens);
+  validateCover('cover', value.cover);
+  if (!isValidDayThemeAssetId(value.cover.assetId)) issues.push('cover.assetId');
+  if (!isValidDayThemeAssetId(value.cover.motifAssetId)) issues.push('cover.motifAssetId');
+  if (value.variants !== undefined) {
+    if (value.mode !== 'adaptive') issues.push('variants.mode');
+    validateTokens('variants.light.tokens', value.variants.light.tokens);
+    validateTokens('variants.dark.tokens', value.variants.dark.tokens);
+    validateCover('variants.light.cover', value.variants.light.cover);
+    validateCover('variants.dark.cover', value.variants.dark.cover);
   }
-
-  if (!validGradient(value.cover.fallbackGradient)) issues.push('cover.fallbackGradient');
-  if (!validCssValue(value.cover.overlay)) issues.push('cover.overlay');
-  if (!['light', 'dark'].includes(value.cover.textTone)) issues.push('cover.textTone');
-  if (!validAssetId(value.cover.assetId)) issues.push('cover.assetId');
-  if (!validAssetId(value.cover.motifAssetId)) issues.push('cover.motifAssetId');
   if (!validCssValue(value.calendar.indicatorColor)) issues.push('calendar.indicatorColor');
   if (value.calendar.symbol !== undefined && [...value.calendar.symbol].length > 4) {
     issues.push('calendar.symbol');

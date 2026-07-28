@@ -13,10 +13,12 @@ const definition = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('DayThemeRegistry', () => {
-  it('registers a valid contract and exposes exactly one production built-in', () => {
+  it('registers a valid contract and exposes the four production built-ins in curated order', () => {
     const registry = new DayThemeRegistry([]);
     expect(registry.register(definition())).toMatchObject({id: 'test-theme', version: 1});
-    expect(dayThemeRegistry.list()).toHaveLength(1);
+    expect(dayThemeRegistry.list().map(theme => theme.id)).toEqual([
+      'done-today-default', 'sakura', 'coffee', 'rainy',
+    ]);
     expect(dayThemeRegistry.list()[0]).toMatchObject({
       id: DEFAULT_DAY_THEME_ID,
       version: DEFAULT_DAY_THEME_VERSION,
@@ -81,8 +83,10 @@ describe('DayThemeRegistry', () => {
   it('has name and description resources in Vietnamese and English', () => {
     for (const locale of ['vi', 'en'] as const) {
       const theme = flattenResource(resources[locale].theme);
-      expect(theme['dayTheme.doneTodayDefault.name']).toBeTruthy();
-      expect(theme['dayTheme.doneTodayDefault.description']).toBeTruthy();
+      for (const definition of dayThemeRegistry.list()) {
+        expect(theme[definition.nameKey.replace('theme:', '')]).toBeTruthy();
+        expect(theme[definition.descriptionKey.replace('theme:', '')]).toBeTruthy();
+      }
     }
   });
 });

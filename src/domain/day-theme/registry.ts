@@ -1,4 +1,4 @@
-import {doneTodayDefaultDayTheme, DEFAULT_DAY_THEME_ID} from './definitions';
+import {builtInDayThemes, doneTodayDefaultDayTheme, DEFAULT_DAY_THEME_ID} from './definitions';
 import type {DayThemeDefinition, DayThemeReference, ResolvedDayTheme} from './models';
 import {assertValidDayThemeDefinition, isValidDayThemeId, isValidDayThemeVersion} from './validation';
 
@@ -46,10 +46,7 @@ export class DayThemeRegistry {
   }
 
   list(): readonly DayThemeDefinition[] {
-    return Object.freeze(
-      [...this.#themes.values()].flat().sort((a, b) =>
-        a.id.localeCompare(b.id) || a.version - b.version),
-    );
+    return Object.freeze([...this.#themes.values()].flat());
   }
 
   resolve(themeId: string | null, themeVersion: number | null): ResolvedDayTheme {
@@ -71,4 +68,4 @@ export class DayThemeRegistry {
   }
 }
 
-export const dayThemeRegistry = new DayThemeRegistry([doneTodayDefaultDayTheme]);
+export const dayThemeRegistry = new DayThemeRegistry(builtInDayThemes);

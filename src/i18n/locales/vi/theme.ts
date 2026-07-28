@@ -5,6 +5,18 @@ export default {
       name:'Done Today Mặc định',
       description:'Nền tảng quen thuộc, điềm tĩnh và hài hòa với giao diện ứng dụng.',
     },
+    sakura:{
+      name:'Sakura',
+      description:'Sắc xuân nhẹ và thoáng với điểm nhấn hồng phấn tinh tế.',
+    },
+    coffee:{
+      name:'Coffee',
+      description:'Một góc nhật ký ấm và yên tĩnh với sắc giấy ngà, nâu cà phê.',
+    },
+    rainy:{
+      name:'Rainy',
+      description:'Xanh xám dịu và nhịp mưa nhẹ cho những ngày chậm, trầm.',
+    },
   },
   customizer:{open:'Tùy chỉnh giao diện'},
   mode:{
