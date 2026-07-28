@@ -1,10 +1,11 @@
 use chrono::{NaiveDate, Utc};
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 use tauri::Manager;
 use uuid::Uuid;
@@ -17,6 +18,9 @@ const MIGRATION_V4: &str = include_str!("../migrations/004_backup_receipts.sql")
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
 const LOCALE_KEY: &str = "localization.locale";
+const INSTALLATION_BOOTSTRAP_KEY: &str = "installation.bootstrap";
+const INSTALLATION_BOOTSTRAP_VERSION: u8 = 1;
+static LOCALE_INITIALIZATION_LOCK: Mutex<()> = Mutex::new(());
 const LEGACY_THEME_COLOR_COUNT: usize = 27;
 const THEME_COLOR_KEYS: [&str; 33] = [
     "pageBackground",
@@ -270,6 +274,35 @@ struct HistoryPage {
     has_more: bool,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+enum InstallationClassification {
+    Fresh,
+    LegacyOrUnclassified,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct InstallationBootstrapMarker {
+    version: u8,
+    classification: InstallationClassification,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+enum LocaleInitializationSource {
+    Persisted,
+    Fresh,
+    Compatibility,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct LocaleInitializationResult {
+    locale: &'static str,
+    source: LocaleInitializationSource,
+}
+
 fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     connection.pragma_update(None, "foreign_keys", "ON")?;
     let transaction = connection.transaction()?;
@@ -460,6 +493,126 @@ fn save_locale(connection: &Connection, locale: &str) -> AppResult<()> {
         params![LOCALE_KEY, locale, Utc::now().to_rfc3339()],
     )?;
     Ok(())
+}
+
+fn load_setting(connection: &Connection, key: &str) -> AppResult<Option<String>> {
+    Ok(connection
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = ?1",
+            [key],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
+fn upsert_setting(
+    transaction: &Transaction<'_>,
+    key: &str,
+    value: &str,
+    updated_at: &str,
+) -> AppResult<()> {
+    transaction.execute(
+        "INSERT INTO app_settings (key,value,updated_at) VALUES (?1,?2,?3)
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+        params![key, value, updated_at],
+    )?;
+    Ok(())
+}
+
+fn parse_installation_marker(value: Option<&str>) -> Option<InstallationClassification> {
+    let marker: InstallationBootstrapMarker = serde_json::from_str(value?).ok()?;
+    (marker.version == INSTALLATION_BOOTSTRAP_VERSION).then_some(marker.classification)
+}
+
+fn encode_installation_marker(classification: InstallationClassification) -> AppResult<String> {
+    serde_json::to_string(&InstallationBootstrapMarker {
+        version: INSTALLATION_BOOTSTRAP_VERSION,
+        classification,
+    })
+    .map_err(|_| AppError::database())
+}
+
+fn normalize_windows_locale(value: Option<&str>) -> &'static str {
+    let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) else {
+        return "en";
+    };
+    let normalized = value.replace('_', "-").to_ascii_lowercase();
+    if normalized == "vi" || normalized == "vi-vn" {
+        "vi"
+    } else {
+        "en"
+    }
+}
+
+fn initialize_locale_transaction<F>(
+    connection: &mut Connection,
+    database_existed_before_bootstrap: bool,
+    windows_locale: Option<&str>,
+    after_marker_write: F,
+) -> AppResult<LocaleInitializationResult>
+where
+    F: FnOnce() -> rusqlite::Result<()>,
+{
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let persisted_locale = load_setting(&transaction, LOCALE_KEY)?;
+    let raw_marker = load_setting(&transaction, INSTALLATION_BOOTSTRAP_KEY)?;
+    let valid_marker = parse_installation_marker(raw_marker.as_deref());
+    let inferred_classification = if database_existed_before_bootstrap {
+        InstallationClassification::LegacyOrUnclassified
+    } else {
+        InstallationClassification::Fresh
+    };
+    let classification = valid_marker.unwrap_or(inferred_classification);
+    let now = Utc::now().to_rfc3339();
+
+    if valid_marker.is_none() {
+        let encoded = encode_installation_marker(classification)?;
+        upsert_setting(&transaction, INSTALLATION_BOOTSTRAP_KEY, &encoded, &now)?;
+    }
+
+    let persisted = persisted_locale
+        .as_deref()
+        .filter(|locale| matches!(*locale, "vi" | "en"));
+    let (locale, source) = if let Some(locale) = persisted {
+        (
+            if locale == "vi" { "vi" } else { "en" },
+            LocaleInitializationSource::Persisted,
+        )
+    } else {
+        after_marker_write()?;
+        let locale = match classification {
+            InstallationClassification::Fresh => normalize_windows_locale(windows_locale),
+            InstallationClassification::LegacyOrUnclassified => "vi",
+        };
+        upsert_setting(&transaction, LOCALE_KEY, locale, &now)?;
+        let source = match classification {
+            InstallationClassification::Fresh => LocaleInitializationSource::Fresh,
+            InstallationClassification::LegacyOrUnclassified => {
+                LocaleInitializationSource::Compatibility
+            }
+        };
+        (locale, source)
+    };
+
+    transaction.commit()?;
+    Ok(LocaleInitializationResult { locale, source })
+}
+
+fn initialize_locale_at_path(
+    path: &Path,
+    windows_locale: Option<&str>,
+) -> AppResult<LocaleInitializationResult> {
+    let _guard = LOCALE_INITIALIZATION_LOCK
+        .lock()
+        .map_err(|_| AppError::database())?;
+    let database_existed_before_bootstrap = path.try_exists().map_err(|_| AppError::database())?;
+    let mut connection = open_database(path)?;
+    initialize_locale_transaction(
+        &mut connection,
+        database_existed_before_bootstrap,
+        windows_locale,
+        || Ok(()),
+    )
 }
 
 fn seed_categories(connection: &mut Connection) -> rusqlite::Result<()> {
@@ -912,6 +1065,13 @@ fn initialize_database(app: tauri::AppHandle) -> AppResult<()> {
     Ok(())
 }
 #[tauri::command]
+fn initialize_locale_preference(
+    app: tauri::AppHandle,
+    os_locale: Option<String>,
+) -> AppResult<LocaleInitializationResult> {
+    initialize_locale_at_path(&database_path(&app)?, os_locale.as_deref())
+}
+#[tauri::command]
 fn get_daily_log(app: tauri::AppHandle, date: String) -> AppResult<Option<DailyLog>> {
     find_daily_log(&open_database(&database_path(&app)?)?, &date)
 }
@@ -1057,6 +1217,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             initialize_database,
+            initialize_locale_preference,
             get_daily_log,
             create_work_item,
             list_work_categories,
@@ -1183,6 +1344,293 @@ mod tests {
         assert_eq!(error.code, error_code::LOCALIZATION_UNSUPPORTED);
         assert!(error.params.is_empty());
         assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
+    }
+    #[test]
+    fn windows_locale_normalization_uses_vietnamese_only_for_supported_vietnamese_tags() {
+        for value in ["vi", "vi-VN", "VI-vn", "vi_VN"] {
+            assert_eq!(normalize_windows_locale(Some(value)), "vi");
+        }
+        for value in [
+            "en",
+            "en-US",
+            "en-GB",
+            "EN_us",
+            "fr-FR",
+            "de-DE",
+            "ja-JP",
+            "",
+            " ",
+            "vi--VN",
+            "vietnamese",
+        ] {
+            assert_eq!(normalize_windows_locale(Some(value)), "en");
+        }
+        assert_eq!(normalize_windows_locale(None), "en");
+    }
+    #[test]
+    fn fresh_database_persists_os_locale_and_reopen_keeps_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("fresh.sqlite3");
+        let first = initialize_locale_at_path(&path, Some("en-US")).unwrap();
+        assert_eq!(
+            first,
+            LocaleInitializationResult {
+                locale: "en",
+                source: LocaleInitializationSource::Fresh
+            }
+        );
+        let reopened = initialize_locale_at_path(&path, Some("vi-VN")).unwrap();
+        assert_eq!(
+            reopened,
+            LocaleInitializationResult {
+                locale: "en",
+                source: LocaleInitializationSource::Persisted
+            }
+        );
+        let db = Connection::open(path).unwrap();
+        assert_eq!(load_locale(&db).unwrap().as_deref(), Some("en"));
+        assert_eq!(
+            parse_installation_marker(
+                load_setting(&db, INSTALLATION_BOOTSTRAP_KEY)
+                    .unwrap()
+                    .as_deref()
+            ),
+            Some(InstallationClassification::Fresh)
+        );
+    }
+    #[test]
+    fn fresh_database_uses_vietnamese_windows_locale_and_unsupported_falls_back_to_english() {
+        for (name, os_locale, expected) in [
+            ("vi.sqlite3", Some("vi-VN"), "vi"),
+            ("unsupported.sqlite3", Some("fr-FR"), "en"),
+            ("missing.sqlite3", None, "en"),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let result =
+                initialize_locale_at_path(&directory.path().join(name), os_locale).unwrap();
+            assert_eq!(result.locale, expected);
+            assert_eq!(result.source, LocaleInitializationSource::Fresh);
+        }
+    }
+    #[test]
+    fn existing_database_without_locale_is_classified_conservatively_and_preserves_data() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("legacy.sqlite3");
+        let original_theme = theme_value();
+        {
+            let mut db = open_database(&path).unwrap();
+            let item = create_item(&mut db, "2026-07-19", None).unwrap();
+            update_item(&db, update(&item.id, "Legacy journal", "completed")).unwrap();
+            save_theme(&db, &original_theme).unwrap();
+            db.execute(
+                "INSERT INTO backup_import_receipts VALUES('receipt','sha256:legacy','2026-07-19T00:00:00Z','merge',NULL,'{}')",
+                [],
+            )
+            .unwrap();
+        }
+        let result = initialize_locale_at_path(&path, Some("en-US")).unwrap();
+        assert_eq!(
+            result,
+            LocaleInitializationResult {
+                locale: "vi",
+                source: LocaleInitializationSource::Compatibility
+            }
+        );
+        let db = Connection::open(path).unwrap();
+        assert_eq!(load_locale(&db).unwrap().as_deref(), Some("vi"));
+        assert_eq!(
+            parse_installation_marker(
+                load_setting(&db, INSTALLATION_BOOTSTRAP_KEY)
+                    .unwrap()
+                    .as_deref()
+            ),
+            Some(InstallationClassification::LegacyOrUnclassified)
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT task FROM work_items WHERE task='Legacy journal'",
+                [],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+            "Legacy journal"
+        );
+        assert_eq!(load_theme(&db).unwrap(), Some(original_theme));
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM backup_import_receipts", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+            1
+        );
+    }
+    #[test]
+    fn persisted_locale_is_authoritative_and_repairs_missing_or_corrupt_marker() {
+        for (marker, expected_classification) in [
+            (None, InstallationClassification::LegacyOrUnclassified),
+            (
+                Some(r#"{"version":99,"classification":"fresh"}"#),
+                InstallationClassification::LegacyOrUnclassified,
+            ),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("persisted.sqlite3");
+            {
+                let db = open_database(&path).unwrap();
+                save_locale(&db, "en").unwrap();
+                if let Some(marker) = marker {
+                    db.execute(
+                        "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,?2,?3)",
+                        params![INSTALLATION_BOOTSTRAP_KEY, marker, Utc::now().to_rfc3339()],
+                    )
+                    .unwrap();
+                }
+            }
+            let result = initialize_locale_at_path(&path, Some("vi-VN")).unwrap();
+            assert_eq!(result.locale, "en");
+            assert_eq!(result.source, LocaleInitializationSource::Persisted);
+            let db = Connection::open(path).unwrap();
+            assert_eq!(
+                parse_installation_marker(
+                    load_setting(&db, INSTALLATION_BOOTSTRAP_KEY)
+                        .unwrap()
+                        .as_deref()
+                ),
+                Some(expected_classification)
+            );
+        }
+    }
+    #[test]
+    fn marker_controls_missing_or_invalid_locale_resolution() {
+        for (classification, stored_locale, os_locale, expected, source) in [
+            (
+                InstallationClassification::Fresh,
+                None,
+                Some("vi-VN"),
+                "vi",
+                LocaleInitializationSource::Fresh,
+            ),
+            (
+                InstallationClassification::Fresh,
+                Some("invalid"),
+                Some("en-US"),
+                "en",
+                LocaleInitializationSource::Fresh,
+            ),
+            (
+                InstallationClassification::LegacyOrUnclassified,
+                None,
+                Some("en-US"),
+                "vi",
+                LocaleInitializationSource::Compatibility,
+            ),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("classified.sqlite3");
+            {
+                let db = open_database(&path).unwrap();
+                let marker = encode_installation_marker(classification).unwrap();
+                db.execute(
+                    "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,?2,?3)",
+                    params![INSTALLATION_BOOTSTRAP_KEY, marker, Utc::now().to_rfc3339()],
+                )
+                .unwrap();
+                if let Some(locale) = stored_locale {
+                    db.execute(
+                        "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,?2,?3)",
+                        params![LOCALE_KEY, locale, Utc::now().to_rfc3339()],
+                    )
+                    .unwrap();
+                }
+            }
+            let result = initialize_locale_at_path(&path, os_locale).unwrap();
+            assert_eq!(result.locale, expected);
+            assert_eq!(result.source, source);
+            let db = Connection::open(path).unwrap();
+            assert_eq!(load_locale(&db).unwrap().as_deref(), Some(expected));
+        }
+    }
+    #[test]
+    fn corrupt_marker_on_existing_database_fails_closed_to_compatibility_vietnamese() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("corrupt.sqlite3");
+        {
+            let db = open_database(&path).unwrap();
+            db.execute(
+                "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,'not-json',?2)",
+                params![INSTALLATION_BOOTSTRAP_KEY, Utc::now().to_rfc3339()],
+            )
+            .unwrap();
+        }
+        let result = initialize_locale_at_path(&path, Some("en-US")).unwrap();
+        assert_eq!(result.locale, "vi");
+        assert_eq!(result.source, LocaleInitializationSource::Compatibility);
+    }
+    #[test]
+    fn repeated_and_concurrent_initialization_are_idempotent() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = Arc::new(directory.path().join("concurrent.sqlite3"));
+        let barrier = Arc::new(Barrier::new(3));
+        let mut handles = Vec::new();
+        for _ in 0..2 {
+            let path = Arc::clone(&path);
+            let barrier = Arc::clone(&barrier);
+            handles.push(thread::spawn(move || {
+                barrier.wait();
+                initialize_locale_at_path(&path, Some("en-US")).unwrap()
+            }));
+        }
+        barrier.wait();
+        let results: Vec<_> = handles
+            .into_iter()
+            .map(|handle| handle.join().unwrap())
+            .collect();
+        assert!(results.iter().all(|result| result.locale == "en"));
+        assert_eq!(
+            results
+                .iter()
+                .filter(|result| result.source == LocaleInitializationSource::Fresh)
+                .count(),
+            1
+        );
+        assert_eq!(
+            results
+                .iter()
+                .filter(|result| result.source == LocaleInitializationSource::Persisted)
+                .count(),
+            1
+        );
+        let db = Connection::open(path.as_path()).unwrap();
+        assert_eq!(
+            db.query_row(
+                "SELECT COUNT(*) FROM app_settings WHERE key IN (?1,?2)",
+                params![LOCALE_KEY, INSTALLATION_BOOTSTRAP_KEY],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            2
+        );
+    }
+    #[test]
+    fn failed_initialization_transaction_leaves_no_partial_marker_or_locale() {
+        let mut db = memory();
+        let error = initialize_locale_transaction(&mut db, false, Some("en-US"), || {
+            Err(rusqlite::Error::InvalidQuery)
+        })
+        .unwrap_err();
+        assert_eq!(error.code, error_code::DATABASE_UNAVAILABLE);
+        assert_eq!(
+            db.query_row(
+                "SELECT COUNT(*) FROM app_settings WHERE key IN (?1,?2)",
+                params![LOCALE_KEY, INSTALLATION_BOOTSTRAP_KEY],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0
+        );
     }
     #[test]
     fn failed_migration_rolls_back_schema_and_version() {

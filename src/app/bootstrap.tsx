@@ -21,7 +21,6 @@ export function createApplicationBootstrap(root:RootLike,dependencies:BootstrapD
   const execute=async()=>{
     const resolution=await dependencies.localeService.initialize();
     if(resolution.source==='readFailure')dependencies.reportError('Unable to read the saved language preference.',resolution.error);
-    if(resolution.source==='compatibility'&&resolution.persistence==='failed')dependencies.reportError('Unable to save the compatibility language preference.',resolution.error);
     try{
       await dependencies.initializeI18n(resolution.locale);
       root.render(dependencies.renderApplication());
