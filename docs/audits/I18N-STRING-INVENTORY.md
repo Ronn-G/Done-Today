@@ -1,13 +1,14 @@
 # I18N string inventory
 
 Audit date: 2026-07-28
-Scope: completed I18N-4 plus I18N-5 automated checkpoint, baseline repository state `abdfdf4`.
+Scope: completed I18N-4 and I18N-5, implementation through `febacf0`.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
 Windows visual/keyboard/accessibility acceptance. Screen-reader tooling was not claimed.
 I18N-5 adds no translation key or user-facing string: it adds native locale bootstrap metadata and
-locks the existing Backup v1 preference exclusion. Native I18N-5 acceptance is still pending.
+locks the existing Backup v1 preference exclusion. Native I18N-5 acceptance was confirmed on
+2026-07-28; no inventory count or resource key changed.
 
 ## Method and exclusions
 
@@ -146,7 +147,7 @@ never renders compatibility `message` or warning text from Rust.
   review. No screen-reader tooling result is claimed.
 - I18N-4 is **Completed**; I18N-5, Day Theme and release packaging remain outside this checkpoint.
 
-## I18N-5 automated checkpoint result
+## Completed I18N-5 result
 
 - Fresh/legacy classification uses explicit database-existence evidence at the native bootstrap
   boundary, never journal/category/theme/receipt content or timestamps.
@@ -156,5 +157,9 @@ never renders compatibility `message` or warning text from Rust.
   concurrent calls are serialized and transaction failure leaves no partial pair.
 - Backup v1 payload/checksum/version remain unchanged. Export excludes locale/marker, preview does
   not apply them, and Merge/Replace preserve them.
-- I18N-5 is **In progress — checkpoint complete** pending user-confirmed native Windows acceptance.
-  Day Theme and release packaging remain outside this checkpoint.
+- The user confirmed native Windows acceptance on 2026-07-28 for fresh vi/en/unsupported, legacy
+  and persisted locale behavior, runtime switch/reopen, Backup Merge/Replace, themes, supported
+  window sizes, raw-key/flash/clipping checks and keyboard/focus.
+- Accessibility evidence is automated/source audit and native keyboard/focus/Accessibility tree.
+  No screen-reader testing is claimed.
+- I18N-5 is **Completed**. Day Theme and release packaging remain outside this checkpoint.

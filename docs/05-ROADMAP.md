@@ -33,7 +33,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
-| I18N-5 | In progress — checkpoint complete | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã triển khai/test; chờ native Windows acceptance trước khi Completed |
+| I18N-5 | Completed | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã hoàn tất automated gate và native Windows acceptance ngày 2026-07-28 |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -123,7 +123,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - I18N-4 được đánh dấu **Completed**. I18N-5, Day Theme và release packaging không thuộc checkpoint
   này và không được đánh dấu hoàn thành.
 
-### I18N-5 automated checkpoint
+### I18N-5 final acceptance
 
 - Fresh boundary được capture tại native database path trước `open/migrate`: chỉ file database chưa
   tồn tại trong bootstrap hiện tại là `fresh`; database đã tồn tại hoặc không phân loại an toàn là
@@ -137,9 +137,15 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   marker/locale; retry và concurrent initialization giữ state nhất quán.
 - Backup v1 không đổi envelope, payload, checksum hoặc version. Locale/marker không export/import;
   Merge và Replace giữ cả hai preference; receipt/re-import semantics không đổi.
-- Targeted frontend/Rust regressions và full automated gate phải đạt trước checkpoint commit.
-  Native Windows acceptance cho vi/en/unsupported/legacy/persisted/runtime-switch/backup vẫn cần
-  người dùng xác nhận; vì vậy I18N-5 chưa được đánh dấu Completed.
+- Targeted frontend/Rust regressions và full automated gate đã đạt trong hai checkpoint
+  `98c59f4` và `febacf0`.
+- Người dùng xác nhận native Windows acceptance ngày 2026-07-28 bằng profile/database thử nghiệm
+  tách biệt cho fresh `vi`/`en`, unsupported fallback `en`, legacy missing-locale fallback `vi`,
+  persisted locale precedence, runtime switch/reopen, Export/Merge/Replace, App Theme, light/dark/
+  custom theme, cửa sổ 900×600/default/maximize, không raw key/flash/clipping và keyboard/focus.
+- Accessibility evidence gồm automated/source audit và native keyboard/focus/Accessibility tree.
+  Không tuyên bố đã kiểm tra bằng screen-reader tooling.
+- I18N-5 được đánh dấu **Completed**. Day Theme và release packaging chưa bắt đầu.
 
 ## 4. I18N-1 đã hoàn thành
 

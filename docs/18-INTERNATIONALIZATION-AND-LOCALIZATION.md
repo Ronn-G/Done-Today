@@ -850,7 +850,7 @@ Acceptance for fresh-install detection: an explicit, reliable installation marke
 fresh install; Windows locale detection normalizes regional variants to a supported locale;
 unsupported locales resolve to `en`; and any existing persisted locale remains authoritative.
 
-Delivery status: **In progress — checkpoint complete**. The implementation checkpoint uses:
+Delivery status: **Completed** on 2026-07-28. The implementation uses:
 
 - database existence captured at the native path boundary immediately before open/migrate; only a
   database created by that bootstrap is classified `fresh`;
@@ -867,10 +867,13 @@ Delivery status: **In progress — checkpoint complete**. The implementation che
 - Backup v1 exclusion: locale/marker are device-local, absent from export/checksum/preview/import,
   and preserved by Merge and Replace. A transferable locale remains a future Backup v2 decision.
 
-Automated resolver/bootstrap/concurrency/rollback/backup regressions are part of this checkpoint.
-I18N-5 remains in progress until native Windows acceptance confirms fresh vi/en/unsupported,
-legacy, persisted preference, runtime switch and Backup Merge/Replace behavior. No screen-reader
-result is claimed by the automated checkpoint.
+Automated resolver/bootstrap/concurrency/rollback/backup regressions passed in commits `98c59f4`
+and `febacf0`. The user confirmed native Windows acceptance on 2026-07-28 with isolated
+profile/database fixtures for fresh vi/en/unsupported, legacy missing preference, persisted
+preference, runtime switch/reopen, Backup Merge/Replace, App Theme, supported themes/window sizes,
+raw-key/flash/clipping checks and keyboard/focus. Accessibility evidence is limited to
+automated/source audit and native keyboard/focus/Accessibility tree; no screen-reader testing is
+claimed. I18N-5 is **Completed**. Day Theme and release packaging remain outside this work.
 
 ## 26. Open questions and provisional decisions
 
