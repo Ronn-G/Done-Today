@@ -1,8 +1,8 @@
 # Database Design
 
 **Document status:** Authoritative
-**Document version:** 1.2
-**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
+**Document version:** 1.3
+**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
 
 ## 1. Bảng daily_logs
 
@@ -11,11 +11,21 @@ CREATE TABLE daily_logs (
   id TEXT PRIMARY KEY,
   log_date TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  theme_id TEXT NULL,
+  theme_version INTEGER NULL
 );
 ```
 
 `log_date` dùng định dạng `YYYY-MM-DD` theo múi giờ địa phương của người dùng.
+
+Migration `005_day_theme.sql` bổ sung hai cột Day Theme nullable mà không backfill hoặc rewrite
+daily log cũ. `NULL/NULL` nghĩa là chưa có lựa chọn Day Theme cụ thể; renderer dùng default runtime
+nhưng không persist `done-today-default`. Khi có `theme_id`, `theme_version` phải là số nguyên dương.
+ID dùng lower-kebab-case ASCII, dài tối đa 64 ký tự. SQLite không có foreign key tới registry
+built-in; application/persistence boundary kiểm tra pair và ghi hoặc clear cả hai field bằng một
+statement trong transaction. Unknown nhưng structurally valid ID/version được giữ nguyên để
+registry fallback khi render; fallback không tự xóa metadata.
 
 ## 2. Bảng work_items
 
@@ -99,3 +109,6 @@ Không sao chép envelope hoặc payload backup vào tài liệu này để trá
 Migration 004 bổ sung
 `backup_import_receipts(id, checksum, imported_at, mode, source_exported_at, result_summary_json)`
 và index theo checksum. Receipt không thuộc payload backup.
+
+Migration 005 bổ sung `daily_logs.theme_id` và `daily_logs.theme_version`; dữ liệu, timestamps,
+work item, category, setting và receipt hiện có được giữ nguyên.

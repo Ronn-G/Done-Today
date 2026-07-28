@@ -1,8 +1,8 @@
 # Backup và restore
 
 **Document status:** Authoritative
-**Document version:** 1.1
-**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
+**Document version:** 1.2
+**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
 
 ## Envelope v1
 
@@ -15,11 +15,26 @@
 Version backup không phụ thuộc migration database. Bộ đọc xác định phiên bản envelope trước rồi
 normalize về model import; adapter phiên bản sau có thể được thêm mà không đổi v1.
 
+Mỗi entry `dailyLogs[]` có thể chứa cặp optional/null-safe:
+
+```json
+{"themeId":"done-today-default","themeVersion":1}
+```
+
+Hai field cùng thiếu hoặc cùng `null` normalize về `NULL/NULL`. Nếu một field thiếu/null nhưng field
+còn lại có giá trị, ID sai lower-kebab-case/tối đa 64 ký tự, hoặc version không phải số nguyên dương,
+toàn bộ import bị từ chối bằng structured safe error. Unknown nhưng structurally valid theme ID vẫn
+hợp lệ và được giữ nguyên; registry quyết định fallback khi render.
+
 ## Canonical checksum
 
 SHA-256 được tính trên payload, không gồm checksum. Object key được sắp theo tên; daily log theo
 `logDate,id`, work item theo `dailyLogId,position,id`, category theo `position,id`. Chuỗi canonical
 không có whitespace và được băm dạng UTF-8 nên thứ tự object đầu vào và line ending file không ảnh hưởng.
+
+Reader không chèn default Day Theme trước bước xác minh. Khi hai field Day Theme thiếu hoặc `null`,
+canonical representation bỏ cả hai field; vì vậy fixture/file v1 cũ giữ nguyên checksum. Export log
+`NULL/NULL` cũng bỏ hai field và không invent `done-today-default`; explicit pair được đưa vào checksum.
 
 ## Phạm vi
 
@@ -47,6 +62,9 @@ với import; import chạy planner lại trong transaction để tránh preview
 
 - Log mới giữ ID. Cùng `logDate` nhưng ID khác dùng log hiện tại và remap item. Cùng ID nhưng ngày khác
   bị từ chối.
+- Day Theme metadata là một phần của toàn bộ daily-log record. Theo winner rule hiện hành, daily log
+  local thắng khi Merge gặp cùng ID/ngày hoặc cùng `logDate`; không có timestamp/theme heuristic riêng.
+  Log mới nhận nguyên explicit pair từ backup.
 - Work item tương đương là no-op. Cùng ID nhưng khác nội dung nhận UUID mới và giữ cả hai.
 - Category tương đương là no-op. Cùng ID nhưng khác nội dung nhận UUID mới và item được remap. Không tự
   merge chỉ vì trùng tên.
@@ -57,6 +75,10 @@ với import; import chạy planner lại trong transaction để tránh preview
 UI yêu cầu xác nhận rõ. Một transaction xóa item, log, category và custom theme theo thứ tự khóa ngoại,
 sau đó chèn snapshot với ID gốc. Theme null xóa custom theme để dùng mặc định. Schema/migration metadata
 không bị xóa. Mọi lỗi đều rollback.
+
+Day Theme pair được khôi phục cùng daily log trong chính transaction Replace. Backup v1 cũ không có
+pair sẽ khôi phục `NULL/NULL`. App Theme `themePreferences`, locale device-local, installation marker,
+receipt, re-import warning và rollback semantics giữ policy hiện hành.
 
 ## Receipt, consistency và riêng tư
 

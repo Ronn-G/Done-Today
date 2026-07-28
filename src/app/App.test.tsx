@@ -2,7 +2,10 @@ import {describe,expect,it,vi} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {initializeI18n} from '../i18n';
-import {AppNavigation,TodayOverview} from './App';
+import {dayThemeRegistry} from '../domain/day-theme/registry';
+import {DayThemeScope} from '../features/daily-log/DayThemeScope';
+import {i18next} from '../i18n';
+import {AppNavigation,resolveDayThemeForLog,TodayOverview} from './App';
 
 describe('I18N-2 app shell and Today overview',()=>{
   it.each([
@@ -52,5 +55,59 @@ describe('I18N-2 app shell and Today overview',()=>{
     expect(styles).toContain('.stats { grid-template-columns: repeat(2,minmax(0,1fr)); }');
     expect(styles).toContain('.stats .stat:nth-child(3) { border-left: 0; }');
     expect(styles).toContain('.stats .stat:nth-child(3),.stats .stat:nth-child(4) { border-top: 1px solid var(--stats-border); }');
+  });
+});
+
+describe('Day Theme foundation integration',()=>{
+  it('resolves null, known and unknown metadata without mutating the original reference',()=>{
+    const unknown={themeId:'future-theme',themeVersion:7};
+    expect(resolveDayThemeForLog(null)).toMatchObject({source:'default',requested:null});
+    expect(resolveDayThemeForLog({themeId:'done-today-default',themeVersion:1})).toMatchObject({
+      source:'exact',definition:{id:'done-today-default',version:1},
+    });
+    expect(resolveDayThemeForLog(unknown)).toMatchObject({
+      source:'default',definition:{id:'done-today-default',version:1},
+      requested:{id:'future-theme',version:7},
+    });
+    expect(unknown).toEqual({themeId:'future-theme',themeVersion:7});
+  });
+
+  it('updates only the scope resolution while app-shell markup stays outside the boundary',()=>{
+    const render=(themeId:string|null,themeVersion:number|null)=>renderToStaticMarkup(<>
+      <aside data-testid="stable-shell">Done Today</aside>
+      <DayThemeScope resolvedTheme={dayThemeRegistry.resolve(themeId,themeVersion)}>
+        <main>Journal</main>
+      </DayThemeScope>
+    </>);
+    const known=render('done-today-default',1);
+    const unknown=render('future-theme',7);
+    expect(known).toContain('data-day-theme-resolution="exact"');
+    expect(unknown).toContain('data-day-theme-resolution="default"');
+    for(const markup of [known,unknown]){
+      expect(markup).toContain('<aside data-testid="stable-shell">Done Today</aside>');
+      expect(markup.indexOf('</aside>')).toBeLessThan(markup.indexOf('day-theme-scope'));
+    }
+  });
+
+  it.each(['vi','en'] as const)('resolves the built-in name and description in %s without raw keys',async(locale)=>{
+    await initializeI18n(locale);
+    const definition=dayThemeRegistry.list()[0];
+    const name=i18next.t(definition.nameKey);
+    const description=i18next.t(definition.descriptionKey);
+    expect(name).not.toContain('dayTheme.');
+    expect(description).not.toContain('dayTheme.');
+    expect(name.trim()).not.toBe('');
+    expect(description.trim()).not.toBe('');
+  });
+
+  it('keeps theme-specific branching out of the Today business component and global selectors',()=>{
+    const appSource=readFileSync(new URL('./App.tsx',import.meta.url),'utf8');
+    const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+    expect(appSource).not.toMatch(/themeId\s*===/);
+    expect(appSource).not.toContain("'done-today-default'");
+    const scopeBlock=/\.day-theme-scope\s*\{([^}]+)\}/.exec(styles)?.[1]??'';
+    expect(scopeBlock).toContain('--accent: var(--day-accent)');
+    expect(scopeBlock).not.toMatch(/:root|html|body/);
+    expect(styles).toContain('@media (prefers-reduced-motion: reduce)');
   });
 });

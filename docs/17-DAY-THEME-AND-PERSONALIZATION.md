@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.0  
+**Phiên bản:** 1.1
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Last verified against commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
 
 ---
 
@@ -1181,3 +1181,28 @@ Người dùng phải có thể:
 Nguyên tắc cuối cùng:
 
 > App shell giữ sự ổn định. Day Theme giữ ký ức. Nội dung luôn là trung tâm.
+
+---
+
+# 32. Checkpoint 1 — Foundation implementation
+
+Trạng thái: **In progress — implementation complete; native visual acceptance pending**.
+
+Implementation foundation hiện hành chốt:
+
+- typed React-independent contract, validator và immutable registry;
+- đúng một built-in `done-today-default` version `1`, mode `adaptive`;
+- resolve theo thứ tự exact, latest same-ID compatible, default rồi emergency fallback;
+- kết quả resolve giữ nguyên requested ID/version khi fallback;
+- local `DayThemeScope` đặt semantic CSS variables trong day content container, không ghi `:root`,
+  `html`, `body` hoặc app-shell variables;
+- migration `005` thêm `theme_id TEXT NULL` và `theme_version INTEGER NULL`, không backfill;
+- repository/use case/native command ghi hoặc clear pair atomically; unknown valid ID được giữ;
+- Backup envelope vẫn là `done-today-backup` version `1`; legacy checksum còn hợp lệ, explicit pair
+  round-trip, Merge dùng daily-log winner rule hiện hành và Replace giữ transaction/rollback;
+- vi/en có `nameKey` và `descriptionKey` cho built-in foundation theme.
+
+Checkpoint này chưa triển khai Theme Picker, Day Cover mới, theme thứ hai, Calendar/History indicator,
+personalization, theme pack hoặc release packaging. Default runtime không phải persisted selection.
+Checkpoint chỉ được đóng **Completed** sau native Windows visual/keyboard/accessibility acceptance
+riêng; không suy ra toàn bộ Day Theme & Personalization đã hoàn thành.

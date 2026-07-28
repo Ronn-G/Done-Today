@@ -35,6 +35,9 @@ type AppPage=Route['page'];
 const service=new JournalService(new TauriJournalRepository());
 const themeRepository=new TauriThemeRepository();
 const today=()=>localDateKey();
+export function resolveDayThemeForLog(log:Pick<DailyLog,'themeId'|'themeVersion'>|null){
+  return dayThemeRegistry.resolve(log?.themeId??null,log?.themeVersion??null);
+}
 function parseRoute():Route{
   const hash=location.hash.slice(1);
   if(hash==='/history')return{page:'history'};
@@ -124,7 +127,12 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const items=useMemo(()=>log?.items??[],[log]);
   const stats=useMemo(()=>calculateStatistics(items),[items]);
   const groups=useMemo(()=>groupDailyItems(items,categories),[items,categories]);
-  const resolvedDayTheme=useMemo(()=>dayThemeRegistry.resolve(log?.themeId??null,log?.themeVersion??null),[log?.themeId,log?.themeVersion]);
+  const dayThemeId=log?.themeId??null;
+  const dayThemeVersion=log?.themeVersion??null;
+  const resolvedDayTheme=useMemo(
+    ()=>resolveDayThemeForLog({themeId:dayThemeId,themeVersion:dayThemeVersion}),
+    [dayThemeId,dayThemeVersion],
+  );
   const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);
     try{

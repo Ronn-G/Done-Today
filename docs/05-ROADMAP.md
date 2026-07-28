@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.5
-**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
+**Document version:** 2.6
+**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | Specified | Tài liệu 17 đã có; không được suy ra là implementation đã hoàn thành |
+| Day Theme & Personalization | In progress — Checkpoint 1 implementation complete; native visual acceptance pending | Foundation contract/registry/scope, `done-today-default@1`, migration 005, typed persistence và Backup v1 compatibility đã có; Theme Picker và các phase sau chưa bắt đầu |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -146,6 +146,20 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Accessibility evidence gồm automated/source audit và native keyboard/focus/Accessibility tree.
   Không tuyên bố đã kiểm tra bằng screen-reader tooling.
 - I18N-5 được đánh dấu **Completed**. Day Theme và release packaging chưa bắt đầu.
+
+### Day Theme Checkpoint 1 — Foundation implementation
+
+- React-independent typed contract, validation, immutable registry và fallback chain đã có.
+- Registry production có đúng một built-in `done-today-default` version 1, mode adaptive, với
+  resource vi/en và scoped semantic CSS variables chỉ trong day content container.
+- Migration 005 để dữ liệu cũ `NULL/NULL`; typed repository/native command ghi-clear pair atomically.
+- Backup v1 không bump version: legacy fixture/checksum còn hợp lệ; explicit metadata round-trip;
+  Merge dùng daily-log winner rule hiện hành; Replace/receipt/rollback và device-local locale giữ nguyên.
+- Automated targeted gates đạt tại hai commit implementation `a4f3698` và `81b3276`.
+- Trạng thái vẫn là **In progress — Checkpoint 1 implementation complete; native visual acceptance
+  pending**. Chưa tuyên bố GUI Windows, keyboard, Accessibility tree hoặc screen reader PASS.
+- Theme Picker, Day Cover mới, theme thứ hai, Calendar/History integration, personalization,
+  theme packs và release packaging chưa bắt đầu.
 
 ## 4. I18N-1 đã hoàn thành
 

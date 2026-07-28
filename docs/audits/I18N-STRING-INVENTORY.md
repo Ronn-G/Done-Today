@@ -1,7 +1,7 @@
 # I18N string inventory
 
 Audit date: 2026-07-28
-Scope: completed I18N-4 and I18N-5, implementation through `febacf0`.
+Scope: completed I18N-4 and I18N-5 plus Day Theme Checkpoint 1 implementation through `81b3276`.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
@@ -9,6 +9,10 @@ Windows visual/keyboard/accessibility acceptance. Screen-reader tooling was not 
 I18N-5 adds no translation key or user-facing string: it adds native locale bootstrap metadata and
 locks the existing Backup v1 preference exclusion. Native I18N-5 acceptance was confirmed on
 2026-07-28; no inventory count or resource key changed.
+Day Theme Checkpoint 1 adds `theme.dayTheme.doneTodayDefault.name`,
+`theme.dayTheme.doneTodayDefault.description` and
+`theme.backendErrors.dayThemeMetadataInvalid` in both locales. It does not reopen I18N-1–I18N-5
+policy, change active locale or add locale to Backup v1.
 
 ## Method and exclusions
 
@@ -67,6 +71,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 | `src/features/settings/ThemeSettings.tsx` | Settings tip and version | ui | Completed | `theme.settings.tip`, `settings.about.version` | P1 | Version number remains stable; only its label is translated. |
 | `src/features/settings/FloatingThemeCustomizer.tsx` | Customizer label/header; reset position; expand/collapse; close | accessibility / ui | Completed | `theme.floating.*`, `common.actions.expand`, `common.actions.collapse`, `common.actions.close` | P0 | Visible copy, tooltips and accessible names are localized; persisted panel coordinates/open/collapsed state remain locale-independent. |
 | `src/domain/theme/presets.ts:18-24` | Six preset names and descriptions | ui | Yes | `theme.preset.<presetId>.name`, `theme.preset.<presetId>.description` | P1 | Names/descriptions are constants today; persisted theme contains ID/colors, not these strings. Move to `nameKey`/`descriptionKey` as required by design spec. Copy review required; native visual review required. |
+| `src/domain/day-theme/definitions.ts` | Done Today Default Day Theme name and description | ui | Completed | `theme.dayTheme.doneTodayDefault.name`, `theme.dayTheme.doneTodayDefault.description` | P1 | Stable ID/version remain locale-independent; registry stores typed keys only. Native visual review remains pending. |
 
 ## Frontend: backup and restore
 
@@ -101,6 +106,7 @@ never renders compatibility `message` or warning text from Rust.
 | `src-tauri/src/lib.rs` | Not found; database unavailable | backend-user-facing | Completed | `data.not_found`, `database.unavailable` | `errors.messages.dataNotFound`, `errors.messages.databaseUnavailable` | P0 | Old generic codes are removed. SQLite detail remains debug-only. |
 | `src-tauri/src/lib.rs` | Invalid/oversized/corrupt theme preferences; invalid/incomplete palette; invalid HEX; unsupported theme schema | backend-user-facing | Completed | `theme.invalid`, `theme.too_large`, `theme.schema_unsupported`, `theme.palette_invalid`, `theme.palette_incomplete`, `theme.color_invalid`, `theme.stored_corrupt` | `theme.backendErrors.*` | P1 | Specific codes are active; limits/schema versions use numeric params. |
 | `src-tauri/src/lib.rs` | Invalid date; task/result/next-action length; invalid status | backend-user-facing | Completed | `date.invalid`, `work_item.task_too_long`, `work_item.result_too_long`, `work_item.next_action_too_long`, `work_item.status_invalid` | `errors.messages.dateInvalid`, `today.backendErrors.*` | P0 | Length limits are numeric params. |
+| `src-tauri/src/lib.rs` | Invalid/incomplete Day Theme metadata pair | backend-user-facing | Completed | `day_theme.metadata_invalid` | `theme.backendErrors.dayThemeMetadataInvalid` | P1 | Safe structured error; no SQL/path. Unknown structurally valid Day Theme IDs remain accepted. |
 | `src-tauri/src/lib.rs` | Category name/color invalid; category/item reorder invalid or empty; pagination invalid | backend-user-facing | Completed | `category.name_invalid`, `category.color_invalid`, `category.reorder_invalid`, `work_item.reorder_empty`, `work_item.reorder_invalid`, `history.pagination_invalid` | `settings.categories.backendErrors.*`, `today.backendErrors.*`, `history.backendErrors.paginationInvalid` | P1 | Structured errors expose no SQL or paths. |
 | `src-tauri/src/backup.rs` | Create/read/size/JSON/version/shape/date/timestamp/checksum/reference/duplicate validation errors | backend-user-facing | Completed | `backup.create_failed`, `backup.file_read_failed`, `backup.file_too_large`, `backup.json_invalid`, `backup.version_missing`, `backup.version_newer`, `backup.version_unsupported`, `backup.structure_invalid`, `backup.format_invalid`, `backup.timestamp_invalid`, `backup.checksum_mismatch`, `backup.reference_invalid`, `backup.duplicate_id` | `backup.backendErrors.*` | P0 | Active params include `{maxMiB:20}` and numeric version pairs. |
 | `src-tauri/src/backup.rs` | Stored theme invalid; destination invalid; write/create failed | backend-user-facing | Completed | `backup.theme_invalid`, `backup.destination_invalid`, `backup.file_write_failed`, `backup.create_failed` | `backup.backendErrors.*` | P0 | No absolute path is returned. |
@@ -116,6 +122,7 @@ never renders compatibility `message` or warning text from Rust.
 | `src/domain/journal/models.ts`, migration 001, Rust `STATUSES` | `completed`, `in_progress`, `postponed`, `cancelled` | internal/domain | No | P0 | Stable across database, backup, sorting and validation. |
 | `src/domain/theme/models.ts` | `light`, `dark`, `system`; `square`, `subtle`, `rounded`, `soft` | internal/domain | No | P0 | Translate only labels. |
 | `src/domain/theme/presets.ts` | `done-today`, `forest`, `ocean`, `lavender`, `warm-sand`, `monochrome`, `custom` | internal/domain | No | P0 | Stable preset IDs. |
+| `src/domain/day-theme/definitions.ts`, migration 005 | `done-today-default`, version `1`, nullable `theme_id`/`theme_version` | internal/domain | No | P0 | Day Theme is distinct from App Theme; fallback never rewrites persisted metadata. |
 | `src/domain/backup/*`, `src-tauri/src/backup.rs` | `done-today-backup`, version `1`, `merge`, `replace`, checksum and camelCase field names | serialized/backup | No | P0 | Backup format must remain locale-independent. |
 | `src-tauri/src/lib.rs` | `appearance.themePreferences`, `localization.locale`, `installation.bootstrap` | setting keys | No | P0 | Locale and typed/versioned bootstrap marker are device-local metadata; valid persisted locale is authoritative. |
 | migrations and repositories | UUIDs, ISO/RFC3339 timestamps, `YYYY-MM-DD`, colors, positions | internal/domain | No | P0 | Format for display only at UI boundary. |
@@ -134,7 +141,7 @@ never renders compatibility `message` or warning text from Rust.
 
 ## Completed I18N-4 result
 
-- 41 stable error codes and 2 stable warning codes are shared through the reviewed contract fixture.
+- 42 stable error codes and 2 stable warning codes are shared through the reviewed contract fixture.
 - No current Tauri command family relies on a raw backend message for frontend presentation.
 - Remaining Vietnamese Rust literals are editable category seed data, not UI/error copy, and are
   intentionally outside translation/migration scope.
@@ -163,3 +170,13 @@ never renders compatibility `message` or warning text from Rust.
 - Accessibility evidence is automated/source audit and native keyboard/focus/Accessibility tree.
   No screen-reader testing is claimed.
 - I18N-5 is **Completed**. Day Theme and release packaging remain outside this checkpoint.
+
+## Day Theme Checkpoint 1 localization result
+
+- Both locales contain the built-in Day Theme name/description and safe metadata validation error.
+- Resource parity, interpolation validation and static error-code mapping remain exhaustive.
+- Stable Day Theme ID/version, database fields and Backup v1 JSON field names are never translated.
+- Locale remains device-local and is neither exported nor changed by Merge/Replace.
+- I18N-1–I18N-5 remain Completed and are not reopened.
+- Day Theme Checkpoint 1 implementation is complete, but native Windows visual acceptance is pending;
+  Theme Picker and later personalization phases have not started.
