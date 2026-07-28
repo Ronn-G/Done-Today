@@ -35,6 +35,8 @@ describe('i18n resources',()=>{
       expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.sakura.description');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.coffee.description');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.rainy.description');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.picker.trigger');
+      expect(flattenResource(resources[locale].theme)).toHaveProperty('dayTheme.picker.saveFailed');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('preset.warmSand.description');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('customize.heading');
       expect(flattenResource(resources[locale].theme)).toHaveProperty('colors.pageBackground');
