@@ -2,7 +2,7 @@
 
 **Document status:** Authoritative for delivery status
 **Document version:** 2.6
-**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
+**Last verified against baseline commit:** `455a974c39cdb57085b32082dee8e4518ba5039a` (2026-07-28)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — Checkpoint 1 implementation complete; native visual acceptance pending | Foundation contract/registry/scope, `done-today-default@1`, migration 005, typed persistence và Backup v1 compatibility đã có; Theme Picker và các phase sau chưa bắt đầu |
+| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 — Foundation đã Completed sau native Windows acceptance ngày 2026-07-28; Theme Picker và các phase sau chưa bắt đầu |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -145,9 +145,10 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   custom theme, cửa sổ 900×600/default/maximize, không raw key/flash/clipping và keyboard/focus.
 - Accessibility evidence gồm automated/source audit và native keyboard/focus/Accessibility tree.
   Không tuyên bố đã kiểm tra bằng screen-reader tooling.
-- I18N-5 được đánh dấu **Completed**. Day Theme và release packaging chưa bắt đầu.
+- I18N-5 được đánh dấu **Completed**. Day Theme không thuộc I18N-5 và được theo dõi riêng bên dưới;
+  release packaging chưa bắt đầu.
 
-### Day Theme Checkpoint 1 — Foundation implementation
+### Day Theme Checkpoint 1 — Foundation
 
 - React-independent typed contract, validation, immutable registry và fallback chain đã có.
 - Registry production có đúng một built-in `done-today-default` version 1, mode adaptive, với
@@ -155,9 +156,15 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Migration 005 để dữ liệu cũ `NULL/NULL`; typed repository/native command ghi-clear pair atomically.
 - Backup v1 không bump version: legacy fixture/checksum còn hợp lệ; explicit metadata round-trip;
   Merge dùng daily-log winner rule hiện hành; Replace/receipt/rollback và device-local locale giữ nguyên.
-- Automated targeted gates đạt tại hai commit implementation `a4f3698` và `81b3276`.
-- Trạng thái vẫn là **In progress — Checkpoint 1 implementation complete; native visual acceptance
-  pending**. Chưa tuyên bố GUI Windows, keyboard, Accessibility tree hoặc screen reader PASS.
+- Automated targeted gates đạt tại hai commit implementation `a4f3698`, `81b3276`; integration
+  regressions và tài liệu implementation nằm trong `455a974`.
+- Người dùng xác nhận native Windows acceptance đạt ngày 2026-07-28 cho default Day Theme trên
+  Today/ngày cũ, local scope không ảnh hưởng app shell, App Theme light/dark/custom, `vi`/`en`,
+  cửa sổ 900×600/default/maximize, journal table/editor/autosave/chuyển ngày và keyboard/focus.
+- Accessibility evidence gồm source audit, automated tests và native keyboard/focus/visual review.
+  Không tuyên bố đã kiểm tra bằng Accessibility tree hoặc screen-reader tooling.
+- Day Theme Checkpoint 1 — Foundation được đánh dấu **Completed**. Toàn bộ Day Theme &
+  Personalization vẫn **In progress — checkpoint complete**.
 - Theme Picker, Day Cover mới, theme thứ hai, Calendar/History integration, personalization,
   theme packs và release packaging chưa bắt đầu.
 
@@ -187,7 +194,8 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme vẫn là **Specified**, không phải feature mặc định kế tiếp nếu chưa có quyết định ưu tiên.
+Day Theme & Personalization vẫn là **In progress — checkpoint complete**; Checkpoint 2 và các phase
+sau không phải công việc mặc định kế tiếp nếu chưa có quyết định ưu tiên.
 
 ## 6. Release packaging
 

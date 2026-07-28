@@ -1,7 +1,7 @@
 # I18N string inventory
 
 Audit date: 2026-07-28
-Scope: completed I18N-4 and I18N-5 plus Day Theme Checkpoint 1 implementation through `81b3276`.
+Scope: completed I18N-4 and I18N-5 plus Day Theme Checkpoint 1 through `455a974`.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
@@ -71,7 +71,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 | `src/features/settings/ThemeSettings.tsx` | Settings tip and version | ui | Completed | `theme.settings.tip`, `settings.about.version` | P1 | Version number remains stable; only its label is translated. |
 | `src/features/settings/FloatingThemeCustomizer.tsx` | Customizer label/header; reset position; expand/collapse; close | accessibility / ui | Completed | `theme.floating.*`, `common.actions.expand`, `common.actions.collapse`, `common.actions.close` | P0 | Visible copy, tooltips and accessible names are localized; persisted panel coordinates/open/collapsed state remain locale-independent. |
 | `src/domain/theme/presets.ts:18-24` | Six preset names and descriptions | ui | Yes | `theme.preset.<presetId>.name`, `theme.preset.<presetId>.description` | P1 | Names/descriptions are constants today; persisted theme contains ID/colors, not these strings. Move to `nameKey`/`descriptionKey` as required by design spec. Copy review required; native visual review required. |
-| `src/domain/day-theme/definitions.ts` | Done Today Default Day Theme name and description | ui | Completed | `theme.dayTheme.doneTodayDefault.name`, `theme.dayTheme.doneTodayDefault.description` | P1 | Stable ID/version remain locale-independent; registry stores typed keys only. Native visual review remains pending. |
+| `src/domain/day-theme/definitions.ts` | Done Today Default Day Theme name and description | ui | Completed | `theme.dayTheme.doneTodayDefault.name`, `theme.dayTheme.doneTodayDefault.description` | P1 | Stable ID/version remain locale-independent; registry stores typed keys only. Native Windows visual review passed in Checkpoint 1 acceptance. |
 
 ## Frontend: backup and restore
 
@@ -178,5 +178,10 @@ never renders compatibility `message` or warning text from Rust.
 - Stable Day Theme ID/version, database fields and Backup v1 JSON field names are never translated.
 - Locale remains device-local and is neither exported nor changed by Merge/Replace.
 - I18N-1–I18N-5 remain Completed and are not reopened.
-- Day Theme Checkpoint 1 implementation is complete, but native Windows visual acceptance is pending;
-  Theme Picker and later personalization phases have not started.
+- The user confirmed native Windows acceptance on 2026-07-28 for the default Day Theme on
+  Today/older days, local scope, App Theme light/dark/custom, `vi`/`en`, supported window sizes,
+  journal editing/autosave/date switching and keyboard/focus behavior.
+- Accessibility evidence is source audit, automated tests and native keyboard/focus/visual review.
+  No Accessibility tree or screen-reader tooling result is claimed.
+- Day Theme Checkpoint 1 — Foundation is **Completed**. Day Theme & Personalization remains
+  **In progress**; Theme Picker and later checkpoints have not started.
