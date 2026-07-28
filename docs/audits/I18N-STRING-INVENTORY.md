@@ -1,11 +1,13 @@
 # I18N string inventory
 
-Audit date: 2026-07-27
-Scope: completed I18N-4 implementation, baseline repository state `c5d787b`.
+Audit date: 2026-07-28
+Scope: completed I18N-4 plus I18N-5 automated checkpoint, baseline repository state `abdfdf4`.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
 Windows visual/keyboard/accessibility acceptance. Screen-reader tooling was not claimed.
+I18N-5 adds no translation key or user-facing string: it adds native locale bootstrap metadata and
+locks the existing Backup v1 preference exclusion. Native I18N-5 acceptance is still pending.
 
 ## Method and exclusions
 
@@ -114,7 +116,7 @@ never renders compatibility `message` or warning text from Rust.
 | `src/domain/theme/models.ts` | `light`, `dark`, `system`; `square`, `subtle`, `rounded`, `soft` | internal/domain | No | P0 | Translate only labels. |
 | `src/domain/theme/presets.ts` | `done-today`, `forest`, `ocean`, `lavender`, `warm-sand`, `monochrome`, `custom` | internal/domain | No | P0 | Stable preset IDs. |
 | `src/domain/backup/*`, `src-tauri/src/backup.rs` | `done-today-backup`, version `1`, `merge`, `replace`, checksum and camelCase field names | serialized/backup | No | P0 | Backup format must remain locale-independent. |
-| `src-tauri/src/lib.rs` | `appearance.themePreferences` | setting key | No | P0 | Proposed locale key: `localization.locale`. |
+| `src-tauri/src/lib.rs` | `appearance.themePreferences`, `localization.locale`, `installation.bootstrap` | setting keys | No | P0 | Locale and typed/versioned bootstrap marker are device-local metadata; valid persisted locale is authoritative. |
 | migrations and repositories | UUIDs, ISO/RFC3339 timestamps, `YYYY-MM-DD`, colors, positions | internal/domain | No | P0 | Format for display only at UI boundary. |
 | journal/category fields | task, result, next action, category name | user-data | Never | P0 | Preserve verbatim through locale changes and backup/restore. |
 
@@ -143,3 +145,16 @@ never renders compatibility `message` or warning text from Rust.
 - Accessibility evidence is source audit, automated keyboard regression and native keyboard/visual
   review. No screen-reader tooling result is claimed.
 - I18N-4 is **Completed**; I18N-5, Day Theme and release packaging remain outside this checkpoint.
+
+## I18N-5 automated checkpoint result
+
+- Fresh/legacy classification uses explicit database-existence evidence at the native bootstrap
+  boundary, never journal/category/theme/receipt content or timestamps.
+- Windows/WebView preferred-locale input is normalized and resolved in a typed native operation;
+  persisted `vi`/`en` remains authoritative.
+- `installation.bootstrap` and `localization.locale` are written transactionally and idempotently;
+  concurrent calls are serialized and transaction failure leaves no partial pair.
+- Backup v1 payload/checksum/version remain unchanged. Export excludes locale/marker, preview does
+  not apply them, and Merge/Replace preserve them.
+- I18N-5 is **In progress — checkpoint complete** pending user-confirmed native Windows acceptance.
+  Day Theme and release packaging remain outside this checkpoint.

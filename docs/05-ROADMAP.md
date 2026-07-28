@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.4
-**Last verified against baseline commit:** `c5d787b718032edb078a5c5b11056df466843041` (2026-07-27)
+**Document version:** 2.5
+**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
 
 ## 1. Cách đọc trạng thái
 
@@ -33,7 +33,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
-| I18N-5 | Planned | Fresh-install detection và backup preference policy chỉ thực hiện sau quyết định contract riêng |
+| I18N-5 | In progress — checkpoint complete | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã triển khai/test; chờ native Windows acceptance trước khi Completed |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -122,6 +122,24 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   visual review. Không tuyên bố đã kiểm tra bằng screen-reader tooling.
 - I18N-4 được đánh dấu **Completed**. I18N-5, Day Theme và release packaging không thuộc checkpoint
   này và không được đánh dấu hoàn thành.
+
+### I18N-5 automated checkpoint
+
+- Fresh boundary được capture tại native database path trước `open/migrate`: chỉ file database chưa
+  tồn tại trong bootstrap hiện tại là `fresh`; database đã tồn tại hoặc không phân loại an toàn là
+  `legacyOrUnclassified`.
+- `installation.bootstrap` version 1 và `localization.locale` dùng `app_settings`. Một native
+  initialization operation serialize các lời gọi, resolve và persist transactionally/idempotently.
+- Locale `vi`/`en` đã persist luôn authoritative. Fresh dùng locale ưu tiên đầu tiên từ WebView/
+  Windows (`vi`, `vi-VN` và case/underscore variants -> `vi`; English/unsupported/API failure ->
+  `en`); legacy thiếu preference dùng compatibility `vi`.
+- Marker thiếu/hỏng/version lạ fail closed cho database cũ. Transaction failure không để partial
+  marker/locale; retry và concurrent initialization giữ state nhất quán.
+- Backup v1 không đổi envelope, payload, checksum hoặc version. Locale/marker không export/import;
+  Merge và Replace giữ cả hai preference; receipt/re-import semantics không đổi.
+- Targeted frontend/Rust regressions và full automated gate phải đạt trước checkpoint commit.
+  Native Windows acceptance cho vi/en/unsupported/legacy/persisted/runtime-switch/backup vẫn cần
+  người dùng xác nhận; vì vậy I18N-5 chưa được đánh dấu Completed.
 
 ## 4. I18N-1 đã hoàn thành
 

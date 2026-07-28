@@ -1,8 +1,8 @@
 # Backup và restore
 
 **Document status:** Authoritative
-**Document version:** 1.0
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Document version:** 1.1
+**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
 
 ## Envelope v1
 
@@ -26,6 +26,13 @@ không có whitespace và được băm dạng UTF-8 nên thứ tự object đ�
 Bao gồm daily log, work item, category và theme theo allow-list. Không gồm database/path app-data,
 receipt, seed metadata, route, vị trí cửa sổ/panel, trạng thái thu gọn, autosave tạm, cache, log,
 artifact, OS hay biến môi trường.
+
+`localization.locale` và `installation.bootstrap` là application preference/metadata cục bộ của
+thiết bị và không thuộc Backup v1. Export không chứa hai key này, checksum canonical không phụ
+thuộc chúng, preview không đề xuất thay đổi chúng, và cả Merge lẫn Replace đều giữ nguyên active
+locale cùng installation marker. Import backup từ thiết bị/ngôn ngữ khác vì vậy không đổi ngôn
+ngữ UI hiện tại. Nếu sản phẩm muốn chuyển locale giữa thiết bị trong tương lai, đó là quyết định
+Backup v2 độc lập với envelope/payload/checksum v1.
 
 ## Export, validate và preview
 

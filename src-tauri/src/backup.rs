@@ -748,7 +748,7 @@ pub fn import(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::migrate;
+    use crate::{migrate, INSTALLATION_BOOTSTRAP_KEY, LOCALE_KEY};
     fn memory() -> Connection {
         let mut db = Connection::open_in_memory().unwrap();
         migrate(&mut db).unwrap();
@@ -809,14 +809,39 @@ mod tests {
         )
     }
     #[test]
-    fn snapshot_excludes_receipts() {
+    fn snapshot_excludes_receipts_and_device_local_locale_metadata() {
         let mut db = memory();
         db.execute("INSERT INTO backup_import_receipts VALUES('r','sha256:x','2026-07-19T00:00:00Z','merge',NULL,'{}')",[]).unwrap();
+        db.execute(
+            "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,'en','2026-07-19T00:00:00Z')",
+            [LOCALE_KEY],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,'{\"version\":1,\"classification\":\"fresh\"}','2026-07-19T00:00:00Z')",
+            [INSTALLATION_BOOTSTRAP_KEY],
+        )
+        .unwrap();
         let value = snapshot(&mut db).unwrap();
-        assert!(serde_json::to_string(&value)
-            .unwrap()
-            .find("receipt")
-            .is_none())
+        let encoded = serde_json::to_string(&value).unwrap();
+        assert!(!encoded.contains("receipt"));
+        assert!(!encoded.contains(LOCALE_KEY));
+        assert!(!encoded.contains(INSTALLATION_BOOTSTRAP_KEY));
+        let first_checksum = checksum(&value).unwrap();
+        db.execute(
+            "UPDATE app_settings SET value='vi' WHERE key=?1",
+            [LOCALE_KEY],
+        )
+        .unwrap();
+        db.execute(
+            "UPDATE app_settings SET value='{\"version\":1,\"classification\":\"legacyOrUnclassified\"}' WHERE key=?1",
+            [INSTALLATION_BOOTSTRAP_KEY],
+        )
+        .unwrap();
+        assert_eq!(
+            first_checksum,
+            checksum(&snapshot(&mut db).unwrap()).unwrap()
+        );
     }
     #[test]
     fn migration_v4_is_idempotent() {
@@ -967,6 +992,49 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+    #[test]
+    fn merge_and_replace_preserve_device_local_locale_and_installation_marker() {
+        for mode in [ImportMode::Merge, ImportMode::Replace] {
+            let directory = tempfile::tempdir().unwrap();
+            let db_path = directory.path().join("db.sqlite");
+            let mut db = Connection::open(&db_path).unwrap();
+            migrate(&mut db).unwrap();
+            db.execute(
+                "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,'en','2026-07-19T00:00:00Z')",
+                [LOCALE_KEY],
+            )
+            .unwrap();
+            let marker = r#"{"version":1,"classification":"fresh"}"#;
+            db.execute(
+                "INSERT INTO app_settings(key,value,updated_at)VALUES(?1,?2,'2026-07-19T00:00:00Z')",
+                params![INSTALLATION_BOOTSTRAP_KEY, marker],
+            )
+            .unwrap();
+            drop(db);
+
+            let file = write_envelope(empty_payload());
+            import(&db_path, file.path(), mode, false, false).unwrap();
+            let db = Connection::open(&db_path).unwrap();
+            assert_eq!(
+                db.query_row(
+                    "SELECT value FROM app_settings WHERE key=?1",
+                    [LOCALE_KEY],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+                "en"
+            );
+            assert_eq!(
+                db.query_row(
+                    "SELECT value FROM app_settings WHERE key=?1",
+                    [INSTALLATION_BOOTSTRAP_KEY],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+                marker
+            );
+        }
     }
     #[test]
     fn reimport_requires_confirmation_but_is_allowed() {

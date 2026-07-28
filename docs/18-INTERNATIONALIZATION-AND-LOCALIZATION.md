@@ -1,6 +1,8 @@
 # Internationalization and localization
 
 Status: architecture specification for Sprint I18N-0  
+Document version: 1.1
+Last verified against baseline commit: `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
 Initial locales: Vietnamese (`vi`) and English (`en`)
 
 ## 1. Goals and scope
@@ -847,6 +849,28 @@ backup-version compatibility before changing either contract.
 Acceptance for fresh-install detection: an explicit, reliable installation marker distinguishes a
 fresh install; Windows locale detection normalizes regional variants to a supported locale;
 unsupported locales resolve to `en`; and any existing persisted locale remains authoritative.
+
+Delivery status: **In progress — checkpoint complete**. The implementation checkpoint uses:
+
+- database existence captured at the native path boundary immediately before open/migrate; only a
+  database created by that bootstrap is classified `fresh`;
+- `app_settings["installation.bootstrap"]` marker version 1 with classification `fresh` or
+  `legacyOrUnclassified`; missing/corrupt/unknown markers on an existing database fail closed;
+- the first preferred Windows/WebView locale from `navigator.language`; Vietnamese variants
+  normalize to `vi`, English variants to `en`, and unsupported/malformed/API failure to `en`;
+- one serialized native operation with an immediate SQLite transaction for marker/locale
+  resolution and persistence; repeated/concurrent calls are idempotent;
+- precedence: valid persisted `localization.locale` first, then valid marker, then conservative
+  database-existence classification; legacy/unclassified missing preference resolves `vi`;
+- no migration and no user-content heuristics; journal, category, theme, status, date/time and seed
+  data are not read to infer installation age and are not rewritten;
+- Backup v1 exclusion: locale/marker are device-local, absent from export/checksum/preview/import,
+  and preserved by Merge and Replace. A transferable locale remains a future Backup v2 decision.
+
+Automated resolver/bootstrap/concurrency/rollback/backup regressions are part of this checkpoint.
+I18N-5 remains in progress until native Windows acceptance confirms fresh vi/en/unsupported,
+legacy, persisted preference, runtime switch and Backup Merge/Replace behavior. No screen-reader
+result is claimed by the automated checkpoint.
 
 ## 26. Open questions and provisional decisions
 

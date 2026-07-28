@@ -1,8 +1,8 @@
 # Database Design
 
 **Document status:** Authoritative
-**Document version:** 1.1
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Document version:** 1.2
+**Last verified against baseline commit:** `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
 
 ## 1. Bảng daily_logs
 
@@ -44,6 +44,24 @@ CREATE TABLE app_settings (
   updated_at TEXT NOT NULL
 );
 ```
+
+Các key application preference hiện hành:
+
+- `appearance.themePreferences`: App Theme schema version 2.
+- `localization.locale`: locale canonical `vi` hoặc `en`, là preference cục bộ của thiết bị.
+- `installation.bootstrap`: marker JSON nhỏ, versioned, ghi một lần để phân biệt
+  `fresh` với `legacyOrUnclassified` cho chính sách khởi tạo locale I18N-5.
+
+Marker version 1 có shape:
+
+```json
+{"version":1,"classification":"fresh"}
+```
+
+`classification` chỉ nhận `fresh` hoặc `legacyOrUnclassified`. Marker thiếu, hỏng hoặc version lạ
+trên database đã tồn tại phải fail closed về `legacyOrUnclassified`; locale `vi`/`en` hợp lệ đã
+persist luôn authoritative. Marker và locale khởi tạo được resolve/upsert trong cùng transaction.
+Không thêm migration mới vì `app_settings` là metadata store canonical đã có.
 
 ## 4. Chỉ mục
 
