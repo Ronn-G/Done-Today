@@ -73,6 +73,51 @@ describe('DayThemePicker', () => {
     expect(value.onApplied).toHaveBeenCalledWith({themeId: null, themeVersion: null});
   });
 
+  it('restores focus and preview when the picker unmounts during a day change', async () => {
+    await initializeI18n('en');
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    trigger.focus();
+    const value = props();
+    const view = render(<DayThemePicker {...value}/>);
+    fireEvent.mouseEnter(screen.getByRole('radio', {name: /Coffee/}));
+    view.unmount();
+    expect(value.onRollbackPreview).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
+
+  it('keeps its draft while an open picker changes locale', async () => {
+    await initializeI18n('en');
+    const value = props();
+    render(<DayThemePicker {...value}/>);
+    fireEvent.click(screen.getByRole('radio', {name: /Coffee/}));
+    await initializeI18n('vi');
+    expect(screen.getByRole('radio', {name: /Coffee/}).getAttribute('aria-checked')).toBe('true');
+    expect(value.onApply).not.toHaveBeenCalled();
+  });
+
+  it('uses the safe runtime fallback for unknown persisted metadata without writing it', async () => {
+    await initializeI18n('en');
+    const value = props({persisted: {themeId: 'future-theme', themeVersion: 7}});
+    render(<DayThemePicker {...value}/>);
+    expect(screen.getByRole('radio', {name: /Done Today Default/}).getAttribute('aria-checked')).toBe('true');
+    expect(value.onApply).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate Apply requests while persistence is in flight', async () => {
+    await initializeI18n('en');
+    let release: (() => void) | undefined;
+    const onApply = vi.fn(() => new Promise<void>(resolve => { release = resolve }));
+    render(<DayThemePicker {...props({onApply})}/>);
+    const apply = screen.getByRole('button', {name: 'Apply'});
+    fireEvent.click(apply);
+    fireEvent.click(apply);
+    expect(onApply).toHaveBeenCalledOnce();
+    expect(apply).toHaveProperty('disabled', true);
+    release?.();
+  });
+
   it('rolls back on failure and retries the same intended selection without duplicate requests', async () => {
     await initializeI18n('en');
     let attempts = 0;

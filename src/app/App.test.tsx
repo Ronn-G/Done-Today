@@ -5,7 +5,7 @@ import {initializeI18n} from '../i18n';
 import {dayThemeRegistry} from '../domain/day-theme/registry';
 import {DayThemeScope} from '../features/daily-log/DayThemeScope';
 import {i18next} from '../i18n';
-import {AppNavigation,resolveDayThemeForLog,shouldPersistDayTheme,TodayOverview} from './App';
+import {AppNavigation,mergeSavedDayTheme,resolveDayThemeForLog,shouldAcceptDayThemeCompletion,shouldPersistDayTheme,TodayOverview} from './App';
 
 describe('I18N-2 app shell and Today overview',()=>{
   it.each([
@@ -63,6 +63,31 @@ describe('Day Theme foundation integration',()=>{
   it('does not create a log when applying the default to an untouched day',()=>{
     expect(shouldPersistDayTheme(null,{themeId:null,themeVersion:null})).toBe(false);
     expect(shouldPersistDayTheme(null,{themeId:'sakura',themeVersion:1})).toBe(true);
+  });
+
+  it('merges saved theme metadata without replacing a pending editor draft',()=>{
+    const current={
+      id:'log-1',logDate:'2026-07-29',createdAt:'created',updatedAt:'before',
+      themeId:null,themeVersion:null,
+      items:[{
+        id:'item-1',dailyLogId:'log-1',task:'pending draft',result:'',nextAction:'',
+        status:'in_progress' as const,position:0,categoryId:null,createdAt:'created',updatedAt:'before',
+      }],
+    };
+    const nativeResult={
+      ...current,updatedAt:'after',themeId:'rainy',themeVersion:1,
+      items:[{...current.items[0],task:'persisted old value'}],
+    };
+    expect(mergeSavedDayTheme(current,nativeResult)).toMatchObject({
+      updatedAt:'after',themeId:'rainy',themeVersion:1,
+      items:[{task:'pending draft'}],
+    });
+  });
+
+  it('rejects a stale completion after navigation to another day',()=>{
+    expect(shouldAcceptDayThemeCompletion('2026-07-30','2026-07-29')).toBe(false);
+    expect(shouldAcceptDayThemeCompletion('2026-07-29','2026-07-29')).toBe(true);
+    expect(shouldAcceptDayThemeCompletion(null,'2026-07-29')).toBe(false);
   });
 
   it('resolves null, known and unknown metadata without mutating the original reference',()=>{

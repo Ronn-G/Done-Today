@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1 và Checkpoint 2 Completed; Checkpoint 3+ Not started |
+| Day Theme & Personalization | In progress — checkpoint implementation complete | Checkpoint 1 và Checkpoint 2 Completed; Checkpoint 3 implementation complete, native Windows acceptance pending; Checkpoint 4+ Not started |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -191,7 +191,29 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Accessibility evidence gồm automated/source audit và native keyboard/focus/visual review;
   decorative motif/overlay không gây cản trở trong phạm vi kiểm tra áp dụng. Không tuyên bố đã
   kiểm tra bằng Accessibility tree hoặc screen-reader tooling.
-- Checkpoint 3 và các phase sau: **Not started**.
+- Checkpoint 3 đã chuyển sang implementation; các phase sau vẫn **Not started**.
+
+### Day Theme Checkpoint 3 — Theme Picker
+
+- Trạng thái: **Implementation complete; native Windows acceptance pending** (2026-07-29).
+- Day Cover có control `Chủ đề của ngày` / `Day theme` riêng; App Theme vẫn global và dùng
+  accessible name `Giao diện ứng dụng` / `App appearance`.
+- Picker được lazy-load khi mở, lấy đúng bốn item theo curated order từ registry và dùng semantic
+  gradient thumbnail; full motif của mọi theme không bị đưa vào startup path.
+- Persisted selection, draft và preview là state riêng. Cancel, Close, Escape, outside close,
+  unmount hoặc chuyển ngày hoàn nguyên preview; chỉ Apply mới gọi persistence.
+- Apply theo ngày qua một giao dịch SQLite, có thể tạo đúng một daily log tối thiểu cho ngày trống,
+  không seed work item/category. Default chuẩn hóa thành `NULL/NULL`; ngày trống đã ở Default không
+  tạo log.
+- Saving, success, localized failure và Retry đã có; duplicate Apply bị khóa. Completion của ngày
+  cũ không ghi đè UI ngày mới và metadata save không thay thế draft editor đang chờ autosave.
+- Database schema/migration 005, Backup envelope/checksum/version 1, Merge/Replace/receipt,
+  Work Categories và journal business rules không đổi.
+- Hai commit implementation là `50e2eef` (`feat: add day theme picker`) và `e9a5b30`
+  (`feat: persist day theme selections`). Automated/source evidence đã đạt; native Windows review
+  cho `vi`/`en`, light/dark/custom, 900×600/default/maximize và keyboard/focus còn chờ người dùng.
+- Checkpoint 4, Calendar/History indicator, personalization, theme pack và release packaging:
+  **Not started**.
 
 ## 4. I18N-1 đã hoàn thành
 
@@ -219,8 +241,9 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1 và
-Checkpoint 2 đã **Completed**; Checkpoint 3 và các phase sau **Not started**.
+Day Theme & Personalization vẫn là **In progress**. Checkpoint 1 và Checkpoint 2 đã **Completed**;
+Checkpoint 3 **Implementation complete; native Windows acceptance pending**; Checkpoint 4 và các
+phase sau **Not started**.
 
 ## 6. Release packaging
 

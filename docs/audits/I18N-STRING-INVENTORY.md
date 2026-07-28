@@ -1,8 +1,8 @@
 # I18N string inventory
 
-Audit date: 2026-07-28
-Scope: completed I18N-4 and I18N-5 plus completed Day Theme Checkpoint 1 and Checkpoint 2
-implementation through `4d8d2c9`.
+Audit date: 2026-07-29
+Scope: completed I18N-4 and I18N-5, completed Day Theme Checkpoint 1 and Checkpoint 2, plus
+Checkpoint 3 implementation pending native Windows acceptance.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
@@ -17,6 +17,8 @@ policy, change active locale or add locale to Backup v1.
 Day Theme Checkpoint 2 adds only localized name/description pairs for Sakura, Coffee and Rainy in
 both locales. The Day Cover reuses existing Today date, subtitle, navigation and App Theme action
 copy; decorative motifs expose no accessible text.
+Day Theme Checkpoint 3 adds the picker and explicit App Theme/Day Theme labels in the `theme`
+namespace. Stable theme IDs, database metadata and Backup v1 remain locale-independent.
 
 ## Method and exclusions
 
@@ -204,5 +206,28 @@ never renders compatibility `message` or warning text from Rust.
 - Accessibility evidence is automated/source audit and native keyboard/focus/visual review;
   decorative motif/overlay did not obstruct the tested interactions. No Accessibility tree or
   screen-reader testing is claimed.
-- Checkpoint 2 is **Completed**. Checkpoint 3 and later phases are **Not started**; overall Day
-  Theme & Personalization remains **In progress**.
+- Checkpoint 2 is **Completed**. Checkpoint 3 implementation is documented below and awaits native
+  Windows acceptance; later phases are **Not started**. Overall Day Theme & Personalization remains
+  **In progress**.
+
+## Day Theme Checkpoint 3 localization result
+
+- Both locales contain `theme.dayTheme.picker.*` for the visible trigger, dialog
+  title/description, options label, current/preview semantics, Default, Apply, Saving, success,
+  failure and Close. Shared Cancel/Retry reuse `common.actions.*`.
+- `theme.customizer.open` is now the unambiguous App Theme accessible name
+  `Giao diện ứng dụng` / `App appearance`; the visible Day Theme trigger remains
+  `Chủ đề của ngày` / `Day theme`.
+- Theme item name/description lookup uses an explicit typed/static allow-list required by the
+  production source validator. Stable IDs/version and user-entered journal/category data are not
+  translated.
+- Changing locale while the picker is open re-renders presentation copy and preserves the current
+  draft/preview without invoking persistence.
+- Resource parity, interpolation, raw-key and production call-site validation remain blocking.
+- Automated/source accessibility evidence covers dialog name/description, radiogroup/radio state,
+  selected text/checkmark, focus trap/restore, Escape/outside close and forced-colors CSS.
+- Native Windows review for `vi`/`en`, long Vietnamese/English copy, supported viewport sizes,
+  light/dark/custom App Theme and keyboard/focus remains pending. No screen-reader or Accessibility
+  tree result is claimed.
+- Checkpoint 3 is **Implementation complete; native Windows acceptance pending**. Checkpoint 4 and
+  later phases are **Not started**; overall Day Theme & Personalization remains **In progress**.

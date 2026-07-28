@@ -44,6 +44,17 @@ export function resolveDayThemeForLog(log:Pick<DailyLog,'themeId'|'themeVersion'
 export function shouldPersistDayTheme(log:DailyLog|null,metadata:DayThemeMetadata){
   return log!==null||Object.values(metadata).some(value=>value!==null);
 }
+export function mergeSavedDayTheme(current:DailyLog|null,saved:DailyLog):DailyLog{
+  return current?{
+    ...current,
+    updatedAt:saved.updatedAt,
+    themeId:saved.themeId,
+    themeVersion:saved.themeVersion,
+  }:saved;
+}
+export function shouldAcceptDayThemeCompletion(activeDate:string|null,requestDate:string){
+  return activeDate===requestDate;
+}
 function parseRoute():Route{
   const hash=location.hash.slice(1);
   if(hash==='/history')return{page:'history'};
@@ -157,13 +168,8 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const applyDayTheme=async(metadata:DayThemeMetadata)=>{
     if(!shouldPersistDayTheme(log,metadata))return;
     const saved=await service.setDayThemeForDate(date,metadata);
-    if(activeDate.current!==date)return;
-    setLog(current=>current?{
-      ...current,
-      updatedAt:saved.updatedAt,
-      themeId:saved.themeId,
-      themeVersion:saved.themeVersion,
-    }:saved);
+    if(!shouldAcceptDayThemeCompletion(activeDate.current,date))return;
+    setLog(current=>mergeSavedDayTheme(current,saved));
   };
   const addItem=useCallback(async(categoryId:string|null=null)=>{
     if(creating)return;setCreating(true);setError(null);

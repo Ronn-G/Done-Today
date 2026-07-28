@@ -1254,5 +1254,51 @@ deliberate asset-load failure manual.
 Checkpoint này không có Theme Picker, Calendar/History indicator, personalization, theme pack,
 dependency bump hoặc release packaging.
 
-Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3 và các phase sau:
+Tại thời điểm đóng Checkpoint 2: Checkpoint 1 và Checkpoint 2 **Completed**; Checkpoint 3 và các
+phase sau **Not started**. Trạng thái hiện hành của Checkpoint 3 được ghi ở mục 34 bên dưới.
+
+---
+
+# 34. Checkpoint 3 — Theme Picker implementation
+
+Trạng thái: **Implementation complete; native Windows acceptance pending** (2026-07-29).
+
+Implementation hiện hành chốt:
+
+- Day Cover có trigger Day Theme hiển thị riêng với App Theme global; hai control dùng icon,
+  visual treatment và localized accessible name khác nhau;
+- picker là dialog responsive được lazy-load khi mở, lấy curated order trực tiếp từ immutable
+  registry và render thumbnail bằng semantic gradient fallback, không tải toàn bộ full motif ở
+  startup;
+- persisted selection, picker draft và temporary preview là state riêng. Preview không ghi
+  database; Cancel, Close, Escape, outside close, unmount và chuyển ngày hoàn nguyên an toàn;
+- Apply là hành động ghi duy nhất, khóa duplicate request, có Saving, success, localized error,
+  rollback và Retry. Default do người dùng chọn được chuẩn hóa thành `NULL/NULL`;
+- ngày chưa có log chỉ tạo một daily log tối thiểu khi explicit Apply một non-default selection.
+  Việc mở/preview/cancel hoặc Apply Default trên ngày chưa có log không tạo record;
+- native date-scoped command dùng một immediate SQLite transaction và tái sử dụng
+  `ensure_daily_log`; không có migration mới, không seed work item/category và không đổi History
+  inclusion rule;
+- completion cũ không cập nhật UI sau khi rời ngày. Theme metadata được hòa vào log hiện tại thay
+  vì thay toàn bộ work-item array, nên draft editor/autosave đang chờ không bị mất;
+- unknown valid persisted metadata vẫn được giữ ở persistence/Backup boundary; runtime picker hiển
+  thị fallback an toàn mà không tạo write ngầm;
+- vi/en có đầy đủ trigger, title/description, current/preview, Apply/Cancel/Default,
+  Saving/success/failure/Retry và Close copy; stable theme ID/version không dịch;
+- Backup envelope/checksum/version `1`, migration `005`, Merge/Replace/receipt, App Theme,
+  Work Categories, status/statistics và journal business rules không đổi.
+
+Implementation nằm trong `50e2eef` (`feat: add day theme picker`) và `e9a5b30`
+(`feat: persist day theme selections`). Automated/source tests bao phủ registry order,
+preview/cancel/apply/default, failure/Retry, duplicate Apply, locale switch, focus restore,
+unmount/date stale guard, no-log persistence, autosave-safe merge và native atomic write.
+
+Native Windows acceptance vẫn phải kiểm tra bằng profile cô lập cho `vi`/`en`, App Theme
+light/dark/custom, cửa sổ 900×600/default/maximize, mouse/keyboard/focus, persistence qua reopen,
+preview/cancel, editor/autosave và phân biệt App Theme/Day Theme. Failure/Retry dùng automated test
+làm bằng chứng; không yêu cầu phá database để tạo lỗi. Chưa tuyên bố đã kiểm tra screen reader,
+Accessibility tree, forced-colors manual hoặc native visual acceptance.
+
+Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3:
+**Implementation complete; native Windows acceptance pending**. Checkpoint 4 và các phase sau:
 **Not started**. Toàn bộ Day Theme & Personalization: **In progress**.

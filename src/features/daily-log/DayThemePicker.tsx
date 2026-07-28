@@ -61,25 +61,43 @@ export function DayThemePicker({
   const descriptionId = useId();
   const dialogRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const previewActive = useRef(false);
+  const rollbackRef = useRef(onRollbackPreview);
 
+  useEffect(() => { rollbackRef.current = onRollbackPreview }, [onRollbackPreview]);
   useEffect(() => {
     const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     itemRefs.current[definitions.findIndex(theme => theme.id === selectedId)]?.focus();
-    return () => returnFocus?.focus();
+    return () => {
+      if (previewActive.current) {
+        previewActive.current = false;
+        rollbackRef.current();
+      }
+      returnFocus?.focus();
+    };
   }, [definitions, selectedId]);
 
+  const preview = (metadata: DayThemeMetadata) => {
+    previewActive.current = true;
+    onPreview(metadata);
+  };
+  const rollbackPreview = () => {
+    if (!previewActive.current) return;
+    previewActive.current = false;
+    onRollbackPreview();
+  };
   const selectDraft = (definition: DayThemeDefinition) => {
     setDraftId(definition.id);
     setFailed(false);
-    onPreview(choiceFor(definition));
+    preview(choiceFor(definition));
   };
   const restoreDraftPreview = () => {
     const definition = definitions.find(theme => theme.id === draftId);
-    if (definition) onPreview(choiceFor(definition));
+    if (definition) preview(choiceFor(definition));
   };
   const cancel = () => {
     if (saving) return;
-    onRollbackPreview();
+    rollbackPreview();
     onCancel();
   };
   const apply = async () => {
@@ -89,13 +107,14 @@ export function DayThemePicker({
     const intended = choiceFor(definition);
     setSaving(true);
     setFailed(false);
-    onPreview(intended);
+    preview(intended);
     try {
       await onApply(intended);
+      previewActive.current = false;
       onApplied(intended);
     } catch {
       setFailed(true);
-      onRollbackPreview();
+      rollbackPreview();
     } finally {
       setSaving(false);
     }
@@ -165,7 +184,7 @@ export function DayThemePicker({
             className={`day-theme-picker-item${isDraft ? ' draft' : ''}${isCurrent ? ' current' : ''}`}
             onClick={() => selectDraft(definition)}
             onFocus={() => selectDraft(definition)}
-            onMouseEnter={() => onPreview(choiceFor(definition))}
+            onMouseEnter={() => preview(choiceFor(definition))}
             onMouseLeave={restoreDraftPreview}
             onKeyDown={event => handleItemKeyDown(event, index)}
           >
