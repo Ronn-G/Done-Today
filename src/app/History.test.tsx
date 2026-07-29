@@ -13,6 +13,8 @@ const summaries: DailyLogSummary[] = [
     percentage: 100,
     previewTasks: ['Chuẩn bị bản demo cho Khách hàng ACME'],
     updatedAt: '2026-01-02T12:00:00Z',
+    themeId: 'sakura',
+    themeVersion: 1,
   },
   {
     id: 'log-2026-01-01',
@@ -22,6 +24,8 @@ const summaries: DailyLogSummary[] = [
     percentage: 50,
     previewTasks: ['Follow up at 09:30', 'Ghi lại kết quả'],
     updatedAt: '2026-01-01T12:00:00Z',
+    themeId: null,
+    themeVersion: null,
   },
 ];
 

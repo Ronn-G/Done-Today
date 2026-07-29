@@ -108,4 +108,10 @@ export class JournalService {
       });
     return this.repository.listDailyLogSummaries(page, pageSize);
   }
+  async listCalendar(startDate: string, endDateExclusive: string) {
+    const start = localDateSchema.parse(startDate);
+    const end = localDateSchema.parse(endDateExclusive);
+    if (start >= end) throw createAppError('date.invalid');
+    return this.repository.listCalendarDaySummaries(start, end);
+  }
 }

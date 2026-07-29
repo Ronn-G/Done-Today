@@ -275,6 +275,8 @@ struct DailyLogSummary {
     percentage: i64,
     preview_tasks: Vec<String>,
     updated_at: String,
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -283,6 +285,14 @@ struct HistoryPage {
     page: i64,
     page_size: i64,
     has_more: bool,
+}
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct CalendarDaySummary {
+    date: String,
+    has_log: bool,
+    theme_id: Option<String>,
+    theme_version: Option<i64>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
@@ -1078,9 +1088,19 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
     let mut statement = connection.prepare(
         "SELECT d.id,d.log_date,COUNT(w.id),
                 COALESCE(SUM(CASE WHEN w.status='completed' THEN 1 ELSE 0 END),0),
-                d.updated_at
+                d.updated_at,d.theme_id,d.theme_version,
+                COALESCE((
+                  SELECT json_group_array(preview.task)
+                  FROM (
+                    SELECT preview.task
+                    FROM work_items preview
+                    WHERE preview.daily_log_id=d.id AND TRIM(preview.task)<>''
+                    ORDER BY preview.position,preview.created_at,preview.id
+                    LIMIT 3
+                  ) preview
+                ),'[]')
          FROM daily_logs d JOIN work_items w ON w.daily_log_id=d.id
-         GROUP BY d.id,d.log_date,d.updated_at
+         GROUP BY d.id,d.log_date,d.updated_at,d.theme_id,d.theme_version
          ORDER BY d.log_date DESC LIMIT ?1 OFFSET ?2",
     )?;
     let rows = statement.query_map(params![page_size + 1, offset], |row| {
@@ -1090,24 +1110,28 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
             row.get::<_, i64>(2)?,
             row.get::<_, i64>(3)?,
             row.get::<_, String>(4)?,
+            row.get::<_, Option<String>>(5)?,
+            row.get::<_, Option<i64>>(6)?,
+            row.get::<_, String>(7)?,
         ))
     })?;
     let mut raw = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     let has_more = raw.len() > page_size as usize;
     raw.truncate(page_size as usize);
     let mut items = Vec::with_capacity(raw.len());
-    for (id, log_date, total_items, completed_items, updated_at) in raw {
-        let preview_tasks = {
-            let mut preview = connection.prepare(
-                "SELECT task FROM work_items
-                 WHERE daily_log_id=?1 AND TRIM(task)<>''
-                 ORDER BY position,created_at,id LIMIT 3",
-            )?;
-            let collected = preview
-                .query_map([&id], |row| row.get(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()?;
-            collected
-        };
+    for (
+        id,
+        log_date,
+        total_items,
+        completed_items,
+        updated_at,
+        theme_id,
+        theme_version,
+        preview_tasks_json,
+    ) in raw
+    {
+        let preview_tasks =
+            serde_json::from_str(&preview_tasks_json).map_err(|_| AppError::database())?;
         items.push(DailyLogSummary {
             id,
             log_date,
@@ -1120,6 +1144,8 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
             },
             preview_tasks,
             updated_at,
+            theme_id,
+            theme_version,
         });
     }
     Ok(HistoryPage {
@@ -1128,6 +1154,36 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
         page_size,
         has_more,
     })
+}
+fn list_calendar_summaries(
+    connection: &Connection,
+    start_date: &str,
+    end_date_exclusive: &str,
+) -> AppResult<Vec<CalendarDaySummary>> {
+    let start = NaiveDate::parse_from_str(start_date, "%Y-%m-%d")
+        .map_err(|_| AppError::new(error_code::DATE_INVALID))?;
+    let end = NaiveDate::parse_from_str(end_date_exclusive, "%Y-%m-%d")
+        .map_err(|_| AppError::new(error_code::DATE_INVALID))?;
+    if start >= end {
+        return Err(AppError::new(error_code::DATE_INVALID));
+    }
+    let mut statement = connection.prepare(
+        "SELECT log_date,theme_id,theme_version
+         FROM daily_logs
+         WHERE log_date>=?1 AND log_date<?2
+         ORDER BY log_date",
+    )?;
+    let summaries = statement
+        .query_map(params![start_date, end_date_exclusive], |row| {
+            Ok(CalendarDaySummary {
+                date: row.get(0)?,
+                has_log: true,
+                theme_id: row.get(1)?,
+                theme_version: row.get(2)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(summaries)
 }
 fn list_activity_dates(connection: &Connection) -> AppResult<Vec<String>> {
     let mut statement = connection.prepare(
@@ -1283,6 +1339,18 @@ fn list_daily_log_summaries(
     list_summaries(&open_database(&database_path(&app)?)?, page, page_size)
 }
 #[tauri::command]
+fn list_calendar_day_summaries(
+    app: tauri::AppHandle,
+    start_date: String,
+    end_date_exclusive: String,
+) -> AppResult<Vec<CalendarDaySummary>> {
+    list_calendar_summaries(
+        &open_database(&database_path(&app)?)?,
+        &start_date,
+        &end_date_exclusive,
+    )
+}
+#[tauri::command]
 fn list_journal_activity_dates(app: tauri::AppHandle) -> AppResult<Vec<String>> {
     list_activity_dates(&open_database(&database_path(&app)?)?)
 }
@@ -1353,6 +1421,7 @@ pub fn run() {
             delete_work_item,
             reorder_work_items,
             list_daily_log_summaries,
+            list_calendar_day_summaries,
             list_journal_activity_dates,
             get_theme_preferences,
             save_theme_preferences,
@@ -2352,6 +2421,119 @@ mod tests {
         );
         delete_item(&db, &item.id).unwrap();
         assert!(list_summaries(&db, 1, 20).unwrap().items.is_empty());
+    }
+    #[test]
+    fn history_returns_theme_metadata_without_per_card_preview_queries() {
+        let mut db = memory();
+        let first = create_item(&mut db, "2026-07-18", None).unwrap();
+        update_item(
+            &db,
+            update(&first.id, "Quoted \"task\" and newline\nsafe", "completed"),
+        )
+        .unwrap();
+        db.execute(
+            "UPDATE daily_logs SET theme_id='coffee',theme_version=1 WHERE id=?1",
+            [&first.daily_log_id],
+        )
+        .unwrap();
+        let second = create_item(&mut db, "2026-07-19", None).unwrap();
+        update_item(&db, update(&second.id, "Unknown theme", "in_progress")).unwrap();
+        db.execute(
+            "UPDATE daily_logs SET theme_id='future-theme',theme_version=7 WHERE id=?1",
+            [&second.daily_log_id],
+        )
+        .unwrap();
+        let page = list_summaries(&db, 1, 20).unwrap();
+        assert_eq!(
+            (
+                page.items[0].theme_id.as_deref(),
+                page.items[0].theme_version
+            ),
+            (Some("future-theme"), Some(7))
+        );
+        assert_eq!(
+            (
+                page.items[1].theme_id.as_deref(),
+                page.items[1].theme_version
+            ),
+            (Some("coffee"), Some(1))
+        );
+        assert_eq!(
+            page.items[1].preview_tasks,
+            vec!["Quoted \"task\" and newline\nsafe"]
+        );
+    }
+    #[test]
+    fn calendar_summaries_use_an_ordered_half_open_indexed_range() {
+        let mut db = memory();
+        for date in ["2026-06-30", "2026-07-01", "2026-07-15", "2026-08-01"] {
+            let transaction = db.transaction().unwrap();
+            ensure_daily_log(&transaction, date).unwrap();
+            transaction.commit().unwrap();
+        }
+        db.execute(
+            "UPDATE daily_logs SET theme_id='sakura',theme_version=1 WHERE log_date='2026-07-15'",
+            [],
+        )
+        .unwrap();
+        let summaries = list_calendar_summaries(&db, "2026-07-01", "2026-08-01").unwrap();
+        assert_eq!(
+            summaries,
+            vec![
+                CalendarDaySummary {
+                    date: "2026-07-01".into(),
+                    has_log: true,
+                    theme_id: None,
+                    theme_version: None,
+                },
+                CalendarDaySummary {
+                    date: "2026-07-15".into(),
+                    has_log: true,
+                    theme_id: Some("sakura".into()),
+                    theme_version: Some(1),
+                },
+            ]
+        );
+        let plan = db
+            .prepare(
+                "EXPLAIN QUERY PLAN
+                 SELECT log_date,theme_id,theme_version FROM daily_logs
+                 WHERE log_date>=?1 AND log_date<?2 ORDER BY log_date",
+            )
+            .unwrap()
+            .query_map(params!["2026-07-01", "2026-08-01"], |row| {
+                row.get::<_, String>(3)
+            })
+            .unwrap()
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .unwrap();
+        assert!(plan.iter().any(|detail| detail.contains("log_date")));
+    }
+    #[test]
+    fn calendar_summaries_preserve_unknown_theme_metadata_and_reject_bad_ranges() {
+        let mut db = memory();
+        let transaction = db.transaction().unwrap();
+        let id = ensure_daily_log(&transaction, "2026-07-20").unwrap();
+        transaction.commit().unwrap();
+        db.execute(
+            "UPDATE daily_logs SET theme_id='future-theme',theme_version=9 WHERE id=?1",
+            [&id],
+        )
+        .unwrap();
+        let summaries = list_calendar_summaries(&db, "2026-07-01", "2026-08-01").unwrap();
+        assert_eq!(summaries[0].theme_id.as_deref(), Some("future-theme"));
+        assert_eq!(summaries[0].theme_version, Some(9));
+        for (start, end) in [
+            ("bad-date", "2026-08-01"),
+            ("2026-07-01", "bad-date"),
+            ("2026-07-01", "2026-07-01"),
+            ("2026-08-01", "2026-07-01"),
+        ] {
+            assert_eq!(
+                list_calendar_summaries(&db, start, end).unwrap_err().code,
+                error_code::DATE_INVALID
+            );
+        }
     }
     #[test]
     fn rejects_invalid_dates() {

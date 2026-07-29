@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { dailyLogSchema, dayThemeMetadataSchema } from './models';
+import {
+  calendarDaySummarySchema,
+  dailyLogSchema,
+  dailyLogSummarySchema,
+  dayThemeMetadataSchema,
+} from './models';
 
 const log = {
   id: 'log-1',
@@ -32,5 +37,50 @@ describe('daily log Day Theme metadata model', () => {
       false,
     );
     expect(dayThemeMetadataSchema.safeParse(metadata).success).toBe(false);
+  });
+});
+
+describe('Calendar and History Day Theme summary models', () => {
+  it('accepts nullable, known and unknown complete pairs', () => {
+    for (const metadata of [
+      { themeId: null, themeVersion: null },
+      { themeId: 'rainy', themeVersion: 1 },
+      { themeId: 'future-theme', themeVersion: 9 },
+    ]) {
+      expect(
+        calendarDaySummarySchema.safeParse({
+          date: '2026-07-19',
+          hasLog: true,
+          ...metadata,
+        }).success,
+      ).toBe(true);
+      expect(
+        dailyLogSummarySchema.safeParse({
+          ...log,
+          logDate: '2026-07-19',
+          totalItems: 1,
+          completedItems: 0,
+          percentage: 0,
+          previewTasks: [],
+          ...metadata,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
+  it('rejects partial and malformed summary pairs', () => {
+    for (const metadata of [
+      { themeId: 'rainy', themeVersion: null },
+      { themeId: null, themeVersion: 1 },
+      { themeId: 'Bad ID', themeVersion: 1 },
+    ]) {
+      expect(
+        calendarDaySummarySchema.safeParse({
+          date: '2026-07-19',
+          hasLog: true,
+          ...metadata,
+        }).success,
+      ).toBe(false);
+    }
   });
 });

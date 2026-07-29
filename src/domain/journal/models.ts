@@ -72,15 +72,27 @@ export const dailyLogSchema = z
     }
   });
 export type DailyLog = z.infer<typeof dailyLogSchema>;
-export const dailyLogSummarySchema = z.object({
-  id: z.string(),
-  logDate: localDateSchema,
-  totalItems: z.number().int().nonnegative(),
-  completedItems: z.number().int().nonnegative(),
-  percentage: z.number().min(0).max(100),
-  previewTasks: z.array(z.string()).max(3),
-  updatedAt: z.string(),
-});
+export const dailyLogSummarySchema = z
+  .object({
+    id: z.string(),
+    logDate: localDateSchema,
+    totalItems: z.number().int().nonnegative(),
+    completedItems: z.number().int().nonnegative(),
+    percentage: z.number().min(0).max(100),
+    previewTasks: z.array(z.string()).max(3),
+    updatedAt: z.string(),
+    themeId: z.string().refine(isValidDayThemeId).nullable(),
+    themeVersion: z.number().refine(isValidDayThemeVersion).nullable(),
+  })
+  .superRefine((value, context) => {
+    if ((value.themeId === null) !== (value.themeVersion === null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['themeId'],
+        message: 'Day Theme metadata must be a complete pair.',
+      });
+    }
+  });
 export type DailyLogSummary = z.infer<typeof dailyLogSummarySchema>;
 export const historyPageSchema = z.object({
   items: z.array(dailyLogSummarySchema),
@@ -89,3 +101,21 @@ export const historyPageSchema = z.object({
   hasMore: z.boolean(),
 });
 export type HistoryPage = z.infer<typeof historyPageSchema>;
+export const calendarDaySummarySchema = z
+  .object({
+    date: localDateSchema,
+    hasLog: z.boolean(),
+    themeId: z.string().refine(isValidDayThemeId).nullable(),
+    themeVersion: z.number().refine(isValidDayThemeVersion).nullable(),
+  })
+  .superRefine((value, context) => {
+    if ((value.themeId === null) !== (value.themeVersion === null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['themeId'],
+        message: 'Day Theme metadata must be a complete pair.',
+      });
+    }
+  });
+export type CalendarDaySummary = z.infer<typeof calendarDaySummarySchema>;
+export const calendarDaySummariesSchema = z.array(calendarDaySummarySchema);

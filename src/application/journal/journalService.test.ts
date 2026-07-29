@@ -26,6 +26,7 @@ const repositoryWithActivityDates = (dates: string[]) => {
     reorderCategories: async () => [],
     assignWorkItemCategory: unused,
     listDailyLogSummaries: unused,
+    listCalendarDaySummaries: unused,
     listJournalActivityDates,
   } satisfies JournalRepository;
   return { repository, listJournalActivityDates };
@@ -211,5 +212,50 @@ describe('JournalService history validation', () => {
     expect(english).toBe('The requested history page is invalid.');
     expect(english).not.toContain('Trang');
     expect(english).not.toContain('history.pagination_invalid');
+  });
+});
+
+describe('JournalService calendar range validation', () => {
+  it('passes a canonical half-open date range to the repository', async () => {
+    const listCalendarDaySummaries = vi.fn(async () => []);
+    const { repository } = repositoryWithActivityDates([]);
+    const service = new JournalService({
+      ...repository,
+      listCalendarDaySummaries,
+    });
+    await expect(
+      service.listCalendar('2026-07-01', '2026-08-01'),
+    ).resolves.toEqual([]);
+    expect(listCalendarDaySummaries).toHaveBeenCalledWith(
+      '2026-07-01',
+      '2026-08-01',
+    );
+  });
+
+  it.each([
+    ['bad-date', '2026-08-01'],
+    ['2026-07-01', 'bad-date'],
+  ])('rejects a malformed range boundary %s to %s', async (start, end) => {
+    const { repository } = repositoryWithActivityDates([]);
+    await expect(
+      new JournalService(repository).listCalendar(start, end),
+    ).rejects.toThrow();
+  });
+
+  it.each([
+    ['2026-07-01', '2026-07-01'],
+    ['2026-08-01', '2026-07-01'],
+  ])('rejects a non-increasing range %s to %s', async (start, end) => {
+    const listCalendarDaySummaries = vi.fn(async () => []);
+    const { repository } = repositoryWithActivityDates([]);
+    const service = new JournalService({
+      ...repository,
+      listCalendarDaySummaries,
+    });
+    await expect(service.listCalendar(start, end)).rejects.toEqual({
+      code: 'date.invalid',
+      params: {},
+    });
+    expect(listCalendarDaySummaries).not.toHaveBeenCalled();
   });
 });

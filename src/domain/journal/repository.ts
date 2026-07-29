@@ -1,4 +1,5 @@
 import type {
+  CalendarDaySummary,
   DailyLog,
   DayThemeMetadata,
   HistoryPage,
@@ -35,5 +36,9 @@ export interface JournalRepository {
     categoryId: string | null,
   ): Promise<WorkItem>;
   listDailyLogSummaries(page: number, pageSize: number): Promise<HistoryPage>;
+  listCalendarDaySummaries(
+    startDate: string,
+    endDateExclusive: string,
+  ): Promise<CalendarDaySummary[]>;
   listJournalActivityDates(): Promise<LocalDateKey[]>;
 }

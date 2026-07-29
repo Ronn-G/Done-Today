@@ -1,4 +1,5 @@
 import {
+  calendarDaySummariesSchema,
   dailyLogSchema,
   dayThemeMetadataSchema,
   historyPageSchema,
@@ -92,6 +93,13 @@ export class TauriJournalRepository implements JournalRepository {
       'list_daily_log_summaries',
       { page, pageSize },
       historyPageSchema,
+    );
+  }
+  async listCalendarDaySummaries(startDate: string, endDateExclusive: string) {
+    return invokeTauriCommand(
+      'list_calendar_day_summaries',
+      { startDate, endDateExclusive },
+      calendarDaySummariesSchema,
     );
   }
   async listJournalActivityDates() {

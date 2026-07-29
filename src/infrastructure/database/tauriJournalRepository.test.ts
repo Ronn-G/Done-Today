@@ -85,3 +85,95 @@ describe('TauriJournalRepository Day Theme metadata', () => {
     });
   });
 });
+
+describe('TauriJournalRepository Calendar and History summaries', () => {
+  beforeEach(() => vi.mocked(invoke).mockReset());
+
+  it('loads a lightweight calendar range with nullable and unknown theme metadata', async () => {
+    const response = [
+      {
+        date: '2026-07-01',
+        hasLog: true,
+        themeId: null,
+        themeVersion: null,
+      },
+      {
+        date: '2026-07-02',
+        hasLog: true,
+        themeId: 'future-theme',
+        themeVersion: 7,
+      },
+    ];
+    vi.mocked(invoke).mockResolvedValue(response);
+    await expect(
+      new TauriJournalRepository().listCalendarDaySummaries(
+        '2026-07-01',
+        '2026-08-01',
+      ),
+    ).resolves.toEqual(response);
+    expect(invoke).toHaveBeenCalledWith('list_calendar_day_summaries', {
+      startDate: '2026-07-01',
+      endDateExclusive: '2026-08-01',
+    });
+  });
+
+  it.each([
+    [{ date: '2026-07-01', hasLog: true, themeId: 'rainy' }],
+    [
+      {
+        date: '2026-07-01',
+        hasLog: 'yes',
+        themeId: null,
+        themeVersion: null,
+      },
+    ],
+    [
+      {
+        date: 20260701,
+        hasLog: true,
+        themeId: null,
+        themeVersion: null,
+      },
+    ],
+  ])('normalizes malformed calendar response %#', async (response) => {
+    vi.mocked(invoke).mockResolvedValue(response);
+    await expect(
+      new TauriJournalRepository().listCalendarDaySummaries(
+        '2026-07-01',
+        '2026-08-01',
+      ),
+    ).rejects.toEqual({ kind: 'unknown' });
+  });
+
+  it('parses History theme metadata and rejects a partial pair', async () => {
+    const page = {
+      items: [
+        {
+          id: 'log-1',
+          logDate: '2026-07-01',
+          totalItems: 1,
+          completedItems: 0,
+          percentage: 0,
+          previewTasks: ['Task'],
+          updatedAt: 'now',
+          themeId: 'coffee',
+          themeVersion: 1,
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    };
+    vi.mocked(invoke).mockResolvedValueOnce(page);
+    await expect(
+      new TauriJournalRepository().listDailyLogSummaries(1, 20),
+    ).resolves.toEqual(page);
+    vi.mocked(invoke).mockResolvedValueOnce({
+      ...page,
+      items: [{ ...page.items[0], themeVersion: null }],
+    });
+    await expect(
+      new TauriJournalRepository().listDailyLogSummaries(1, 20),
+    ).rejects.toEqual({ kind: 'unknown' });
+  });
+});
