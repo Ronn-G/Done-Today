@@ -1,8 +1,8 @@
 # Technical Design
 
 **Document status:** Authoritative
-**Document version:** 1.4
-**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
+**Document version:** 1.5
+**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 
 ## 1. Công nghệ
 
@@ -139,3 +139,19 @@ Chi tiết quy trình và mức gate xem
   một SQL statement.
 - Frontend kiểm tra IPC payload bằng Zod. `NULL`, theme ID/version lạ hoặc registry lookup thất bại
   đều hiển thị fallback an toàn, không giả lập ngày có dữ liệu.
+
+## 10. Light day personalization boundary
+
+- Domain registry chỉ nhận `minimal`, sáu symbol IDs (`none`, `sparkle`, `focus`, `growth`, `calm`,
+  `celebrate`) và hai journal font roles (`ui`, `journal`); `NULL` luôn có nghĩa theme default.
+- UI gửi cả ba field qua một typed application/repository/Tauri command. Native validation và
+  `BEGIN IMMEDIATE` bảo đảm apply atomic. All-default trên ngày trống là no-op; non-default tạo tối
+  đa một daily log không có work item.
+- Persisted/Backup IDs lạ nhưng có cấu trúc hợp lệ được giữ nguyên để forward-compatible; runtime
+  resolver chỉ fallback về theme default, không ghi sửa ngầm.
+- Dialog được lazy-load, tách persisted/draft/preview; Cancel, Escape, click ngoài, unmount và đổi
+  ngày rollback preview. Apply khóa request trùng, có Saving, rollback/error và Retry.
+- Calendar/History lấy `day_symbol` ngay trong summary query hiện hữu. Không tải full log, không N+1
+  và không import motif/cover asset. Minimal chặn asset loader trước dynamic import.
+- Font role chỉ map vào Day Cover copy, statistics và nội dung/editor của ngày; app shell, controls,
+  table headers và status giữ UI font.

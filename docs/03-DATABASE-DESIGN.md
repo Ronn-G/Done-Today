@@ -1,8 +1,8 @@
 # Database Design
 
 **Document status:** Authoritative
-**Document version:** 1.3
-**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
+**Document version:** 1.4
+**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 
 ## 1. Bảng daily_logs
 
@@ -13,7 +13,10 @@ CREATE TABLE daily_logs (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   theme_id TEXT NULL,
-  theme_version INTEGER NULL
+  theme_version INTEGER NULL,
+  cover_variant TEXT NULL,
+  day_symbol TEXT NULL,
+  journal_font_role TEXT NULL
 );
 ```
 
@@ -26,6 +29,20 @@ ID dùng lower-kebab-case ASCII, dài tối đa 64 ký tự. SQLite không có f
 built-in; application/persistence boundary kiểm tra pair và ghi hoặc clear cả hai field bằng một
 statement trong transaction. Unknown nhưng structurally valid ID/version được giữ nguyên để
 registry fallback khi render; fallback không tự xóa metadata.
+
+Migration `006_day_personalization.sql` chỉ thêm ba cột nullable trên `daily_logs`; không tạo bảng,
+index, foreign key, backfill hoặc rewrite dữ liệu cũ. `NULL` của từng field nghĩa là dùng default từ
+Day Theme đang resolve. Direct application writes chỉ nhận:
+
+- `cover_variant`: `NULL` hoặc `minimal`;
+- `day_symbol`: `NULL`, `none`, `sparkle`, `focus`, `growth`, `calm`, `celebrate`;
+- `journal_font_role`: `NULL`, `ui`, `journal`.
+
+Ba field được ghi bằng một statement trong một immediate transaction. Reset chúng không thay đổi
+`theme_id/theme_version`, work item hay category. All-NULL trên ngày chưa có log là no-op; ít nhất
+một giá trị non-default tạo đúng một daily log tối thiểu và không tạo work item. Stored ID lạ có cấu
+trúc lower-kebab-case được giữ ở data/Backup boundary để forward compatibility; renderer fallback
+an toàn mà không rewrite.
 
 ## 2. Bảng work_items
 
@@ -112,3 +129,7 @@ và index theo checksum. Receipt không thuộc payload backup.
 
 Migration 005 bổ sung `daily_logs.theme_id` và `daily_logs.theme_version`; dữ liệu, timestamps,
 work item, category, setting và receipt hiện có được giữ nguyên.
+
+Migration 006 bổ sung `daily_logs.cover_variant`, `daily_logs.day_symbol` và
+`daily_logs.journal_font_role`; cả ba mặc định `NULL`, không thay đổi các migration 001–005 hoặc dữ
+liệu hiện có.

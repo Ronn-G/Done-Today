@@ -1,8 +1,8 @@
 # Internationalization and localization
 
 Status: architecture specification for Sprint I18N-0  
-Document version: 1.2
-Last verified against implementation commit: `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
+Document version: 1.3
+Last verified against implementation commit: `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 Initial locales: Vietnamese (`vi`) and English (`en`)
 
 ## 1. Goals and scope
@@ -899,3 +899,22 @@ translation key, locale, database migration or Backup v1 field.
 | Should locale be in backup v1? | v1 is strict and allow-lists theme only. | No; consider explicit optional preference in backup v2. |
 | Are theme names persisted? | Only preset ID/colors are persisted. | Replace constant display strings with translation keys safely. |
 | Are documented streak and multiple motivation prompts implemented? | Current journal streak is implemented in Today statistics with Vietnamese/English plural handling; the UI still exposes one prompt. | Treat current streak as delivered by the 2026-07-24 regression closure. Multiple prompt rotation remains aspirational and must not be inferred from the streak implementation. |
+
+## 28. Day Theme Checkpoint 5 localization result
+
+- `theme.personalization.*` contains parity-complete vi/en copy for trigger, dialog
+  title/description, cover options, all seven symbol states, three font states, preview/current,
+  reset, Apply/Saving/success/failure and Close. Cancel/Retry reuse `common.actions.*`.
+- Stable values `minimal`, `none`, `sparkle`, `focus`, `growth`, `calm`, `celebrate`, `ui`,
+  `journal` and Backup/database field names are never translated.
+- Option lookup uses an explicit literal/typed allow-list. Production source scan, resource parity,
+  interpolation validation and raw-key checks remain blocking and pass.
+- Locale changes re-render an open dialog without resetting its draft or triggering persistence.
+  Calendar/History accessible names combine localized theme identity with a personalized symbol
+  label when present.
+- Automated/source accessibility evidence covers dialog/radiogroup semantics, selected state,
+  focus trap/restore, Arrow/Tab/Escape interaction, rollback, visible labels, forced-colors and
+  reduced-motion. Native visual/keyboard review, screen reader and Accessibility Tree remain
+  pending/not claimed for Checkpoint 5.
+- I18N-1–I18N-5 remain Completed and are not reopened. Checkpoint 5 is **Implementation complete —
+  native Windows acceptance pending**; Checkpoint 6+ is **Not started**.

@@ -1,14 +1,15 @@
 # I18N string inventory
 
 Audit date: 2026-07-29
-Last verified against implementation commit: `d7cf6ca291ec52da01150fb79545f1b2e830412c`
-Scope: completed I18N-4 and I18N-5, plus completed Day Theme Checkpoint 1, Checkpoint 2 and
-Checkpoint 3 and Checkpoint 4.
+Last verified against implementation commit: `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c`
+Scope: completed I18N-4 and I18N-5, completed Day Theme Checkpoints 1–4, plus Checkpoint 5
+implementation with native Windows acceptance pending.
 Engineering Hardening Checkpoint 1 reuses the existing `history.pagination_invalid` code and
 `history.backendErrors.paginationInvalid` resources for JournalService validation. Runtime Tauri
 response failures use the existing localized unknown fallback. The inventory remains 42 stable
-error codes and 2 warning codes; no translation key, locale, schema, Backup v1 field or user data
-changed.
+error codes and 2 warning codes. Checkpoint 5 adds `theme.personalization.*`, migration 006 and
+three optional Backup v1 daily-log fields; it does not add a locale/error code, translate stable
+domain IDs, change user-entered data or bump Backup version.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
@@ -262,3 +263,18 @@ never renders compatibility `message` or warning text from Rust.
   metadata, loading failure/Retry injection, stale guards, forced-colors and reduced-motion are
   covered by automated/source evidence where they were not exercised natively.
 - No screen-reader or Accessibility Tree result is claimed.
+
+## Day Theme Checkpoint 5 localization result
+
+- Both locales contain parity-complete `theme.personalization.*` resources for the visible entry,
+  dialog semantics, curated cover/symbol/font labels and persistence states.
+- Literal translation calls form the typed/static allow-list required by production source
+  validation; no dynamic resource key reaches the translator.
+- Stable personalization IDs and database/Backup field names remain locale-independent.
+- Locale switch preserves the open draft and preview without a write. Calendar and History
+  accessible names distinguish the localized personalized symbol from the theme identity.
+- i18n lint passes 48 tests. Automated/source evidence covers radiogroups, focus/keyboard rollback,
+  not-color-only identity, forced-colors and reduced-motion.
+- Native Windows visual/keyboard acceptance, screen reader and Accessibility Tree are not claimed.
+  Checkpoint 5 is **Implementation complete — native Windows acceptance pending**; Checkpoint 6+
+  is **Not started**.

@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.5
+**Phiên bản:** 1.6
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `d7cf6ca291ec52da01150fb79545f1b2e830412c` (2026-07-29)
+**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 
 ---
 
@@ -1358,4 +1358,62 @@ Accessibility Tree.
 Checkpoint 4 — Calendar & History:
 **Completed — native Windows acceptance passed**. Checkpoint 5+:
 **Not started**. Toàn bộ Day Theme & Personalization vẫn:
+**In progress — checkpoint complete**.
+
+---
+
+## 36. Implementation record — Checkpoint 5 Light Personalization
+
+Trạng thái: **Implementation complete — native Windows acceptance pending**.
+
+Phạm vi implementation được khóa đúng ba nhóm:
+
+- cover: `NULL` (theme default) hoặc `minimal`;
+- symbol: `NULL` (theme default), `none`, `sparkle`, `focus`, `growth`, `calm`, `celebrate`;
+- journal font: `NULL` (theme default), `ui` (Clean UI), `journal` (Classic Serif).
+
+Stable logical IDs được persist; không lưu emoji, SVG, asset path hay localized label. Không triển
+khai display title, accent variant, freeform value, sticker, font asset/network font, theme pack,
+sync, release packaging hoặc Checkpoint 6.
+
+Migration 006 thêm `cover_variant`, `day_symbol`, `journal_font_role` nullable trên `daily_logs`.
+Atomic command ghi cả ba field; direct UI/application writes chỉ nhận curated registry. All-default
+trên ngày trống không tạo log; non-default tạo đúng một minimal log không work item. Reset trên log
+đã có giữ Day Theme, content, category và work items. Unknown stored/Backup IDs hợp lệ được giữ
+nguyên ở data boundary và fallback về theme default khi render, không có implicit rewrite.
+
+Backup vẫn `done-today-backup` version 1. Ba JSON fields là optional; null bị bỏ khỏi canonical
+payload nên fixture/checksum legacy không đổi. Explicit values tham gia checksum. Merge dùng
+daily-log winner rule; Replace/import receipt/rollback giữ transaction hiện hữu.
+
+Entry `Personalize` nằm cạnh Day Theme trên Day Cover. Dialog lazy-load tách persisted, draft và
+preview; preview không ghi DB. Cancel, Close, Escape, click backdrop, unmount hoặc đổi ngày rollback;
+Apply khóa duplicate request, có Saving/success, localized error và Retry; reset chỉ đổi draft.
+Locale switch giữ draft. vi/en copy dùng static typed translation keys.
+
+Rendering:
+
+- `minimal` giữ gradient, overlay, cover height/layout nhưng chặn motif loader và không render motif;
+- stored symbol ưu tiên theme symbol ở Day Cover, Calendar và History; `none` ẩn symbol nhưng vẫn
+  giữ accent/name, unknown fallback theme symbol;
+- font role chỉ áp dụng Day Cover copy, statistics, user-entered table/editor content và category
+  title; controls, headers, status và app shell giữ UI font;
+- Calendar/History nhận `day_symbol` trong summary SQL hiện hữu, không full-log query, N+1 hoặc motif
+  import.
+
+Accessibility/source evidence gồm named modal dialog, ba radiogroup/radio states, keyboard arrow
+selection, Tab trap, focus restore, Escape/outside close, visible text kèm icon, accent + name không
+chỉ dựa màu, forced-colors và reduced-motion rules. Automated gates đạt 50 frontend files/443 tests,
+72 Rust tests và 48 i18n tests. Chưa tuyên bố native visual, screen reader hoặc Accessibility Tree
+pass cho Checkpoint 5.
+
+Implementation commits: `6a1e6be07074280d6c20028e00339f45ba5b2f88`,
+`39d966ac5ff45824ab4405d38602ce15dbf7db5c`,
+`287799840b2f389bfe7fb865c6159d2df91b23ec`,
+`bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c`.
+
+Checkpoint 1–2: **Completed**. Checkpoint 3–4:
+**Completed — native Windows acceptance passed**. Checkpoint 5:
+**Implementation complete — native Windows acceptance pending**. Checkpoint 6+:
+**Not started**. Toàn bộ Day Theme & Personalization:
 **In progress — checkpoint complete**.

@@ -1,8 +1,8 @@
 # Backup và restore
 
 **Document status:** Authoritative
-**Document version:** 1.2
-**Last verified against baseline commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
+**Document version:** 1.3
+**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 
 ## Envelope v1
 
@@ -26,6 +26,18 @@ còn lại có giá trị, ID sai lower-kebab-case/tối đa 64 ký tự, hoặc
 toàn bộ import bị từ chối bằng structured safe error. Unknown nhưng structurally valid theme ID vẫn
 hợp lệ và được giữ nguyên; registry quyết định fallback khi render.
 
+Checkpoint 5 mở rộng chính entry `dailyLogs[]` bằng ba field độc lập, optional/null-safe mà không đổi
+envelope hoặc version:
+
+```json
+{"coverVariant":"minimal","daySymbol":"focus","journalFontRole":"journal"}
+```
+
+Mỗi field thiếu hoặc `null` nghĩa là dùng Day Theme default. App chỉ ghi các curated values hiện
+hành, nhưng Backup reader chấp nhận và giữ unknown lower-kebab-case tối đa 64 ký tự để file từ
+phiên bản tương lai có thể round-trip; runtime fallback không rewrite payload/database. Giá trị sai
+cấu trúc làm toàn bộ import thất bại bằng safe structured error.
+
 ## Canonical checksum
 
 SHA-256 được tính trên payload, không gồm checksum. Object key được sắp theo tên; daily log theo
@@ -35,6 +47,10 @@ không có whitespace và được băm dạng UTF-8 nên thứ tự object đ�
 Reader không chèn default Day Theme trước bước xác minh. Khi hai field Day Theme thiếu hoặc `null`,
 canonical representation bỏ cả hai field; vì vậy fixture/file v1 cũ giữ nguyên checksum. Export log
 `NULL/NULL` cũng bỏ hai field và không invent `done-today-default`; explicit pair được đưa vào checksum.
+
+`coverVariant`, `daySymbol` và `journalFontRole` bị bỏ riêng lẻ khi thiếu/null. Vì vậy payload legacy
+và payload có explicit null cho cả ba field có cùng canonical string/checksum. Giá trị non-null
+được đưa vào canonical payload theo thuật toán sắp key hiện hữu; không đổi hash algorithm.
 
 ## Phạm vi
 
@@ -65,6 +81,8 @@ với import; import chạy planner lại trong transaction để tránh preview
 - Day Theme metadata là một phần của toàn bộ daily-log record. Theo winner rule hiện hành, daily log
   local thắng khi Merge gặp cùng ID/ngày hoặc cùng `logDate`; không có timestamp/theme heuristic riêng.
   Log mới nhận nguyên explicit pair từ backup.
+- Ba personalization fields theo cùng daily-log winner rule; không có timestamp hoặc per-field
+  merge heuristic riêng. Log mới nhận nguyên các optional values từ backup.
 - Work item tương đương là no-op. Cùng ID nhưng khác nội dung nhận UUID mới và giữ cả hai.
 - Category tương đương là no-op. Cùng ID nhưng khác nội dung nhận UUID mới và item được remap. Không tự
   merge chỉ vì trùng tên.
@@ -79,6 +97,10 @@ không bị xóa. Mọi lỗi đều rollback.
 Day Theme pair được khôi phục cùng daily log trong chính transaction Replace. Backup v1 cũ không có
 pair sẽ khôi phục `NULL/NULL`. App Theme `themePreferences`, locale device-local, installation marker,
 receipt, re-import warning và rollback semantics giữ policy hiện hành.
+
+Ba personalization fields cũng được khôi phục trong cùng insert/transaction Replace. File v1 cũ
+không có chúng sẽ khôi phục `NULL/NULL/NULL`; lỗi receipt hoặc insert rollback cả journal, Day Theme
+và personalization.
 
 ## Receipt, consistency và riêng tư
 

@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.12
-**Last verified against implementation commit:** `d7cf6ca291ec52da01150fb79545f1b2e830412c` (2026-07-29)
+**Document version:** 2.13
+**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1–4 Completed; Checkpoint 5+ Not started |
+| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1–4 Completed; Checkpoint 5 implementation complete, native Windows acceptance pending; Checkpoint 6+ Not started |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -294,9 +294,27 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1–4 đã
-**Completed**; Checkpoint 4 có native Windows acceptance passed ngày 2026-07-29; Checkpoint 5+
-**Not started**.
+### Day Theme Checkpoint 5 — Light Personalization
+
+Trạng thái: **Implementation complete — native Windows acceptance pending**.
+
+- Đúng ba tùy chọn per-day: cover `minimal`, symbol registry gồm `none`/`sparkle`/`focus`/`growth`/
+  `calm`/`celebrate`, và journal font `ui`/`journal`; `NULL` dùng theme default.
+- Migration 006 thêm ba nullable columns. Atomic apply, empty-day no-op/minimal-log rules và reset
+  giữ Day Theme/content đã có test.
+- Backup vẫn version 1: fields optional, null bị bỏ khỏi canonical form, legacy fixture/checksum,
+  Merge/Replace/receipt và forward-compatible unknown IDs được giữ.
+- Dialog lazy-load có preview/draft/persisted separation, reset, rollback, duplicate lock,
+  Saving/error/Retry, vi/en, keyboard/focus và responsive/forced-colors/reduced-motion source
+  coverage.
+- Minimal không gọi motif loader. Symbol precedence áp dụng ở Day Cover, Calendar và History.
+  Font chỉ scope vào journal copy/content/editor; controls, table headers và app shell giữ UI font.
+- Local gates đạt: i18n 48 tests; frontend 50 files/443 tests; Rust 72 tests; format, typecheck,
+  lint, clippy và production build đều pass. Không build installer/portable và chưa push.
+
+Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1–2:
+**Completed**. Checkpoint 3–4: **Completed — native Windows acceptance passed**. Checkpoint 5:
+**Implementation complete — native Windows acceptance pending**. Checkpoint 6+: **Not started**.
 
 ## 6. Release packaging
 
