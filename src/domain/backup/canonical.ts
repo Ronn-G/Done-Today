@@ -26,10 +26,23 @@ const sortBy =
   };
 export function canonicalPayload(payload: BackupPayloadV1): string {
   const dailyLogs = payload.dailyLogs.map((value) => {
-    const { themeId, themeVersion, ...base } = value;
-    return themeId == null && themeVersion == null
-      ? base
-      : { ...base, themeId, themeVersion };
+    const {
+      themeId,
+      themeVersion,
+      coverVariant,
+      daySymbol,
+      journalFontRole,
+      ...base
+    } = value;
+    return {
+      ...base,
+      ...(themeId == null && themeVersion == null
+        ? {}
+        : { themeId, themeVersion }),
+      ...(coverVariant == null ? {} : { coverVariant }),
+      ...(daySymbol == null ? {} : { daySymbol }),
+      ...(journalFontRole == null ? {} : { journalFontRole }),
+    };
   });
   const stable = {
     dailyLogs: dailyLogs.sort(sortBy(['logDate', 'id'])),

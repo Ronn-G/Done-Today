@@ -1,6 +1,6 @@
 use crate::{
-    error_code, validate_day_theme_metadata, validate_theme_preferences, AppError, AppErrorParam,
-    AppErrorParams, AppResult, STATUSES, THEME_KEY,
+    error_code, valid_day_theme_id, validate_day_theme_metadata, validate_theme_preferences,
+    AppError, AppErrorParam, AppErrorParams, AppResult, STATUSES, THEME_KEY,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
@@ -36,6 +36,12 @@ pub struct BackupDailyLogV1 {
     theme_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     theme_version: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    cover_variant: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    day_symbol: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    journal_font_role: Option<String>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -204,6 +210,17 @@ fn validate(payload: &BackupPayloadV1) -> AppResult<()> {
         }
         validate_day_theme_metadata(log.theme_id.as_deref(), log.theme_version)
             .map_err(|_| AppError::new(error_code::BACKUP_THEME_INVALID))?;
+        if [
+            log.cover_variant.as_deref(),
+            log.day_symbol.as_deref(),
+            log.journal_font_role.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|value| !valid_day_theme_id(value))
+        {
+            return Err(AppError::new(error_code::BACKUP_STRUCTURE_INVALID));
+        }
     }
     let log_ids: HashSet<_> = payload
         .daily_logs
@@ -318,7 +335,8 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
     let tx = connection.transaction()?;
     let daily_logs = {
         let mut statement = tx.prepare(
-            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version
+            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version,
+                    cover_variant,day_symbol,journal_font_role
              FROM daily_logs ORDER BY log_date,id",
         )?;
         let rows = statement
@@ -330,6 +348,9 @@ fn snapshot(connection: &mut Connection) -> AppResult<BackupPayloadV1> {
                     updated_at: row.get(3)?,
                     theme_id: row.get(4)?,
                     theme_version: row.get(5)?,
+                    cover_variant: row.get(6)?,
+                    day_symbol: row.get(7)?,
+                    journal_font_role: row.get(8)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -630,15 +651,19 @@ fn insert_payload(
         {
             tx.execute(
                 "INSERT INTO daily_logs(
-                    id,log_date,created_at,updated_at,theme_id,theme_version
-                 ) VALUES(?1,?2,?3,?4,?5,?6)",
+                    id,log_date,created_at,updated_at,theme_id,theme_version,
+                    cover_variant,day_symbol,journal_font_role
+                 ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)",
                 params![
                     target,
                     log.log_date,
                     log.created_at,
                     log.updated_at,
                     log.theme_id.as_deref(),
-                    log.theme_version
+                    log.theme_version,
+                    log.cover_variant.as_deref(),
+                    log.day_symbol.as_deref(),
+                    log.journal_font_role.as_deref()
                 ],
             )?;
         }
@@ -788,6 +813,9 @@ mod tests {
             updated_at: "2026-07-19T00:00:00Z".into(),
             theme_id: theme.map(|value| value.0.into()),
             theme_version: theme.map(|value| value.1),
+            cover_variant: None,
+            day_symbol: None,
+            journal_font_role: None,
         }
     }
     fn legacy_fixture() -> tempfile::NamedTempFile {
@@ -824,6 +852,9 @@ mod tests {
             updated_at: "2026-07-19T00:00:00Z".into(),
             theme_id: None,
             theme_version: None,
+            cover_variant: None,
+            day_symbol: None,
+            journal_font_role: None,
         });
         assert_ne!(first, checksum(&value).unwrap())
     }
@@ -885,7 +916,7 @@ mod tests {
         }
     }
     #[test]
-    fn export_import_round_trip_preserves_explicit_unknown_day_theme_metadata() {
+    fn export_import_round_trip_preserves_theme_and_unknown_personalization_ids() {
         let source_directory = tempfile::tempdir().unwrap();
         let source_path = source_directory.path().join("source.sqlite3");
         let daily_log_id = {
@@ -893,9 +924,11 @@ mod tests {
             migrate(&mut db).unwrap();
             db.execute(
                 "INSERT INTO daily_logs(
-                    id,log_date,created_at,updated_at,theme_id,theme_version
+                    id,log_date,created_at,updated_at,theme_id,theme_version,
+                    cover_variant,day_symbol,journal_font_role
                  ) VALUES('themed-log','2026-07-19','2026-07-19T00:00:00Z',
-                    '2026-07-19T00:00:00Z','future-theme',7)",
+                    '2026-07-19T00:00:00Z','future-theme',7,
+                    'future-cover','future-symbol','future-font')",
                 [],
             )
             .unwrap();
@@ -906,6 +939,9 @@ mod tests {
         let encoded = String::from_utf8(fs::read(&backup_path).unwrap()).unwrap();
         assert!(encoded.contains("\"themeId\": \"future-theme\""));
         assert!(encoded.contains("\"themeVersion\": 7"));
+        assert!(encoded.contains("\"coverVariant\": \"future-cover\""));
+        assert!(encoded.contains("\"daySymbol\": \"future-symbol\""));
+        assert!(encoded.contains("\"journalFontRole\": \"future-font\""));
 
         let target_directory = tempfile::tempdir().unwrap();
         let target_path = target_directory.path().join("target.sqlite3");
@@ -924,15 +960,25 @@ mod tests {
         assert_eq!(
             target
                 .query_row(
-                    "SELECT theme_id,theme_version FROM daily_logs WHERE id=?1",
+                    "SELECT theme_id,theme_version,cover_variant,day_symbol,journal_font_role
+                     FROM daily_logs WHERE id=?1",
                     [&daily_log_id],
                     |row| Ok((
                         row.get::<_, Option<String>>(0)?,
-                        row.get::<_, Option<i64>>(1)?
+                        row.get::<_, Option<i64>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?
                     ))
                 )
                 .unwrap(),
-            (Some("future-theme".into()), Some(7))
+            (
+                Some("future-theme".into()),
+                Some(7),
+                Some("future-cover".into()),
+                Some("future-symbol".into()),
+                Some("future-font".into())
+            )
         );
     }
     #[test]
@@ -1134,7 +1180,7 @@ mod tests {
                 0
             ))
             .unwrap(),
-            5
+            6
         )
     }
     #[test]

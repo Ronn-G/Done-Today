@@ -84,6 +84,23 @@ describe('TauriJournalRepository Day Theme metadata', () => {
       themeVersion: 1,
     });
   });
+
+  it('writes all personalization fields through one nullable command', async () => {
+    vi.mocked(invoke).mockResolvedValue(null);
+    await expect(
+      new TauriJournalRepository().setDayPersonalizationForDate('2026-07-29', {
+        coverVariant: null,
+        daySymbol: null,
+        journalFontRole: null,
+      }),
+    ).resolves.toBeNull();
+    expect(invoke).toHaveBeenCalledWith('set_daily_log_personalization', {
+      date: '2026-07-29',
+      coverVariant: null,
+      daySymbol: null,
+      journalFontRole: null,
+    });
+  });
 });
 
 describe('TauriJournalRepository Calendar and History summaries', () => {

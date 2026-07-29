@@ -9,6 +9,10 @@ import {
 
 const id = z.string().trim().min(1).max(100);
 const timestamp = z.string().datetime({ offset: true });
+const stablePersonalizationId = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .max(64);
 const date = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -31,6 +35,9 @@ export const backupDailyLogSchema = z
       .refine(isValidDayThemeVersion)
       .nullable()
       .optional(),
+    coverVariant: stablePersonalizationId.nullable().optional(),
+    daySymbol: stablePersonalizationId.nullable().optional(),
+    journalFontRole: stablePersonalizationId.nullable().optional(),
   })
   .strict()
   .superRefine((value, context) => {

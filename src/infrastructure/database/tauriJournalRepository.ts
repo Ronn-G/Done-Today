@@ -14,6 +14,7 @@ import {
 import type { UpdateWorkItem } from '../../domain/journal/models';
 import type { DayThemeMetadata } from '../../domain/journal/models';
 import type { JournalRepository } from '../../domain/journal/repository';
+import type { DayPersonalization } from '../../domain/day-theme/personalization';
 import { invokeTauriCommand, tauriVoidSchema } from '../tauri/invoke';
 
 const nullableDailyLogSchema = dailyLogSchema.nullable();
@@ -59,6 +60,16 @@ export class TauriJournalRepository implements JournalRepository {
         themeVersion: metadata.themeVersion,
       },
       dailyLogSchema,
+    );
+  }
+  async setDayPersonalizationForDate(
+    date: string,
+    personalization: DayPersonalization,
+  ) {
+    return invokeTauriCommand(
+      'set_daily_log_personalization',
+      { date, ...personalization },
+      nullableDailyLogSchema,
     );
   }
   async createWorkItem(date: string, categoryId: string | null = null) {

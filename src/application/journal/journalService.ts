@@ -3,6 +3,7 @@ import {
   localDateSchema,
   updateDayThemeMetadataSchema,
   updateWorkItemSchema,
+  setDayPersonalizationSchema,
 } from '../../domain/journal/models';
 import {
   categoryInputSchema,
@@ -50,6 +51,19 @@ export class JournalService {
       localDateSchema.parse(date),
       dayThemeMetadataSchema.parse(metadata),
     );
+  }
+  async setDayPersonalizationForDate(date: string, personalization: unknown) {
+    const value = setDayPersonalizationSchema.parse({
+      date,
+      ...(typeof personalization === 'object' && personalization !== null
+        ? personalization
+        : {}),
+    });
+    return this.repository.setDayPersonalizationForDate(value.date, {
+      coverVariant: value.coverVariant,
+      daySymbol: value.daySymbol,
+      journalFontRole: value.journalFontRole,
+    });
   }
   async createWorkItem(date: string, categoryId: string | null = null) {
     return this.repository.createWorkItem(

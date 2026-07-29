@@ -8,6 +8,7 @@ import type {
   WorkItem,
 } from './models';
 import type { CategoryInput, CategoryUpdate, WorkCategory } from './categories';
+import type { DayPersonalization } from '../day-theme/personalization';
 export interface JournalRepository {
   initialize(): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
@@ -19,6 +20,10 @@ export interface JournalRepository {
     date: string,
     metadata: DayThemeMetadata,
   ): Promise<DailyLog>;
+  setDayPersonalizationForDate(
+    date: string,
+    personalization: DayPersonalization,
+  ): Promise<DailyLog | null>;
   createWorkItem(date: string, categoryId?: string | null): Promise<WorkItem>;
   updateWorkItem(item: UpdateWorkItem): Promise<WorkItem>;
   deleteWorkItem(itemId: string): Promise<void>;

@@ -3,6 +3,7 @@ import {
   isValidDayThemeId,
   isValidDayThemeVersion,
 } from '../day-theme/validation';
+import { dayPersonalizationSchema } from '../day-theme/personalization';
 export const localDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export type LocalDateKey = string;
 export const journalActivityDatesSchema = z.array(z.string());
@@ -49,6 +50,11 @@ export const dayThemeMetadataSchema = z
     }
   });
 export type DayThemeMetadata = z.infer<typeof dayThemeMetadataSchema>;
+const storedPersonalizationFields = {
+  coverVariant: z.string().nullable().optional(),
+  daySymbol: z.string().nullable().optional(),
+  journalFontRole: z.string().nullable().optional(),
+};
 export const updateDayThemeMetadataSchema = dayThemeMetadataSchema.extend({
   dailyLogId: z.string().trim().min(1),
 });
@@ -61,6 +67,7 @@ export const dailyLogSchema = z
     items: z.array(workItemSchema),
     themeId: z.string().refine(isValidDayThemeId).nullable(),
     themeVersion: z.number().refine(isValidDayThemeVersion).nullable(),
+    ...storedPersonalizationFields,
   })
   .superRefine((value, context) => {
     if ((value.themeId === null) !== (value.themeVersion === null)) {
@@ -71,7 +78,14 @@ export const dailyLogSchema = z
       });
     }
   });
-export type DailyLog = z.infer<typeof dailyLogSchema>;
+export type DailyLog = Omit<
+  z.infer<typeof dailyLogSchema>,
+  'coverVariant' | 'daySymbol' | 'journalFontRole'
+> & {
+  coverVariant?: string | null;
+  daySymbol?: string | null;
+  journalFontRole?: string | null;
+};
 export const dailyLogSummarySchema = z
   .object({
     id: z.string(),
@@ -83,6 +97,7 @@ export const dailyLogSummarySchema = z
     updatedAt: z.string(),
     themeId: z.string().refine(isValidDayThemeId).nullable(),
     themeVersion: z.number().refine(isValidDayThemeVersion).nullable(),
+    daySymbol: z.string().nullable().optional(),
   })
   .superRefine((value, context) => {
     if ((value.themeId === null) !== (value.themeVersion === null)) {
@@ -93,7 +108,10 @@ export const dailyLogSummarySchema = z
       });
     }
   });
-export type DailyLogSummary = z.infer<typeof dailyLogSummarySchema>;
+export type DailyLogSummary = Omit<
+  z.infer<typeof dailyLogSummarySchema>,
+  'daySymbol'
+> & { daySymbol?: string | null };
 export const historyPageSchema = z.object({
   items: z.array(dailyLogSummarySchema),
   page: z.number().int().positive(),
@@ -107,6 +125,7 @@ export const calendarDaySummarySchema = z
     hasLog: z.boolean(),
     themeId: z.string().refine(isValidDayThemeId).nullable(),
     themeVersion: z.number().refine(isValidDayThemeVersion).nullable(),
+    daySymbol: z.string().nullable().optional(),
   })
   .superRefine((value, context) => {
     if ((value.themeId === null) !== (value.themeVersion === null)) {
@@ -117,5 +136,11 @@ export const calendarDaySummarySchema = z
       });
     }
   });
-export type CalendarDaySummary = z.infer<typeof calendarDaySummarySchema>;
+export type CalendarDaySummary = Omit<
+  z.infer<typeof calendarDaySummarySchema>,
+  'daySymbol'
+> & { daySymbol?: string | null };
 export const calendarDaySummariesSchema = z.array(calendarDaySummarySchema);
+export const setDayPersonalizationSchema = dayPersonalizationSchema.extend({
+  date: localDateSchema,
+});

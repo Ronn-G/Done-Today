@@ -15,6 +15,7 @@ const repositoryWithActivityDates = (dates: string[]) => {
     getDailyLog: async () => null,
     updateDayThemeMetadata: unused,
     setDayThemeForDate: unused,
+    setDayPersonalizationForDate: unused,
     createWorkItem: unused,
     updateWorkItem: unused,
     deleteWorkItem: async () => undefined,
@@ -148,6 +149,46 @@ describe('JournalService Day Theme metadata', () => {
       expect(updateDayThemeMetadata).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('JournalService day personalization', () => {
+  it('validates and sends the complete atomic selection', async () => {
+    const setDayPersonalizationForDate = vi.fn(async () => null);
+    const { repository } = repositoryWithActivityDates([]);
+    const service = new JournalService({
+      ...repository,
+      setDayPersonalizationForDate,
+    });
+    await expect(
+      service.setDayPersonalizationForDate('2026-07-29', {
+        coverVariant: 'minimal',
+        daySymbol: 'calm',
+        journalFontRole: 'journal',
+      }),
+    ).resolves.toBeNull();
+    expect(setDayPersonalizationForDate).toHaveBeenCalledWith('2026-07-29', {
+      coverVariant: 'minimal',
+      daySymbol: 'calm',
+      journalFontRole: 'journal',
+    });
+  });
+
+  it('rejects unknown direct-write values before IPC', async () => {
+    const setDayPersonalizationForDate = vi.fn();
+    const { repository } = repositoryWithActivityDates([]);
+    const service = new JournalService({
+      ...repository,
+      setDayPersonalizationForDate,
+    });
+    await expect(
+      service.setDayPersonalizationForDate('2026-07-29', {
+        coverVariant: 'future-cover',
+        daySymbol: null,
+        journalFontRole: null,
+      }),
+    ).rejects.toThrow();
+    expect(setDayPersonalizationForDate).not.toHaveBeenCalled();
+  });
 });
 
 describe('JournalService history validation', () => {

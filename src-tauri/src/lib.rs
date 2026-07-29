@@ -16,6 +16,7 @@ const MIGRATION_V2: &str = include_str!("../migrations/002_app_settings.sql");
 const MIGRATION_V3: &str = include_str!("../migrations/003_work_categories.sql");
 const MIGRATION_V4: &str = include_str!("../migrations/004_backup_receipts.sql");
 const MIGRATION_V5: &str = include_str!("../migrations/005_day_theme.sql");
+const MIGRATION_V6: &str = include_str!("../migrations/006_day_personalization.sql");
 const STATUSES: [&str; 4] = ["completed", "in_progress", "postponed", "cancelled"];
 const THEME_KEY: &str = "appearance.themePreferences";
 const LOCALE_KEY: &str = "localization.locale";
@@ -248,6 +249,9 @@ struct DailyLog {
     updated_at: String,
     theme_id: Option<String>,
     theme_version: Option<i64>,
+    cover_variant: Option<String>,
+    day_symbol: Option<String>,
+    journal_font_role: Option<String>,
     items: Vec<WorkItem>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -255,6 +259,13 @@ struct DailyLog {
 struct DayThemeMetadata {
     theme_id: Option<String>,
     theme_version: Option<i64>,
+}
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct DayPersonalization {
+    cover_variant: Option<String>,
+    day_symbol: Option<String>,
+    journal_font_role: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -277,6 +288,7 @@ struct DailyLogSummary {
     updated_at: String,
     theme_id: Option<String>,
     theme_version: Option<i64>,
+    day_symbol: Option<String>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -293,6 +305,7 @@ struct CalendarDaySummary {
     has_log: bool,
     theme_id: Option<String>,
     theme_version: Option<i64>,
+    day_symbol: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
@@ -337,6 +350,7 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     apply_migration(&transaction, 3, MIGRATION_V3)?;
     apply_migration(&transaction, 4, MIGRATION_V4)?;
     apply_migration(&transaction, 5, MIGRATION_V5)?;
+    apply_migration(&transaction, 6, MIGRATION_V6)?;
     transaction.commit()
 }
 
@@ -712,6 +726,22 @@ fn validate_day_theme_metadata(
         _ => Err(AppError::new(error_code::DAY_THEME_METADATA_INVALID)),
     }
 }
+fn validate_day_personalization(value: &DayPersonalization) -> AppResult<()> {
+    let cover_valid = matches!(value.cover_variant.as_deref(), None | Some("minimal"));
+    let symbol_valid = matches!(
+        value.day_symbol.as_deref(),
+        None | Some("none" | "sparkle" | "focus" | "growth" | "calm" | "celebrate")
+    );
+    let font_valid = matches!(
+        value.journal_font_role.as_deref(),
+        None | Some("ui" | "journal")
+    );
+    if cover_valid && symbol_valid && font_valid {
+        Ok(())
+    } else {
+        Err(AppError::new(error_code::DAY_THEME_METADATA_INVALID))
+    }
+}
 fn ensure_daily_log(transaction: &Transaction<'_>, date: &str) -> AppResult<String> {
     validate_date(date)?;
     if let Some(id) = transaction
@@ -761,7 +791,9 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
     validate_date(date)?;
     let header = connection
         .query_row(
-            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version FROM daily_logs WHERE log_date=?1",
+            "SELECT id,log_date,created_at,updated_at,theme_id,theme_version,
+                    cover_variant,day_symbol,journal_font_role
+             FROM daily_logs WHERE log_date=?1",
             [date],
             |row| {
                 Ok((
@@ -771,11 +803,25 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
                     row.get(3)?,
                     row.get(4)?,
                     row.get(5)?,
+                    row.get(6)?,
+                    row.get(7)?,
+                    row.get(8)?,
                 ))
             },
         )
         .optional()?;
-    let Some((id, log_date, created_at, updated_at, theme_id, theme_version)) = header else {
+    let Some((
+        id,
+        log_date,
+        created_at,
+        updated_at,
+        theme_id,
+        theme_version,
+        cover_variant,
+        day_symbol,
+        journal_font_role,
+    )) = header
+    else {
         return Ok(None);
     };
     let mut statement = connection.prepare(
@@ -793,6 +839,9 @@ fn find_daily_log(connection: &Connection, date: &str) -> AppResult<Option<Daily
         updated_at,
         theme_id,
         theme_version,
+        cover_variant,
+        day_symbol,
+        journal_font_role,
         items,
     }))
 }
@@ -841,6 +890,48 @@ fn set_day_theme_for_date(
     )?;
     transaction.commit()?;
     find_daily_log(connection, date)?.ok_or_else(AppError::not_found)
+}
+fn set_day_personalization_for_date(
+    connection: &mut Connection,
+    date: &str,
+    personalization: DayPersonalization,
+) -> AppResult<Option<DailyLog>> {
+    validate_date(date)?;
+    validate_day_personalization(&personalization)?;
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let existing_id = transaction
+        .query_row(
+            "SELECT id FROM daily_logs WHERE log_date=?1",
+            [date],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()?;
+    if existing_id.is_none()
+        && personalization.cover_variant.is_none()
+        && personalization.day_symbol.is_none()
+        && personalization.journal_font_role.is_none()
+    {
+        transaction.commit()?;
+        return Ok(None);
+    }
+    let daily_log_id = match existing_id {
+        Some(id) => id,
+        None => ensure_daily_log(&transaction, date)?,
+    };
+    transaction.execute(
+        "UPDATE daily_logs
+         SET cover_variant=?1,day_symbol=?2,journal_font_role=?3,updated_at=?4
+         WHERE id=?5",
+        params![
+            personalization.cover_variant.as_deref(),
+            personalization.day_symbol.as_deref(),
+            personalization.journal_font_role.as_deref(),
+            Utc::now().to_rfc3339(),
+            daily_log_id
+        ],
+    )?;
+    transaction.commit()?;
+    find_daily_log(connection, date)
 }
 fn create_item(
     connection: &mut Connection,
@@ -1088,7 +1179,7 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
     let mut statement = connection.prepare(
         "SELECT d.id,d.log_date,COUNT(w.id),
                 COALESCE(SUM(CASE WHEN w.status='completed' THEN 1 ELSE 0 END),0),
-                d.updated_at,d.theme_id,d.theme_version,
+                d.updated_at,d.theme_id,d.theme_version,d.day_symbol,
                 COALESCE((
                   SELECT json_group_array(preview.task)
                   FROM (
@@ -1100,7 +1191,7 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
                   ) preview
                 ),'[]')
          FROM daily_logs d JOIN work_items w ON w.daily_log_id=d.id
-         GROUP BY d.id,d.log_date,d.updated_at,d.theme_id,d.theme_version
+         GROUP BY d.id,d.log_date,d.updated_at,d.theme_id,d.theme_version,d.day_symbol
          ORDER BY d.log_date DESC LIMIT ?1 OFFSET ?2",
     )?;
     let rows = statement.query_map(params![page_size + 1, offset], |row| {
@@ -1112,7 +1203,8 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
             row.get::<_, String>(4)?,
             row.get::<_, Option<String>>(5)?,
             row.get::<_, Option<i64>>(6)?,
-            row.get::<_, String>(7)?,
+            row.get::<_, Option<String>>(7)?,
+            row.get::<_, String>(8)?,
         ))
     })?;
     let mut raw = rows.collect::<rusqlite::Result<Vec<_>>>()?;
@@ -1127,6 +1219,7 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
         updated_at,
         theme_id,
         theme_version,
+        day_symbol,
         preview_tasks_json,
     ) in raw
     {
@@ -1146,6 +1239,7 @@ fn list_summaries(connection: &Connection, page: i64, page_size: i64) -> AppResu
             updated_at,
             theme_id,
             theme_version,
+            day_symbol,
         });
     }
     Ok(HistoryPage {
@@ -1168,7 +1262,7 @@ fn list_calendar_summaries(
         return Err(AppError::new(error_code::DATE_INVALID));
     }
     let mut statement = connection.prepare(
-        "SELECT log_date,theme_id,theme_version
+        "SELECT log_date,theme_id,theme_version,day_symbol
          FROM daily_logs
          WHERE log_date>=?1 AND log_date<?2
          ORDER BY log_date",
@@ -1180,6 +1274,7 @@ fn list_calendar_summaries(
                 has_log: true,
                 theme_id: row.get(1)?,
                 theme_version: row.get(2)?,
+                day_symbol: row.get(3)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -1249,6 +1344,24 @@ fn set_daily_log_day_theme(
         DayThemeMetadata {
             theme_id,
             theme_version,
+        },
+    )
+}
+#[tauri::command]
+fn set_daily_log_personalization(
+    app: tauri::AppHandle,
+    date: String,
+    cover_variant: Option<String>,
+    day_symbol: Option<String>,
+    journal_font_role: Option<String>,
+) -> AppResult<Option<DailyLog>> {
+    set_day_personalization_for_date(
+        &mut open_database(&database_path(&app)?)?,
+        &date,
+        DayPersonalization {
+            cover_variant,
+            day_symbol,
+            journal_font_role,
         },
     )
 }
@@ -1410,6 +1523,7 @@ pub fn run() {
             get_daily_log,
             update_daily_log_day_theme,
             set_daily_log_day_theme,
+            set_daily_log_personalization,
             create_work_item,
             list_work_categories,
             create_work_category,
@@ -1530,7 +1644,7 @@ mod tests {
                 row.get::<_, i64>(0)
             })
             .unwrap(),
-            5
+            6
         );
     }
     #[test]
@@ -1598,6 +1712,9 @@ mod tests {
         };
         assert!(columns.contains(&"theme_id".into()));
         assert!(columns.contains(&"theme_version".into()));
+        assert!(columns.contains(&"cover_variant".into()));
+        assert!(columns.contains(&"day_symbol".into()));
+        assert!(columns.contains(&"journal_font_role".into()));
         assert_eq!(
             db.query_row(
                 "SELECT theme_id,theme_version FROM daily_logs WHERE id='log'",
@@ -1609,6 +1726,20 @@ mod tests {
             )
             .unwrap(),
             (None, None)
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT cover_variant,day_symbol,journal_font_role
+                 FROM daily_logs WHERE id='log'",
+                [],
+                |row| Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?
+                ))
+            )
+            .unwrap(),
+            (None, None, None)
         );
         assert_eq!(
             db.query_row(
@@ -1742,6 +1873,102 @@ mod tests {
         .unwrap();
         assert_eq!((cleared.theme_id, cleared.theme_version), (None, None));
         assert!(cleared.items.is_empty());
+    }
+    #[test]
+    fn day_personalization_is_atomic_and_respects_empty_day_semantics() {
+        let mut db = memory();
+        let defaults = DayPersonalization {
+            cover_variant: None,
+            day_symbol: None,
+            journal_font_role: None,
+        };
+        assert!(
+            set_day_personalization_for_date(&mut db, "2026-07-29", defaults)
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM daily_logs", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+
+        let saved = set_day_personalization_for_date(
+            &mut db,
+            "2026-07-29",
+            DayPersonalization {
+                cover_variant: Some("minimal".into()),
+                day_symbol: Some("focus".into()),
+                journal_font_role: Some("journal".into()),
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(saved.cover_variant.as_deref(), Some("minimal"));
+        assert_eq!(saved.day_symbol.as_deref(), Some("focus"));
+        assert_eq!(saved.journal_font_role.as_deref(), Some("journal"));
+        assert!(saved.items.is_empty());
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM daily_logs", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+
+        set_day_theme_for_date(
+            &mut db,
+            "2026-07-29",
+            DayThemeMetadata {
+                theme_id: Some("coffee".into()),
+                theme_version: Some(1),
+            },
+        )
+        .unwrap();
+        let reset = set_day_personalization_for_date(
+            &mut db,
+            "2026-07-29",
+            DayPersonalization {
+                cover_variant: None,
+                day_symbol: None,
+                journal_font_role: None,
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            (
+                reset.cover_variant,
+                reset.day_symbol,
+                reset.journal_font_role
+            ),
+            (None, None, None)
+        );
+        assert_eq!(
+            (reset.theme_id.as_deref(), reset.theme_version),
+            (Some("coffee"), Some(1))
+        );
+    }
+    #[test]
+    fn day_personalization_rejects_unknown_direct_writes_without_mutation() {
+        let mut db = memory();
+        let error = set_day_personalization_for_date(
+            &mut db,
+            "2026-07-29",
+            DayPersonalization {
+                cover_variant: Some("future-cover".into()),
+                day_symbol: None,
+                journal_font_role: None,
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error.code, error_code::DAY_THEME_METADATA_INVALID);
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM daily_logs", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
     }
     #[test]
     fn day_theme_metadata_rejects_invalid_pairs_without_changing_the_log() {
@@ -2265,7 +2492,7 @@ mod tests {
                     0
                 ))
                 .unwrap(),
-            5
+            6
         );
         let error: AppError = rusqlite::Error::InvalidQuery.into();
         assert_eq!(error.code, error_code::DATABASE_UNAVAILABLE);
@@ -2485,12 +2712,14 @@ mod tests {
                     has_log: true,
                     theme_id: None,
                     theme_version: None,
+                    day_symbol: None,
                 },
                 CalendarDaySummary {
                     date: "2026-07-15".into(),
                     has_log: true,
                     theme_id: Some("sakura".into()),
                     theme_version: Some(1),
+                    day_symbol: None,
                 },
             ]
         );
@@ -2649,7 +2878,7 @@ mod tests {
                 0
             ))
             .unwrap(),
-            5
+            6
         );
     }
     #[test]
