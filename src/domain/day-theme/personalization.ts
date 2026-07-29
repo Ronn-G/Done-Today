@@ -77,3 +77,8 @@ export function hasNonDefaultPersonalization(
 ): boolean {
   return Object.values(value).some((entry) => entry !== null);
 }
+
+export function resolveStoredDaySymbol(value: string | null | undefined) {
+  const parsed = daySymbolSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}

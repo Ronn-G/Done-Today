@@ -36,6 +36,42 @@ export default {
       close: 'Close day theme picker',
     },
   },
+  personalization: {
+    trigger: 'Personalize',
+    title: 'Personalize this day',
+    description:
+      'Choose a light cover, symbol, and journal type style for this day.',
+    close: 'Close day personalization',
+    current: 'Showing the saved choices',
+    preview: 'Previewing unsaved choices',
+    useDefaults: 'Use theme defaults',
+    apply: 'Apply',
+    saving: 'Saving…',
+    saved: 'Day personalization saved',
+    saveFailed:
+      'Couldn’t save these choices. The previous personalization has been restored.',
+    cover: {
+      heading: 'Cover style',
+      default: 'Theme default',
+      minimal: 'Minimal',
+    },
+    symbol: {
+      heading: 'Day symbol',
+      default: 'Theme default',
+      none: 'None',
+      sparkle: 'Sparkle',
+      focus: 'Focus',
+      growth: 'Growth',
+      calm: 'Calm',
+      celebrate: 'Celebrate',
+    },
+    font: {
+      heading: 'Journal font',
+      default: 'Theme default',
+      ui: 'Clean UI',
+      journal: 'Classic Serif',
+    },
+  },
   customizer: { open: 'App appearance' },
   mode: {
     heading: 'Display mode',

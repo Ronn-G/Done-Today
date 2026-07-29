@@ -51,4 +51,26 @@ describe('DayThemeScope', () => {
     );
     expect(styles).toContain('--app-day-accent: var(--accent)');
   });
+
+  it('scopes the selected journal font role to journal copy variables', () => {
+    const markup = renderToStaticMarkup(
+      <DayThemeScope
+        resolvedTheme={dayThemeRegistry.resolve('rainy', 1)}
+        personalization={{
+          coverVariant: null,
+          daySymbol: null,
+          journalFontRole: 'ui',
+        }}
+      >
+        <main>Journal</main>
+      </DayThemeScope>,
+    );
+    expect(markup).toContain('data-journal-font-role="ui"');
+    expect(markup).toContain(
+      '--day-journal-font:Inter, ui-sans-serif, system-ui, sans-serif',
+    );
+    expect(readFileSync('src/styles.css', 'utf8')).toContain(
+      '.day-theme-scope .work-item-editor',
+    );
+  });
 });

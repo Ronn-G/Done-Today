@@ -96,12 +96,24 @@ import { DayThemeScope } from '../features/daily-log/DayThemeScope';
 import type { ResolvedDayTheme } from '../domain/day-theme/models';
 import { DayCover } from '../features/daily-log/DayCover';
 import { HistoryMonthCalendar } from '../features/history/HistoryMonthCalendar';
+import {
+  defaultDayPersonalization,
+  hasNonDefaultPersonalization,
+  resolveDayPersonalization,
+  resolveStoredDaySymbol,
+  daySymbolOptions,
+  type DayPersonalization,
+} from '../domain/day-theme/personalization';
+import { DaySymbolIcon } from '../features/daily-log/DaySymbolIcon';
 
 type Route =
   { page: 'day'; date: string } | { page: 'history' } | { page: 'settings' };
 type AppPage = Route['page'];
 const LazyDayThemePicker = lazy(
   () => import('../features/daily-log/DayThemePicker'),
+);
+const LazyDayPersonalizationDialog = lazy(
+  () => import('../features/daily-log/DayPersonalizationDialog'),
 );
 const service = new JournalService(new TauriJournalRepository());
 const themeRepository = new TauriThemeRepository();
@@ -140,6 +152,27 @@ export function shouldAcceptDayThemeCompletion(
   requestDate: string,
 ) {
   return activeDate === requestDate;
+}
+export function shouldPersistDayPersonalization(
+  log: DailyLog | null,
+  personalization: DayPersonalization,
+) {
+  return log !== null || hasNonDefaultPersonalization(personalization);
+}
+export function mergeSavedDayPersonalization(
+  current: DailyLog | null,
+  saved: DailyLog | null,
+): DailyLog | null {
+  if (!saved) return current;
+  return current
+    ? {
+        ...current,
+        updatedAt: saved.updatedAt,
+        coverVariant: saved.coverVariant,
+        daySymbol: saved.daySymbol,
+        journalFontRole: saved.journalFontRole,
+      }
+    : saved;
 }
 export function useActiveDayThemeDate(date: string) {
   const activeDate = useRef<string | null>(null);
@@ -409,6 +442,12 @@ function DayEditor({
   const [previewDayTheme, setPreviewDayTheme] =
     useState<DayThemeMetadata | null>(null);
   const [dayThemeFeedback, setDayThemeFeedback] = useState<string | null>(null);
+  const [personalizationOpen, setPersonalizationOpen] = useState(false);
+  const [previewPersonalization, setPreviewPersonalization] =
+    useState<DayPersonalization | null>(null);
+  const [personalizationFeedback, setPersonalizationFeedback] = useState<
+    string | null
+  >(null);
   const activeDate = useActiveDayThemeDate(date);
   const refreshStreak = useCallback(
     async () => setCurrentStreak(await service.getCurrentStreak(today())),
@@ -464,6 +503,17 @@ function DayEditor({
       ),
     [activeDayTheme],
   );
+  const persistedPersonalization = useMemo(
+    () =>
+      resolveDayPersonalization({
+        coverVariant: log?.coverVariant ?? null,
+        daySymbol: log?.daySymbol ?? null,
+        journalFontRole: log?.journalFontRole ?? null,
+      }),
+    [log?.coverVariant, log?.daySymbol, log?.journalFontRole],
+  );
+  const activePersonalization =
+    previewPersonalization ?? persistedPersonalization;
   const openDayThemePicker = () => {
     setPreviewDayTheme(null);
     setDayThemeFeedback(null);
@@ -478,6 +528,21 @@ function DayEditor({
     const saved = await service.setDayThemeForDate(date, metadata);
     if (!shouldAcceptDayThemeCompletion(activeDate.current, date)) return;
     setLog((current) => mergeSavedDayTheme(current, saved));
+  };
+  const openPersonalization = () => {
+    setPreviewPersonalization(null);
+    setPersonalizationFeedback(null);
+    setPersonalizationOpen(true);
+  };
+  const closePersonalization = () => {
+    setPreviewPersonalization(null);
+    setPersonalizationOpen(false);
+  };
+  const applyPersonalization = async (value: DayPersonalization) => {
+    if (!shouldPersistDayPersonalization(log, value)) return;
+    const saved = await service.setDayPersonalizationForDate(date, value);
+    if (!shouldAcceptDayThemeCompletion(activeDate.current, date)) return;
+    setLog((current) => mergeSavedDayPersonalization(current, saved));
   };
   const addItem = useCallback(
     async (categoryId: string | null = null) => {
@@ -496,6 +561,7 @@ function DayEditor({
                 updatedAt: item.updatedAt,
                 themeId: null,
                 themeVersion: null,
+                ...defaultDayPersonalization,
                 items: [item],
               },
         );
@@ -602,7 +668,10 @@ function DayEditor({
   };
   const go = (next: string) => navigate({ page: 'day', date: next });
   return (
-    <DayThemeScope resolvedTheme={resolvedDayTheme}>
+    <DayThemeScope
+      resolvedTheme={resolvedDayTheme}
+      personalization={activePersonalization}
+    >
       <div className="content">
         <TodayOverview
           date={date}
@@ -611,8 +680,11 @@ function DayEditor({
           onGo={go}
           onOpenTheme={onOpenTheme}
           onOpenDayTheme={openDayThemePicker}
+          onOpenPersonalization={openPersonalization}
           dayThemeFeedback={dayThemeFeedback}
           resolvedTheme={resolvedDayTheme}
+          personalization={activePersonalization}
+          personalizationFeedback={personalizationFeedback}
         />
         {error && (
           <div className="page-error" role="alert">
@@ -707,6 +779,23 @@ function DayEditor({
           />
         </Suspense>
       )}
+      {personalizationOpen && (
+        <Suspense fallback={null}>
+          <LazyDayPersonalizationDialog
+            persisted={persistedPersonalization}
+            themeSymbol={resolvedDayTheme.definition.calendar.symbol}
+            onPreview={setPreviewPersonalization}
+            onRollbackPreview={() => setPreviewPersonalization(null)}
+            onApply={applyPersonalization}
+            onApplied={() => {
+              setPreviewPersonalization(null);
+              setPersonalizationOpen(false);
+              setPersonalizationFeedback(tTheme('personalization.saved'));
+            }}
+            onCancel={closePersonalization}
+          />
+        </Suspense>
+      )}
     </DayThemeScope>
   );
 }
@@ -718,8 +807,11 @@ export function TodayOverview({
   onGo,
   onOpenTheme,
   onOpenDayTheme,
+  onOpenPersonalization = () => undefined,
   dayThemeFeedback,
   resolvedTheme,
+  personalization = defaultDayPersonalization,
+  personalizationFeedback,
 }: {
   date: string;
   stats: ReturnType<typeof calculateStatistics>;
@@ -727,8 +819,11 @@ export function TodayOverview({
   onGo: (date: string) => void;
   onOpenTheme: () => void;
   onOpenDayTheme: () => void;
+  onOpenPersonalization?: () => void;
   dayThemeFeedback?: string | null;
   resolvedTheme: ResolvedDayTheme;
+  personalization?: DayPersonalization;
+  personalizationFeedback?: string | null;
 }) {
   const { t, i18n } = useTranslation('today');
   const { t: tTheme } = useTranslation('theme');
@@ -782,6 +877,13 @@ export function TodayOverview({
               <span>{tTheme('dayTheme.picker.trigger')}</span>
             </button>
             <button
+              className="day-personalization-trigger"
+              onClick={onOpenPersonalization}
+            >
+              <MoreHorizontal aria-hidden="true" size={17} />
+              <span>{tTheme('personalization.trigger')}</span>
+            </button>
+            <button
               aria-label={tTheme('customizer.open')}
               title={tTheme('customizer.open')}
               onClick={onOpenTheme}
@@ -790,10 +892,17 @@ export function TodayOverview({
             </button>
           </div>
         }
+        coverVariant={personalization.coverVariant}
+        daySymbol={personalization.daySymbol}
       />
       {dayThemeFeedback && (
         <span className="day-theme-feedback" role="status" aria-live="polite">
           {dayThemeFeedback}
+        </span>
+      )}
+      {personalizationFeedback && (
+        <span className="day-theme-feedback" role="status" aria-live="polite">
+          {personalizationFeedback}
         </span>
       )}
       <section className="stats" aria-label={t('stats.label')}>
@@ -1668,10 +1777,21 @@ export function HistoryView({
               summary.themeVersion,
             );
             const themeName = i18n.t(resolvedTheme.definition.nameKey);
+            const resolvedDaySymbol = resolveStoredDaySymbol(summary.daySymbol);
+            const symbolLabel =
+              resolvedDaySymbol === null
+                ? null
+                : i18n.t(
+                    `theme:${
+                      daySymbolOptions.find(
+                        (option) => option.id === resolvedDaySymbol,
+                      )?.labelKey ?? 'personalization.symbol.default'
+                    }`,
+                  );
             const accessibleName = t('accessibility.openDay', {
               date,
               summary: dailySummary,
-              theme: themeName,
+              theme: symbolLabel ? `${themeName}, ${symbolLabel}` : themeName,
             });
             const historyThemeStyle = {
               '--history-theme-color':
@@ -1698,7 +1818,11 @@ export function HistoryView({
                   <span className="history-theme-identity">
                     <i aria-hidden="true" />
                     <span aria-hidden="true">
-                      {resolvedTheme.definition.calendar.symbol}
+                      <DaySymbolIcon
+                        symbol={resolvedDaySymbol}
+                        themeSymbol={resolvedTheme.definition.calendar.symbol}
+                        size={14}
+                      />
                     </span>
                     {t('themeIdentity', { theme: themeName })}
                   </span>

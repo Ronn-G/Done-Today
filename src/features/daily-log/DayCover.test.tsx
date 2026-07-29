@@ -85,6 +85,31 @@ describe('DayCover', () => {
     ).toBe('true');
   });
 
+  it('keeps the cover layout but never loads or renders a motif in minimal mode', () => {
+    const assetLoader = vi.fn(async () => '/coffee-motif.svg');
+    const resolvedTheme = dayThemeRegistry.resolve('coffee', 1);
+    render(
+      <DayCover
+        resolvedTheme={resolvedTheme}
+        eyebrow="Daily journal"
+        heading="Journal"
+        subtitle="Quiet progress"
+        actions={<button type="button">Action</button>}
+        coverVariant="minimal"
+        daySymbol="none"
+        assetLoader={assetLoader}
+      />,
+    );
+    expect(assetLoader).not.toHaveBeenCalled();
+    expect(document.querySelector('.day-cover-motif')).toBeNull();
+    expect(
+      document
+        .querySelector('.day-cover')
+        ?.getAttribute('data-day-cover-asset-state'),
+    ).toBe('suppressed');
+    expect(screen.getByRole('heading', { name: 'Journal' })).toBeTruthy();
+  });
+
   it('defines compact responsive heights, reduced motion and forced-colors fallback', () => {
     const styles = readFileSync('src/styles.css', 'utf8');
     expect(styles).toContain('min-height: 172px');

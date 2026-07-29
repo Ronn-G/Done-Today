@@ -8,11 +8,14 @@ import { i18next } from '../i18n';
 import {
   AppNavigation,
   mergeSavedDayTheme,
+  mergeSavedDayPersonalization,
   resolveDayThemeForLog,
   shouldAcceptDayThemeCompletion,
   shouldPersistDayTheme,
+  shouldPersistDayPersonalization,
   TodayOverview,
 } from './App';
+import type { DailyLog } from '../domain/journal/models';
 
 describe('I18N-2 app shell and Today overview', () => {
   it.each([
@@ -148,6 +151,57 @@ describe('I18N-2 app shell and Today overview', () => {
     expect(styles).toContain(
       '.stats .stat:nth-child(3),\n  .stats .stat:nth-child(4) {\n    border-top: 1px solid var(--stats-border);\n  }',
     );
+  });
+});
+
+describe('light day personalization state boundaries', () => {
+  const log: DailyLog = {
+    id: 'log-1',
+    logDate: '2026-07-29',
+    createdAt: 'before',
+    updatedAt: 'before',
+    themeId: 'coffee',
+    themeVersion: 1,
+    coverVariant: null,
+    daySymbol: null,
+    journalFontRole: null,
+    items: [],
+  };
+
+  it('skips all-default writes only for an empty day', () => {
+    const defaults = {
+      coverVariant: null,
+      daySymbol: null,
+      journalFontRole: null,
+    } as const;
+    expect(shouldPersistDayPersonalization(null, defaults)).toBe(false);
+    expect(
+      shouldPersistDayPersonalization(null, {
+        ...defaults,
+        daySymbol: 'none',
+      }),
+    ).toBe(true);
+    expect(shouldPersistDayPersonalization(log, defaults)).toBe(true);
+  });
+
+  it('merges native personalization without replacing theme or local items', () => {
+    const saved: DailyLog = {
+      ...log,
+      updatedAt: 'after',
+      coverVariant: 'minimal',
+      daySymbol: 'focus',
+      journalFontRole: 'journal',
+      themeId: null,
+      themeVersion: null,
+    };
+    expect(mergeSavedDayPersonalization(log, saved)).toEqual({
+      ...log,
+      updatedAt: 'after',
+      coverVariant: 'minimal',
+      daySymbol: 'focus',
+      journalFontRole: 'journal',
+    });
+    expect(mergeSavedDayPersonalization(null, null)).toBeNull();
   });
 });
 

@@ -4,6 +4,10 @@ import type {
   DayThemeTokens,
   ResolvedDayTheme,
 } from '../../domain/day-theme/models';
+import {
+  defaultDayPersonalization,
+  type DayPersonalization,
+} from '../../domain/day-theme/personalization';
 
 type DayThemeStyle = CSSProperties & Record<`--day-${string}`, string | number>;
 
@@ -35,9 +39,11 @@ function applyVariant(
 export function DayThemeScope({
   resolvedTheme,
   children,
+  personalization = defaultDayPersonalization,
 }: {
   resolvedTheme: ResolvedDayTheme;
   children: ReactNode;
+  personalization?: DayPersonalization;
 }) {
   const { definition } = resolvedTheme;
   const light = definition.variants?.light ?? {
@@ -51,6 +57,11 @@ export function DayThemeScope({
   const style: DayThemeStyle = {
     '--day-calendar-indicator': definition.calendar.indicatorColor,
     '--day-heading-weight': definition.typography?.headingWeight ?? 700,
+    '--day-journal-font':
+      (personalization.journalFontRole ??
+        definition.typography?.journalFontRole) === 'journal'
+        ? 'Georgia, Cambria, "Times New Roman", serif'
+        : 'Inter, ui-sans-serif, system-ui, sans-serif',
   };
   applyVariant(style, 'light', light.tokens, light.cover);
   applyVariant(style, 'dark', dark.tokens, dark.cover);
@@ -60,6 +71,11 @@ export function DayThemeScope({
       data-day-theme-id={definition.id}
       data-day-theme-resolution={resolvedTheme.source}
       data-day-theme-mode={definition.mode}
+      data-journal-font-role={
+        personalization.journalFontRole ??
+        definition.typography?.journalFontRole ??
+        'ui'
+      }
       style={style}
     >
       {children}

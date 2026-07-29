@@ -4,6 +4,11 @@ import {
   type DayThemeAssetLoader,
 } from '../../domain/day-theme/assets';
 import type { ResolvedDayTheme } from '../../domain/day-theme/models';
+import type {
+  CoverVariant,
+  DaySymbol,
+} from '../../domain/day-theme/personalization';
+import { DaySymbolIcon } from './DaySymbolIcon';
 
 export function DayCover({
   resolvedTheme,
@@ -11,6 +16,8 @@ export function DayCover({
   heading,
   subtitle,
   actions,
+  coverVariant = null,
+  daySymbol = null,
   assetLoader = loadDayThemeAsset,
 }: {
   resolvedTheme: ResolvedDayTheme;
@@ -18,12 +25,16 @@ export function DayCover({
   heading: ReactNode;
   subtitle: ReactNode;
   actions: ReactNode;
+  coverVariant?: CoverVariant | null;
+  daySymbol?: DaySymbol | null;
   assetLoader?: DayThemeAssetLoader;
 }) {
   const assetId =
-    resolvedTheme.definition.cover.assetId ??
-    resolvedTheme.definition.cover.motifAssetId ??
-    null;
+    coverVariant === 'minimal'
+      ? null
+      : (resolvedTheme.definition.cover.assetId ??
+        resolvedTheme.definition.cover.motifAssetId ??
+        null);
   const [loadedAsset, setLoadedAsset] = useState<{
     assetId: string;
     url: string;
@@ -46,17 +57,37 @@ export function DayCover({
   return (
     <header
       className="day-cover"
-      data-day-cover-asset-state={assetUrl ? 'loaded' : 'fallback'}
+      data-day-cover-variant={coverVariant ?? 'theme-default'}
+      data-day-cover-asset-state={
+        coverVariant === 'minimal'
+          ? 'suppressed'
+          : assetUrl
+            ? 'loaded'
+            : 'fallback'
+      }
     >
       <span className="day-cover-overlay" aria-hidden="true" />
-      <span
-        className="day-cover-motif"
-        aria-hidden="true"
-        style={assetUrl ? { backgroundImage: `url("${assetUrl}")` } : undefined}
-      />
+      {coverVariant !== 'minimal' && (
+        <span
+          className="day-cover-motif"
+          aria-hidden="true"
+          style={
+            assetUrl ? { backgroundImage: `url("${assetUrl}")` } : undefined
+          }
+        />
+      )}
       <div className="day-cover-content">
         <div className="day-cover-copy">
-          <p className="eyebrow">{eyebrow}</p>
+          <div className="day-cover-identity">
+            <span className="day-cover-symbol" aria-hidden="true">
+              <DaySymbolIcon
+                symbol={daySymbol}
+                themeSymbol={resolvedTheme.definition.calendar.symbol}
+                size={20}
+              />
+            </span>
+            <p className="eyebrow">{eyebrow}</p>
+          </div>
           <h1>{heading}</h1>
           <p className="subtitle">{subtitle}</p>
         </div>

@@ -35,6 +35,42 @@ export default {
       close: 'Đóng bộ chọn chủ đề của ngày',
     },
   },
+  personalization: {
+    trigger: 'Cá nhân hóa',
+    title: 'Cá nhân hóa ngày này',
+    description:
+      'Chọn kiểu bìa, biểu tượng và kiểu chữ nhật ký nhẹ nhàng cho ngày này.',
+    close: 'Đóng phần cá nhân hóa ngày',
+    current: 'Đang hiển thị lựa chọn đã lưu',
+    preview: 'Đang xem trước lựa chọn chưa lưu',
+    useDefaults: 'Dùng mặc định của chủ đề',
+    apply: 'Áp dụng',
+    saving: 'Đang lưu…',
+    saved: 'Đã lưu cá nhân hóa ngày',
+    saveFailed:
+      'Không thể lưu các lựa chọn này. Cá nhân hóa trước đó đã được khôi phục.',
+    cover: {
+      heading: 'Kiểu bìa',
+      default: 'Mặc định của chủ đề',
+      minimal: 'Tối giản',
+    },
+    symbol: {
+      heading: 'Biểu tượng ngày',
+      default: 'Mặc định của chủ đề',
+      none: 'Không dùng',
+      sparkle: 'Lấp lánh',
+      focus: 'Tập trung',
+      growth: 'Phát triển',
+      calm: 'Tĩnh tâm',
+      celebrate: 'Ăn mừng',
+    },
+    font: {
+      heading: 'Kiểu chữ nhật ký',
+      default: 'Mặc định của chủ đề',
+      ui: 'UI gọn gàng',
+      journal: 'Serif cổ điển',
+    },
+  },
   customizer: { open: 'Giao diện ứng dụng' },
   mode: {
     heading: 'Chế độ hiển thị',
