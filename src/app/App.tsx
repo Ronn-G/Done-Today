@@ -55,6 +55,14 @@ export function mergeSavedDayTheme(current:DailyLog|null,saved:DailyLog):DailyLo
 export function shouldAcceptDayThemeCompletion(activeDate:string|null,requestDate:string){
   return activeDate===requestDate;
 }
+export function useActiveDayThemeDate(date:string){
+  const activeDate=useRef<string|null>(null);
+  useEffect(()=>{
+    activeDate.current=date;
+    return()=>{activeDate.current=null};
+  },[date]);
+  return activeDate;
+}
 function parseRoute():Route{
   const hash=location.hash.slice(1);
   if(hash==='/history')return{page:'history'};
@@ -137,8 +145,7 @@ function DayEditor({date,onOpenTheme}:{date:string;onOpenTheme:()=>void}){
   const[dayThemePickerOpen,setDayThemePickerOpen]=useState(false);
   const[previewDayTheme,setPreviewDayTheme]=useState<DayThemeMetadata|null>(null);
   const[dayThemeFeedback,setDayThemeFeedback]=useState<string|null>(null);
-  const activeDate=useRef<string|null>(date);
-  useEffect(()=>()=>{activeDate.current=null},[]);
+  const activeDate=useActiveDayThemeDate(date);
   const refreshStreak=useCallback(async()=>setCurrentStreak(await service.getCurrentStreak(today())),[]);
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
