@@ -12,8 +12,14 @@ import type {
   ImportPreview,
   ImportResult,
 } from '../../domain/backup/preview';
-import { invokeWithAppError, type InvokeCommand } from '../tauri/invoke';
+import { invokeAndParse, type InvokeCommand } from '../tauri/invoke';
 
+const timestamp = z.string().datetime({ offset: true });
+const scalarParam = z.union([z.string(), z.number(), z.boolean()]);
+const appWarningPayloadSchema = z.object({
+  code: z.string().min(1),
+  params: z.record(z.string(), scalarParam).optional(),
+});
 const counts = z.object({
   dailyLogs: z.number().int().nonnegative(),
   workItems: z.number().int().nonnegative(),
@@ -22,26 +28,26 @@ const counts = z.object({
 });
 const previewSchema = z
   .object({
-    fileName: z.string(),
+    fileName: z.string().min(1),
     format: z.literal('done-today-backup'),
     version: z.literal(1),
-    exportedAt: z.string(),
-    appVersion: z.string(),
-    checksum: z.string(),
+    exportedAt: timestamp,
+    appVersion: z.string().trim().min(1).max(40),
+    checksum: z.string().regex(/^sha256:[0-9a-f]{64}$/),
     checksumValid: z.boolean(),
     counts,
     existingIds: z.number().int().nonnegative(),
     newRecords: z.number().int().nonnegative(),
     conflicts: z.number().int().nonnegative(),
     unchanged: z.number().int().nonnegative(),
-    previouslyImportedAt: z.string().nullable(),
-    warnings: z.array(z.unknown()),
+    previouslyImportedAt: timestamp.nullable(),
+    warnings: z.array(appWarningPayloadSchema),
   })
   .transform((value) => ({
     ...value,
     warnings: value.warnings.map(normalizeAppWarning),
   }));
-const exportSchema = z.object({ fileName: z.string(), counts });
+const exportSchema = z.object({ fileName: z.string().min(1), counts });
 const importSchema = z.object({
   mode: z.enum(['merge', 'replace']),
   counts,
@@ -80,13 +86,19 @@ export class TauriBackupRepository implements BackupRepository {
     return typeof selected === 'string' ? selected : null;
   }
   async export(path: string): Promise<ExportResult> {
-    return exportSchema.parse(
-      await invokeWithAppError(this.invokeCommand, 'export_backup', { path }),
+    return invokeAndParse(
+      this.invokeCommand,
+      'export_backup',
+      { path },
+      exportSchema,
     );
   }
   async preview(path: string): Promise<ImportPreview> {
-    return previewSchema.parse(
-      await invokeWithAppError(this.invokeCommand, 'preview_backup', { path }),
+    return invokeAndParse(
+      this.invokeCommand,
+      'preview_backup',
+      { path },
+      previewSchema,
     );
   }
   async import(
@@ -95,13 +107,16 @@ export class TauriBackupRepository implements BackupRepository {
     applyTheme: boolean,
     confirmReimport: boolean,
   ): Promise<ImportResult> {
-    return importSchema.parse(
-      await invokeWithAppError(this.invokeCommand, 'import_backup', {
+    return invokeAndParse(
+      this.invokeCommand,
+      'import_backup',
+      {
         path,
         mode,
         applyTheme,
         confirmReimport,
-      }),
+      },
+      importSchema,
     );
   }
 }

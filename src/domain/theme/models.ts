@@ -96,16 +96,19 @@ function upgradeColors(
     statsPanelProgressFill: colors.accent,
   };
 }
+export const themePreferencesResponseSchema = z
+  .union([themePreferencesSchema, legacyThemePreferencesSchema])
+  .transform((value): ThemePreferences => {
+    if (value.schemaVersion === 2) return value;
+    return {
+      ...value,
+      lightColors: upgradeColors(value.lightColors),
+      darkColors: upgradeColors(value.darkColors),
+      schemaVersion: 2,
+    };
+  });
 export function parseThemePreferences(value: unknown): ThemePreferences {
-  const current = themePreferencesSchema.safeParse(value);
-  if (current.success) return current.data;
-  const legacy = legacyThemePreferencesSchema.parse(value);
-  return {
-    ...legacy,
-    lightColors: upgradeColors(legacy.lightColors),
-    darkColors: upgradeColors(legacy.darkColors),
-    schemaVersion: 2,
-  };
+  return themePreferencesResponseSchema.parse(value);
 }
 
 export const radiusValues: Readonly<Record<BorderRadius, string>> = {

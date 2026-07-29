@@ -2,14 +2,16 @@ import { invoke } from '@tauri-apps/api/core';
 import { z } from 'zod';
 import type { AppLocale } from '../../domain/localization/locale';
 import type { LocaleRepository } from '../../domain/localization/repository';
-import { invokeWithAppError, type InvokeCommand } from '../tauri/invoke';
+import {
+  invokeAndParse,
+  tauriVoidSchema,
+  type InvokeCommand,
+} from '../tauri/invoke';
 
-const localeInitializationSchema = z
-  .object({
-    locale: z.enum(['vi', 'en']),
-    source: z.enum(['persisted', 'fresh', 'compatibility']),
-  })
-  .strict();
+const localeInitializationSchema = z.object({
+  locale: z.enum(['vi', 'en']),
+  source: z.enum(['persisted', 'fresh', 'compatibility']),
+});
 type PreferredLocaleReader = () => unknown;
 const readPreferredSystemLocale = () => globalThis.navigator?.language ?? null;
 
@@ -26,7 +28,12 @@ export class TauriLocaleRepository implements LocaleRepository {
   }
   private async ensureDatabase() {
     if (!this.initialized) {
-      await invokeWithAppError(this.invokeCommand, 'initialize_database');
+      await invokeAndParse(
+        this.invokeCommand,
+        'initialize_database',
+        undefined,
+        tauriVoidSchema,
+      );
       this.initialized = true;
     }
   }
@@ -37,22 +44,24 @@ export class TauriLocaleRepository implements LocaleRepository {
     } catch {
       osLocale = null;
     }
-    const result = localeInitializationSchema.parse(
-      await invokeWithAppError(
-        this.invokeCommand,
-        'initialize_locale_preference',
-        {
-          osLocale: typeof osLocale === 'string' ? osLocale : null,
-        },
-      ),
+    const result = await invokeAndParse(
+      this.invokeCommand,
+      'initialize_locale_preference',
+      {
+        osLocale: typeof osLocale === 'string' ? osLocale : null,
+      },
+      localeInitializationSchema,
     );
     this.initialized = true;
     return result;
   }
   async save(locale: AppLocale) {
     await this.ensureDatabase();
-    await invokeWithAppError(this.invokeCommand, 'save_locale_preference', {
-      locale,
-    });
+    await invokeAndParse(
+      this.invokeCommand,
+      'save_locale_preference',
+      { locale },
+      tauriVoidSchema,
+    );
   }
 }

@@ -1,24 +1,39 @@
 import {
-  parseThemePreferences,
+  themePreferencesResponseSchema,
   type ThemePreferences,
 } from '../../domain/theme/models';
 import type { ThemeRepository } from '../../domain/theme/repository';
-import { invokeTauriCommand } from '../tauri/invoke';
+import { invokeTauriCommand, tauriVoidSchema } from '../tauri/invoke';
+
+const nullableThemePreferencesSchema =
+  themePreferencesResponseSchema.nullable();
+
 export class TauriThemeRepository implements ThemeRepository {
   private initialized = false;
   async initialize() {
     if (!this.initialized) {
-      await invokeTauriCommand('initialize_database');
+      await invokeTauriCommand(
+        'initialize_database',
+        undefined,
+        tauriVoidSchema,
+      );
       this.initialized = true;
     }
   }
   async load() {
     await this.initialize();
-    const value = await invokeTauriCommand<unknown>('get_theme_preferences');
-    return value === null ? null : parseThemePreferences(value);
+    return invokeTauriCommand(
+      'get_theme_preferences',
+      undefined,
+      nullableThemePreferencesSchema,
+    );
   }
   async save(preferences: ThemePreferences) {
     await this.initialize();
-    await invokeTauriCommand('save_theme_preferences', { preferences });
+    await invokeTauriCommand(
+      'save_theme_preferences',
+      { preferences },
+      tauriVoidSchema,
+    );
   }
 }

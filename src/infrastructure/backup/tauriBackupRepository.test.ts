@@ -78,3 +78,86 @@ describe('TauriBackupRepository dialog boundary', () => {
     ).resolves.toBeNull();
   });
 });
+
+describe('TauriBackupRepository response contracts', () => {
+  const counts = {
+    dailyLogs: 1,
+    workItems: 2,
+    workCategories: 3,
+    theme: true,
+  };
+
+  it('parses Backup v1 export, preview, and import responses', async () => {
+    const invokeCommand = vi.fn(async (command: string) => {
+      if (command === 'export_backup')
+        return { fileName: 'safe.json', counts, futureField: true };
+      if (command === 'preview_backup')
+        return {
+          fileName: 'safe.json',
+          format: 'done-today-backup',
+          version: 1,
+          exportedAt: '2026-07-29T00:00:00Z',
+          appVersion: '0.1.0',
+          checksum: `sha256:${'0'.repeat(64)}`,
+          checksumValid: true,
+          counts,
+          existingIds: 1,
+          newRecords: 2,
+          conflicts: 0,
+          unchanged: 3,
+          previouslyImportedAt: null,
+          warnings: [
+            {
+              code: 'backup.warning.app_version',
+              params: {
+                backupVersion: '0.1.0',
+                currentVersion: '0.2.0',
+              },
+            },
+          ],
+        };
+      return { mode: 'merge', counts, remapped: 1 };
+    });
+    const repository = new TauriBackupRepository(
+      vi.fn() as never,
+      vi.fn() as never,
+      invokeCommand,
+    );
+
+    await expect(repository.export('safe.json')).resolves.toEqual({
+      fileName: 'safe.json',
+      counts,
+    });
+    await expect(repository.preview('safe.json')).resolves.toMatchObject({
+      format: 'done-today-backup',
+      version: 1,
+      warnings: [
+        {
+          kind: 'known',
+          code: 'backup.warning.app_version',
+          params: {
+            backupVersion: '0.1.0',
+            currentVersion: '0.2.0',
+          },
+        },
+      ],
+    });
+    await expect(
+      repository.import('safe.json', 'merge', false, false),
+    ).resolves.toEqual({ mode: 'merge', counts, remapped: 1 });
+  });
+
+  it('normalizes malformed nested Backup response data', async () => {
+    const repository = new TauriBackupRepository(
+      vi.fn() as never,
+      vi.fn() as never,
+      vi.fn(async () => ({
+        fileName: 'safe.json',
+        counts: { ...counts, dailyLogs: '1' },
+      })),
+    );
+    await expect(repository.export('safe.json')).rejects.toEqual({
+      kind: 'unknown',
+    });
+  });
+});

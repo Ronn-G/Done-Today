@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
 import { TauriLocaleRepository } from './tauriLocaleRepository';
 
 describe('TauriLocaleRepository', () => {
@@ -59,6 +58,20 @@ describe('TauriLocaleRepository', () => {
       async () => ({ locale: 'fr', source: 'fresh' }),
       () => 'fr-FR',
     );
-    await expect(repository.initialize()).rejects.toBeInstanceOf(z.ZodError);
+    await expect(repository.initialize()).rejects.toEqual({ kind: 'unknown' });
+  });
+  it('strips additional response fields for forward compatibility', async () => {
+    const repository = new TauriLocaleRepository(
+      async () => ({
+        locale: 'en',
+        source: 'fresh',
+        futureMetadata: 'ignored',
+      }),
+      () => 'en-US',
+    );
+    await expect(repository.initialize()).resolves.toEqual({
+      locale: 'en',
+      source: 'fresh',
+    });
   });
 });

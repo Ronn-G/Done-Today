@@ -23,7 +23,7 @@ describe('TauriJournalRepository journal activity dates', () => {
     vi.mocked(invoke).mockResolvedValueOnce(['2026-07-24', 42]);
     await expect(
       new TauriJournalRepository().listJournalActivityDates(),
-    ).rejects.toThrow();
+    ).rejects.toEqual({ kind: 'unknown' });
   });
 });
 
@@ -58,7 +58,7 @@ describe('TauriJournalRepository Day Theme metadata', () => {
         themeId: 'future-theme',
         themeVersion: 7,
       }),
-    ).rejects.toThrow();
+    ).rejects.toEqual({ kind: 'unknown' });
   });
 
   it('sets a day theme by date and parses the complete daily log', async () => {
