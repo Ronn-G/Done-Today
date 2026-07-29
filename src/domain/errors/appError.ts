@@ -52,6 +52,17 @@ export type AppErrorCode = (typeof appErrorCodes)[number];
 export type AppWarningCode = (typeof appWarningCodes)[number];
 export type AppErrorParam = string | number | boolean;
 export type AppErrorParams = Readonly<Record<string, AppErrorParam>>;
+export type AppErrorPayload<C extends AppErrorCode = AppErrorCode> = {
+  code: C;
+  params: AppErrorParams;
+};
+
+export function createAppError<C extends AppErrorCode>(
+  code: C,
+  params: AppErrorParams = {},
+): AppErrorPayload<C> {
+  return { code, params };
+}
 
 export type NormalizedAppError =
   | { kind: 'known'; code: AppErrorCode; params: AppErrorParams }

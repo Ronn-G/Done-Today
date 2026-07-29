@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { JournalRepository } from '../../domain/journal/repository';
+import { normalizeAppError } from '../errors/errorNormalizer';
+import { i18next, initializeI18n } from '../../i18n';
+import { localizeAppError } from '../../i18n/errorPresentation';
 import { JournalService } from './journalService';
 
 const repositoryWithActivityDates = (dates: string[]) => {
@@ -144,4 +147,69 @@ describe('JournalService Day Theme metadata', () => {
       expect(updateDayThemeMetadata).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('JournalService history validation', () => {
+  const serviceWithHistory = () => {
+    const listDailyLogSummaries = vi.fn(
+      async (page: number, pageSize: number) => ({
+        items: [],
+        page,
+        pageSize,
+        hasMore: false,
+      }),
+    );
+    const { repository } = repositoryWithActivityDates([]);
+    return {
+      service: new JournalService({ ...repository, listDailyLogSummaries }),
+      listDailyLogSummaries,
+    };
+  };
+
+  it.each([0, -1, 1.5, Number.NaN])(
+    'rejects invalid page %s with a structured application error',
+    async (page) => {
+      const { service, listDailyLogSummaries } = serviceWithHistory();
+      await expect(service.listHistory(page)).rejects.toEqual({
+        code: 'history.pagination_invalid',
+        params: { field: 'page', min: 1 },
+      });
+      expect(listDailyLogSummaries).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([0, -1, 1.5, 101])(
+    'rejects invalid page size %s with a structured application error',
+    async (pageSize) => {
+      const { service, listDailyLogSummaries } = serviceWithHistory();
+      await expect(service.listHistory(1, pageSize)).rejects.toEqual({
+        code: 'history.pagination_invalid',
+        params: { field: 'pageSize', min: 1, max: 100 },
+      });
+      expect(listDailyLogSummaries).not.toHaveBeenCalled();
+    },
+  );
+
+  it('normalizes and localizes the same validation error in Vietnamese and English', async () => {
+    const { service } = serviceWithHistory();
+    const failure = await service
+      .listHistory(0)
+      .catch((reason: unknown) => reason);
+    expect(normalizeAppError(failure)).toEqual({
+      kind: 'known',
+      code: 'history.pagination_invalid',
+      params: { field: 'page', min: 1 },
+    });
+    const translate = (locale: 'vi' | 'en') =>
+      localizeAppError(failure, (key, options) =>
+        i18next.getFixedT(locale, 'errors')(key, options),
+      );
+    await initializeI18n('vi');
+    const vietnamese = translate('vi');
+    const english = translate('en');
+    expect(vietnamese).toBe('Trang lịch sử được yêu cầu không hợp lệ.');
+    expect(english).toBe('The requested history page is invalid.');
+    expect(english).not.toContain('Trang');
+    expect(english).not.toContain('history.pagination_invalid');
+  });
 });

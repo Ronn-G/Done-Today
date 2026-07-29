@@ -11,6 +11,7 @@ import {
 } from '../../domain/journal/categories';
 import { calculateCurrentStreak } from '../../domain/journal/statistics';
 import type { JournalRepository } from '../../domain/journal/repository';
+import { createAppError } from '../../domain/errors/appError';
 export class JournalService {
   private readonly repository: JournalRepository;
   constructor(repository: JournalRepository) {
@@ -95,9 +96,16 @@ export class JournalService {
   }
   async listHistory(page: number, pageSize = 20) {
     if (!Number.isInteger(page) || page < 1)
-      throw new Error('Trang không hợp lệ');
+      throw createAppError('history.pagination_invalid', {
+        field: 'page',
+        min: 1,
+      });
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
-      throw new Error('Kích thước trang không hợp lệ');
+      throw createAppError('history.pagination_invalid', {
+        field: 'pageSize',
+        min: 1,
+        max: 100,
+      });
     return this.repository.listDailyLogSummaries(page, pageSize);
   }
 }
