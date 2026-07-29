@@ -112,9 +112,11 @@ Development completion không mặc định yêu cầu tạo installer hoặc po
   `cargo test --all-targets --all-features`.
 - Prettier quản lý source/config/workflow được liệt kê trong `package.json`; lockfile, migration,
   backup fixture, generated output và motif asset được loại trừ để tránh thay đổi contract hoặc
-  dữ liệu kiểm thử ngoài ý muốn.
-- `.github/workflows/ci.yml` chạy cùng các gate trên Windows. Workflow đã được kiểm tra tương đương
-  ở local; trạng thái chạy trên GitHub chỉ có sau khi commit được push.
+  dữ liệu kiểm thử ngoài ý muốn. Text files dùng canonical LF, được enforce nhất quán qua
+  `.gitattributes` và Prettier `endOfLine`.
+- `.github/workflows/ci.yml` chạy cùng các gate trên Windows. Initial remote run thất bại ở frontend
+  formatting do checkout CRLF khi repository chưa có line-ending policy; fix đã được kiểm tra ở
+  local và clean checkout, còn next remote run pending push.
 
 ## 8. Release packaging
 

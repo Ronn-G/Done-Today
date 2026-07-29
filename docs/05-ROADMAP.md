@@ -34,7 +34,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
 | I18N-5 | Completed | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã hoàn tất automated gate và native Windows acceptance ngày 2026-07-28 |
-| Engineering Hardening Checkpoint 1 | Completed | TypeScript strict, repository formatting, runtime Tauri response validation và localized JournalService validation đã hoàn tất. Workflow committed; remote GitHub Actions execution pending push |
+| Engineering Hardening Checkpoint 1 | Completed | TypeScript strict, repository formatting, runtime Tauri response validation và localized JournalService validation đã hoàn tất. GitHub Actions: Initial remote run failed at frontend formatting due to line-ending mismatch. Fix committed; verification of the next remote run pending push |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -235,7 +235,8 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - JournalService dùng structured `history.pagination_invalid` và cùng resource `vi`/`en`; không
   thêm error code hay translation key.
 - CI Windows chạy locked install và toàn bộ frontend/Rust gates, không build installer, portable
-  hay release artifact. Workflow committed; remote GitHub Actions execution pending push.
+  hay release artifact. GitHub Actions: Initial remote run failed at frontend formatting due to
+  line-ending mismatch. Fix committed; verification of the next remote run pending push.
 - Implementation commits: `de23d04` (formatting), `507788a` (strict TypeScript), `6963d66`
   (Tauri response contracts), `a1a13b5` (localized journal validation) và `9243c5b` (CI).
 - Checkpoint này không đổi database schema/migration, Backup v1 checksum/Merge/Replace/receipt,

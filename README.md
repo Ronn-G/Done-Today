@@ -75,6 +75,7 @@ Pop-Location
 
 GitHub Actions chạy cùng các gate này trên Windows sau khi workflow được push. Kiểm tra
 `git diff --check` trước khi commit để phát hiện lỗi whitespace trong thay đổi hiện tại.
+Repository text files dùng canonical LF, được enforce qua `.gitattributes` và Prettier.
 
 ## Build
 

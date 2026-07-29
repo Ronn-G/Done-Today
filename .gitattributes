@@ -1,0 +1,11 @@
+# Keep text files consistent across Windows and CI.
+* text=auto eol=lf
+
+# Binary assets must never receive line-ending conversion.
+*.png binary
+*.ico binary
+*.icns binary
+
+# Native Windows command scripts require CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
