@@ -172,8 +172,8 @@ sau đó toàn bộ gate trên pass. Không có warning còn lại. Không build
 - worklog này.
 
 Trạng thái docs giữ CP5 implementation complete/native pending và CP6+ not started. Documentation
-commit dùng message `docs: record day theme checkpoint 5 implementation`; full hash được báo trong
-final response vì commit không thể chứa trước hash của chính nó.
+commit:
+`ba1c67516f34f33771a5965f6b3288fbb657dc95 docs: record day theme checkpoint 5 implementation`.
 
 ## M. Git
 
@@ -184,6 +184,7 @@ Commits trước documentation:
 3. `39d966ac5ff45824ab4405d38602ce15dbf7db5c feat: add light day personalization`
 4. `287799840b2f389bfe7fb865c6159d2df91b23ec feat: apply day personalization across journal views`
 5. `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c test: verify light personalization compatibility`
+6. `ba1c67516f34f33771a5965f6b3288fbb657dc95 docs: record day theme checkpoint 5 implementation`
 
 Implementation range trước docs: 32 files, 4.314 insertions, 46 deletions; branch ahead
 `origin/master` 5, behind 0. Final documentation commit/HEAD và final diff stat được ghi trong final
@@ -198,25 +199,25 @@ response. Không push, tag, PR hoặc release artifact.
 
 ## O. Final status
 
-Day Theme Checkpoint 1 — Foundation:  
+Day Theme Checkpoint 1 — Foundation:
 **Completed**
 
-Day Theme Checkpoint 2 — First Themes:  
+Day Theme Checkpoint 2 — First Themes:
 **Completed**
 
-Day Theme Checkpoint 3 — Theme Picker:  
+Day Theme Checkpoint 3 — Theme Picker:
 **Completed — native Windows acceptance passed**
 
-Day Theme Checkpoint 4 — Calendar & History:  
+Day Theme Checkpoint 4 — Calendar & History:
 **Completed — native Windows acceptance passed**
 
-Day Theme Checkpoint 5 — Light Personalization:  
+Day Theme Checkpoint 5 — Light Personalization:
 **Implementation complete — native Windows acceptance pending**
 
-Day Theme & Personalization:  
+Day Theme & Personalization:
 **In progress — checkpoint complete**
 
-Checkpoint 6+:  
+Checkpoint 6+:
 **Not started**
 
 ## P. Native acceptance
