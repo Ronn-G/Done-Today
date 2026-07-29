@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.6
+**Phiên bản:** 1.7
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
+**Last verified against implementation commit:** `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e` (2026-07-29)
 
 ---
 
@@ -1362,9 +1362,9 @@ Checkpoint 4 — Calendar & History:
 
 ---
 
-## 36. Implementation record — Checkpoint 5 Light Personalization
+## 36. Implementation and acceptance record — Checkpoint 5 Light Personalization
 
-Trạng thái: **Implementation complete — native Windows acceptance pending**.
+Trạng thái: **Completed — native Windows acceptance passed** (2026-07-29).
 
 Phạm vi implementation được khóa đúng ba nhóm:
 
@@ -1404,8 +1404,33 @@ Rendering:
 Accessibility/source evidence gồm named modal dialog, ba radiogroup/radio states, keyboard arrow
 selection, Tab trap, focus restore, Escape/outside close, visible text kèm icon, accent + name không
 chỉ dựa màu, forced-colors và reduced-motion rules. Automated gates đạt 50 frontend files/443 tests,
-72 Rust tests và 48 i18n tests. Chưa tuyên bố native visual, screen reader hoặc Accessibility Tree
-pass cho Checkpoint 5.
+72 Rust tests và 48 i18n tests.
+
+Người dùng xác nhận native Windows acceptance ngày 2026-07-29:
+
+- entry/action và dialog hoạt động bằng mouse/keyboard ở `vi`/`en`, focus trap/restore,
+  Escape/backdrop rollback và layout dùng được tại 900×600, kích thước mặc định và maximize;
+- Cover Theme default và Minimal giữ layout/chiều cao; Minimal không hiển thị motif/full-cover
+  asset; Default/Sakura/Coffee/Rainy vẫn đọc rõ và App Theme light/dark/custom giữ độc lập;
+- đủ bảy symbol states (Theme default, None, Sparkle, Focus, Growth, Calm, Celebrate) hiển thị đúng
+  ở Day Cover, Calendar và History; `none` ẩn symbol tùy biến nhưng giữ theme/accent identity;
+- đủ ba font states (Theme default, Clean UI, Classic Serif) hiển thị tiếng Việt có dấu và tiếng
+  Anh đúng trong journal/editor/Day Cover; controls, table headers, status, dialog chrome và app
+  shell giữ UI font;
+- preview, Cancel, Escape, backdrop, Reset, Apply, reload, đổi ngày, duplicate Apply,
+  Saving/success và editor-draft preservation hoạt động trong luồng sử dụng bình thường;
+- nhiều ngày lưu personalization độc lập, khôi phục đúng từ Today/Calendar/History; reset giữ Day
+  Theme/content; non-default trên ngày trống không tạo work item; migration 006 hoạt động trong
+  profile native đã thử;
+- Theme Picker, Calendar/History, old-day restoration, editor/autosave, Categories,
+  status/statistics/reorder/streak, Backup smoke, `vi`/`en` và App Theme không có regression đáng
+  chú ý trong phạm vi người dùng kiểm tra.
+
+Unknown/corrupt metadata fallback, stale guards, forced-colors, reduced-motion và failure/Retry
+paths không được thử native trực tiếp là **Covered by automated/source evidence**. Không tuyên bố
+đã kiểm tra bằng screen reader thật, Accessibility Tree, deliberate corrupt-database testing,
+native failure injection đầy đủ hoặc mọi tổ hợp theme × cover × symbol × font. Backup vẫn version
+1; query/asset-loading invariants và toàn bộ non-goals của checkpoint giữ nguyên.
 
 Implementation commits: `6a1e6be07074280d6c20028e00339f45ba5b2f88`,
 `39d966ac5ff45824ab4405d38602ce15dbf7db5c`,
@@ -1414,6 +1439,6 @@ Implementation commits: `6a1e6be07074280d6c20028e00339f45ba5b2f88`,
 
 Checkpoint 1–2: **Completed**. Checkpoint 3–4:
 **Completed — native Windows acceptance passed**. Checkpoint 5:
-**Implementation complete — native Windows acceptance pending**. Checkpoint 6+:
+**Completed — native Windows acceptance passed**. Checkpoint 6+:
 **Not started**. Toàn bộ Day Theme & Personalization:
 **In progress — checkpoint complete**.

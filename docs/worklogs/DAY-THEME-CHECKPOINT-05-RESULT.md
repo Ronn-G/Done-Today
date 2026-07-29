@@ -1,5 +1,7 @@
 # Day Theme Checkpoint 5 — Light Personalization Result
 
+Trạng thái: **Completed — native Windows acceptance passed**
+
 ## A. Workspace and preflight
 
 - Codex path/repository: `C:\dev\done-today`; repository root Git:
@@ -157,6 +159,12 @@ Motifs vẫn dynamic; Minimal path chặn loader bằng source/automated evidenc
 Lần chạy full gate đầu tiên phát hiện dynamic translation call và React refs lint; cả hai được sửa,
 sau đó toàn bộ gate trên pass. Không có warning còn lại. Không build installer/portable/release.
 
+Closeout documentation-only ngày 2026-07-29 chạy lại `format:check`, `i18n:lint` (2 files/48
+tests), `typecheck`, `lint` và `git diff --check`; tất cả đều pass. Full frontend and Rust suites
+were not rerun because closeout changes documentation only. Implementation evidence remains 50
+frontend files / 443 tests, 72 Rust tests, production build pass, plus native Windows acceptance
+on 2026-07-29.
+
 ## L. Documentation/worklog
 
 Đã đồng bộ:
@@ -171,9 +179,11 @@ sau đó toàn bộ gate trên pass. Không có warning còn lại. Không build
 - `docs/audits/I18N-STRING-INVENTORY.md`;
 - worklog này.
 
-Trạng thái docs giữ CP5 implementation complete/native pending và CP6+ not started. Documentation
-commit:
+Tài liệu implementation ban đầu giữ CP5 implementation complete/native pending và CP6+ not
+started. Documentation commit:
 `ba1c67516f34f33771a5965f6b3288fbb657dc95 docs: record day theme checkpoint 5 implementation`.
+Closeout ngày 2026-07-29 cập nhật CP5 thành native Windows acceptance passed sau khi người dùng xác
+nhận đã test và mọi thứ ổn; implementation evidence cũ được giữ nguyên.
 
 ## M. Git
 
@@ -185,15 +195,20 @@ Commits trước documentation:
 4. `287799840b2f389bfe7fb865c6159d2df91b23ec feat: apply day personalization across journal views`
 5. `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c test: verify light personalization compatibility`
 6. `ba1c67516f34f33771a5965f6b3288fbb657dc95 docs: record day theme checkpoint 5 implementation`
+7. `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e docs: normalize checkpoint 5 worklog formatting`
+8. `c1344b9cc27f7e96b4ee1be99022d3f8d7051e20 docs: record day theme checkpoint 5 closeout task`
 
 Implementation range trước docs: 32 files, 4.314 insertions, 46 deletions; branch ahead
-`origin/master` 5, behind 0. Final documentation commit/HEAD và final diff stat được ghi trong final
-response. Không push, tag, PR hoặc release artifact.
+`origin/master` 5, behind 0 tại thời điểm implementation. Closeout documentation dùng message
+`docs: complete light day personalization`; hash đầy đủ, final HEAD và final diff stat được ghi
+trong final response để tránh self-reference. Không push, tag, PR hoặc release artifact.
 
 ## N. Deferred
 
-- Native Windows visual/keyboard/focus acceptance của CP5.
 - Screen reader và Accessibility Tree testing.
+- Deliberate native corrupt/unknown metadata testing.
+- Native failure injection đầy đủ cho mọi error/Retry path.
+- Mọi tổ hợp theme × cover × symbol × font.
 - Checkpoint 6+, display title, accent variant, freeform fields, stickers, font assets, theme packs,
   sync và release packaging.
 
@@ -212,7 +227,7 @@ Day Theme Checkpoint 4 — Calendar & History:
 **Completed — native Windows acceptance passed**
 
 Day Theme Checkpoint 5 — Light Personalization:
-**Implementation complete — native Windows acceptance pending**
+**Completed — native Windows acceptance passed**
 
 Day Theme & Personalization:
 **In progress — checkpoint complete**
@@ -220,44 +235,32 @@ Day Theme & Personalization:
 Checkpoint 6+:
 **Not started**
 
-## P. Native acceptance
+## P. Native Windows acceptance
 
-Chạy profile cô lập:
+Người dùng xác nhận “Đã test và mọi thứ ok.” ngày 2026-07-29. Native acceptance ghi nhận:
 
-```powershell
-Set-Location C:\dev\done-today
+1. Entry/action Personalize hiển thị đúng; dialog mở bằng mouse/keyboard ở `vi`/`en`, không raw key,
+   focus trap/restore và Escape/backdrop rollback hoạt động; 900×600/default/maximize không có
+   clipping hoặc overflow đáng kể trong sử dụng bình thường.
+2. Cover Theme default và Minimal đều đạt trên Default/Sakura/Coffee/Rainy; Minimal giữ
+   layout/chiều cao, không hiển thị motif/full-cover asset; App Theme light/dark/custom độc lập.
+3. Đủ bảy symbol states — Theme default, None, Sparkle, Focus, Growth, Calm, Celebrate — hiển thị
+   đúng trên Day Cover, Calendar và History. None ẩn symbol tùy biến nhưng giữ theme/accent identity;
+   mọi lựa chọn có visible label.
+4. Đủ ba font states — Theme default, Clean UI, Classic Serif — đọc đúng tiếng Việt có dấu và
+   tiếng Anh trong journal/editor/Day Cover; controls, table headers, status labels, dialog chrome
+   và app shell giữ UI font, không có layout jump nghiêm trọng.
+5. Preview, Cancel, Escape, backdrop, Reset, Apply, reload, đổi ngày, duplicate Apply và
+   Saving/success hoạt động; editor draft/content không mất. Reset rồi Cancel không persist.
+6. Personalization lưu độc lập theo ngày và khôi phục đúng từ Today/Calendar/History; reset không
+   xóa Day Theme/content; non-default trên ngày trống không tạo work item; all-default không tạo dữ
+   liệu ngoài mong đợi trong luồng UI; migration 006 hoạt động trong profile native đã thử.
+7. Theme Picker, Default/Sakura/Coffee/Rainy, Calendar, History, old-day restoration,
+   editor/autosave, Categories, status, statistics, reorder, streak, Backup smoke, `vi`/`en` và App
+   Theme không có regression đáng chú ý trong phạm vi người dùng kiểm tra.
+8. Native keyboard review và native focus/visual review trong phạm vi người dùng kiểm tra đã đạt.
 
-$env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'done-today-day-theme-cp5-target'
-$configPath = Join-Path $env:TEMP 'done-today-day-theme-cp5.json'
-
-[System.IO.File]::WriteAllText(
-  $configPath,
-  '{"identifier":"com.donetoday.desktop.daythemecp5"}',
-  [System.Text.UTF8Encoding]::new($false)
-)
-
-npm.cmd run tauri -- dev --config $configPath
-```
-
-Checklist: entry/dialog mouse+keyboard; vi/en; focus trap/restore; Escape/backdrop; 900×600/default/
-maximize; no clipping; Default/Minimal trên bốn Day Themes và light/dark/custom App Theme; cả bảy
-symbol states ở Cover/Calendar/History và accessible names; ba font states với tiếng Việt/Anh,
-editor readable và controls/headers/app shell không đổi; preview rồi Cancel/Escape/backdrop/reset;
-Apply/reload/date change/duplicate/Saving/success; ngày A Minimal+Focus+Serif, ngày B Default+
-None+Clean, ngày C defaults; mở từ Today/Calendar/History; reset không xóa theme/content; empty-day
-default không tạo log và non-default không tạo work item; Theme Picker/editor/autosave/categories/
-status/statistics/reorder/Backup smoke regression.
-
-Cleanup chỉ profile cô lập:
-
-```powershell
-$profilePath = Join-Path $env:APPDATA 'com.donetoday.desktop.daythemecp5'
-
-if (Test-Path -LiteralPath $profilePath) {
-  Remove-Item -LiteralPath $profilePath -Recurse -Force
-}
-
-Remove-Item -LiteralPath $configPath -Force -ErrorAction SilentlyContinue
-```
-
-Không xóa profile chính. Chưa có native pass cho đến khi người dùng phản hồi acceptance.
+Các khu vực không được thử native trực tiếp gồm unknown/corrupt metadata, đầy đủ failure/Retry
+injection, forced-colors, reduced-motion, stale guards và mọi tổ hợp
+theme × cover × symbol × font. Các khu vực này là **Covered by automated/source evidence** khi có
+bằng chứng tương ứng. Không tuyên bố đã kiểm tra bằng screen reader thật hoặc Accessibility Tree.

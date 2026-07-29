@@ -1,8 +1,8 @@
 # Internationalization and localization
 
 Status: architecture specification for Sprint I18N-0  
-Document version: 1.3
-Last verified against implementation commit: `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
+Document version: 1.4
+Last verified against implementation commit: `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e` (2026-07-29)
 Initial locales: Vietnamese (`vi`) and English (`en`)
 
 ## 1. Goals and scope
@@ -914,7 +914,13 @@ translation key, locale, database migration or Backup v1 field.
   label when present.
 - Automated/source accessibility evidence covers dialog/radiogroup semantics, selected state,
   focus trap/restore, Arrow/Tab/Escape interaction, rollback, visible labels, forced-colors and
-  reduced-motion. Native visual/keyboard review, screen reader and Accessibility Tree remain
-  pending/not claimed for Checkpoint 5.
-- I18N-1–I18N-5 remain Completed and are not reopened. Checkpoint 5 is **Implementation complete —
-  native Windows acceptance pending**; Checkpoint 6+ is **Not started**.
+  reduced-motion.
+- The user confirmed native Windows visual/keyboard acceptance on 2026-07-29 for the entry/dialog,
+  all cover/symbol/font choices, preview/rollback/reset/apply/reload, per-day restoration,
+  Calendar/History labels, `vi`/`en`, App Theme light/dark/custom, supported window sizes and
+  normal-flow regressions without raw translation keys.
+- Unknown/corrupt metadata, stale guards, forced-colors, reduced-motion and failure/Retry paths not
+  exercised natively remain covered by automated/source evidence. No screen-reader, Accessibility
+  Tree, comprehensive native failure injection or exhaustive combination result is claimed.
+- I18N-1–I18N-5 remain Completed and are not reopened. Checkpoint 5 is **Completed — native Windows
+  acceptance passed**; Checkpoint 6+ is **Not started**.

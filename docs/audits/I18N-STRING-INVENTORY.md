@@ -1,9 +1,9 @@
 # I18N string inventory
 
 Audit date: 2026-07-29
-Last verified against implementation commit: `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c`
-Scope: completed I18N-4 and I18N-5, completed Day Theme Checkpoints 1–4, plus Checkpoint 5
-implementation with native Windows acceptance pending.
+Last verified against implementation commit: `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e`
+Scope: completed I18N-4 and I18N-5, plus completed Day Theme Checkpoints 1–5; Checkpoint 5 native
+Windows acceptance passed on 2026-07-29.
 Engineering Hardening Checkpoint 1 reuses the existing `history.pagination_invalid` code and
 `history.backendErrors.paginationInvalid` resources for JournalService validation. Runtime Tauri
 response failures use the existing localized unknown fallback. The inventory remains 42 stable
@@ -275,6 +275,11 @@ never renders compatibility `message` or warning text from Rust.
   accessible names distinguish the localized personalized symbol from the theme identity.
 - i18n lint passes 48 tests. Automated/source evidence covers radiogroups, focus/keyboard rollback,
   not-color-only identity, forced-colors and reduced-motion.
-- Native Windows visual/keyboard acceptance, screen reader and Accessibility Tree are not claimed.
-  Checkpoint 5 is **Implementation complete — native Windows acceptance pending**; Checkpoint 6+
-  is **Not started**.
+- The user confirmed native Windows visual/keyboard acceptance on 2026-07-29 for the localized
+  entry/dialog, cover/symbol/font choices, preview/rollback/reset/apply/reload, per-day persistence,
+  Calendar/History, `vi`/`en`, App Theme light/dark/custom, supported window sizes and normal-flow
+  regressions without raw keys.
+- Unknown/corrupt metadata, stale guards, forced-colors, reduced-motion and failure/Retry paths not
+  exercised natively remain covered by automated/source evidence. No screen-reader, Accessibility
+  Tree, comprehensive native failure injection or exhaustive combination result is claimed.
+- Checkpoint 5 is **Completed — native Windows acceptance passed**; Checkpoint 6+ is **Not started**.

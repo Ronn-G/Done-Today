@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.8
-**Last verified against implementation commit:** `bcbd6b95da8bbd933cd13bc3c7c37ef0d5225f8c` (2026-07-29)
+**Document version:** 1.9
+**Last verified against implementation commit:** `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e` (2026-07-29)
 
 ## 1. Mục đích
 
@@ -33,25 +33,25 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.8 | `bcbd6b9` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.9 | `cb8d3e8` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
 | `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.5 | `bcbd6b9` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.4 | `bcbd6b9` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.13 | `bcbd6b9` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.14 | `cb8d3e8` |
 | `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.1 | `eca9f76d` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.3 | `bcbd6b9` |
 | `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.0 | `eca9f76d` |
-| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.6 | `bcbd6b9` |
-| `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.3 | `bcbd6b9` |
+| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.7 | `cb8d3e8` |
+| `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.4 | `cb8d3e8` |
 | `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md` | Quy trình triển khai, review, test và release | 1.1 | `eca9f76d` |
 
 ## 4. Tài liệu tham khảo
 
 | Tài liệu | Vai trò | Last verified against implementation commit |
 | --- | --- | --- |
-| `audits/I18N-STRING-INVENTORY.md` | Audit/reference inventory; không ghi đè I18N architecture spec | `bcbd6b9` |
+| `audits/I18N-STRING-INVENTORY.md` | Audit/reference inventory; không ghi đè I18N architecture spec | `cb8d3e8` |
 
 Nội dung lịch sử còn hữu ích của `04-UI-DESIGN.md` được giữ lại trong chính file đã bị thay thế,
 nhưng không có quyền quyết định normative.
@@ -102,15 +102,21 @@ response dùng safe fallback hiện hữu.
 
 ## 9. Day Theme Checkpoint 5
 
-Light Personalization đã hoàn tất implementation ở `bcbd6b9`: đúng ba optional per-day fields
+Light Personalization đã hoàn tất implementation và documentation audit ở `cb8d3e8`: đúng ba optional per-day fields
 `cover_variant`, `day_symbol`, `journal_font_role`; migration 006; atomic Tauri write; Backup v1
 optional-field compatibility; dialog lazy-load; Day Cover, Calendar và History integration; vi/en,
-keyboard/focus và automated compatibility gates. Native Windows acceptance vẫn pending, vì vậy
-Checkpoint 5 chưa được đánh dấu Completed.
+keyboard/focus và automated compatibility gates. Người dùng xác nhận native Windows acceptance
+đạt ngày 2026-07-29 cho entry/dialog, Cover Theme default/Minimal, đủ bảy symbol states, đủ ba font
+states, preview/rollback/reset/apply/reload, persistence theo ngày, Calendar/History, App Theme
+light/dark/custom, `vi`/`en`, các kích thước 900×600/default/maximize và normal-flow regressions.
+Backup smoke đạt trong phạm vi người dùng kiểm tra.
 
 Trạng thái chuẩn: Checkpoint 1–2 Completed; Checkpoint 3–4 Completed — native Windows acceptance
-passed; Checkpoint 5 Implementation complete — native Windows acceptance pending; Checkpoint 6+
-Not started. Toàn bộ Day Theme & Personalization là **In progress — checkpoint complete**.
+passed; Checkpoint 5 Completed — native Windows acceptance passed; Checkpoint 6+ Not started. Toàn
+bộ Day Theme & Personalization là **In progress — checkpoint complete**. Unknown/corrupt metadata,
+stale guards, forced-colors, reduced-motion và failure/Retry paths tiếp tục dựa trên
+automated/source evidence khi không được thử native trực tiếp; không tuyên bố screen reader thật,
+Accessibility Tree hoặc mọi tổ hợp theme × cover × symbol × font đã được kiểm tra.
 
 ## 10. Quy tắc bảo trì
 
