@@ -1,8 +1,8 @@
 # I18N string inventory
 
 Audit date: 2026-07-29
-Scope: completed I18N-4 and I18N-5, completed Day Theme Checkpoint 1 and Checkpoint 2, plus
-Checkpoint 3 implementation pending native Windows acceptance.
+Scope: completed I18N-4 and I18N-5, plus completed Day Theme Checkpoint 1, Checkpoint 2 and
+Checkpoint 3.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
@@ -77,7 +77,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 | `src/features/settings/ThemeSettings.tsx` | Settings tip and version | ui | Completed | `theme.settings.tip`, `settings.about.version` | P1 | Version number remains stable; only its label is translated. |
 | `src/features/settings/FloatingThemeCustomizer.tsx` | Customizer label/header; reset position; expand/collapse; close | accessibility / ui | Completed | `theme.floating.*`, `common.actions.expand`, `common.actions.collapse`, `common.actions.close` | P0 | Visible copy, tooltips and accessible names are localized; persisted panel coordinates/open/collapsed state remain locale-independent. |
 | `src/domain/theme/presets.ts:18-24` | Six preset names and descriptions | ui | Yes | `theme.preset.<presetId>.name`, `theme.preset.<presetId>.description` | P1 | Names/descriptions are constants today; persisted theme contains ID/colors, not these strings. Move to `nameKey`/`descriptionKey` as required by design spec. Copy review required; native visual review required. |
-| `src/domain/day-theme/definitions.ts`, `src/domain/day-theme/firstThemes.ts` | Four built-in Day Theme names and descriptions | ui | Completed | `theme.dayTheme.doneTodayDefault.*`, `theme.dayTheme.sakura.*`, `theme.dayTheme.coffee.*`, `theme.dayTheme.rainy.*` | P1 | Stable ID/version remain locale-independent; registry stores typed keys only. Native Windows visual review passed for Checkpoint 1 and Checkpoint 2. |
+| `src/domain/day-theme/definitions.ts`, `src/domain/day-theme/firstThemes.ts` | Four built-in Day Theme names and descriptions | ui | Completed | `theme.dayTheme.doneTodayDefault.*`, `theme.dayTheme.sakura.*`, `theme.dayTheme.coffee.*`, `theme.dayTheme.rainy.*` | P1 | Stable ID/version remain locale-independent; registry stores typed keys only. Native Windows visual review passed through Checkpoint 3. |
 
 ## Frontend: backup and restore
 
@@ -206,9 +206,9 @@ never renders compatibility `message` or warning text from Rust.
 - Accessibility evidence is automated/source audit and native keyboard/focus/visual review;
   decorative motif/overlay did not obstruct the tested interactions. No Accessibility tree or
   screen-reader testing is claimed.
-- Checkpoint 2 is **Completed**. Checkpoint 3 implementation is documented below and awaits native
-  Windows acceptance; later phases are **Not started**. Overall Day Theme & Personalization remains
-  **In progress**.
+- Checkpoint 2 is **Completed**. Checkpoint 3 completion is documented below; later phases are
+  **Not started**. Overall Day Theme & Personalization remains **In progress — checkpoint
+  complete**.
 
 ## Day Theme Checkpoint 3 localization result
 
@@ -226,8 +226,11 @@ never renders compatibility `message` or warning text from Rust.
 - Resource parity, interpolation, raw-key and production call-site validation remain blocking.
 - Automated/source accessibility evidence covers dialog name/description, radiogroup/radio state,
   selected text/checkmark, focus trap/restore, Escape/outside close and forced-colors CSS.
-- Native Windows review for `vi`/`en`, long Vietnamese/English copy, supported viewport sizes,
-  light/dark/custom App Theme and keyboard/focus remains pending. No screen-reader or Accessibility
-  tree result is claimed.
-- Checkpoint 3 is **Implementation complete; native Windows acceptance pending**. Checkpoint 4 and
-  later phases are **Not started**; overall Day Theme & Personalization remains **In progress**.
+- The user confirmed native Windows acceptance on 2026-07-29 for `vi`/`en`, long
+  Vietnamese/English copy, supported viewport sizes, light/dark/custom App Theme,
+  mouse/keyboard/focus and picker behavior without raw translation keys. Automated/source
+  accessibility evidence and native keyboard/focus/visual review passed; no screen-reader or
+  Accessibility tree result is claimed.
+- Checkpoint 3 is **Completed — native Windows acceptance passed**. Checkpoint 4 and later phases
+  are **Not started**; overall Day Theme & Personalization remains **In progress — checkpoint
+  complete**.

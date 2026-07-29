@@ -6,7 +6,7 @@
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `4d8d2c9f829fef5e745ac3b68216d8469fb515e1` (2026-07-28)
+**Last verified against implementation commit:** `039038b30d1a4b6a9243dca02f7c84b283e56316` (2026-07-29)
 
 ---
 
@@ -1259,9 +1259,9 @@ phase sau **Not started**. Trạng thái hiện hành của Checkpoint 3 đượ
 
 ---
 
-# 34. Checkpoint 3 — Theme Picker implementation
+# 34. Checkpoint 3 — Theme Picker implementation và acceptance
 
-Trạng thái: **Implementation complete; native Windows acceptance pending** (2026-07-29).
+Trạng thái: **Completed — native Windows acceptance passed** (2026-07-29).
 
 Implementation hiện hành chốt:
 
@@ -1288,17 +1288,23 @@ Implementation hiện hành chốt:
 - Backup envelope/checksum/version `1`, migration `005`, Merge/Replace/receipt, App Theme,
   Work Categories, status/statistics và journal business rules không đổi.
 
-Implementation nằm trong `50e2eef` (`feat: add day theme picker`) và `e9a5b30`
-(`feat: persist day theme selections`). Automated/source tests bao phủ registry order,
-preview/cancel/apply/default, failure/Retry, duplicate Apply, locale switch, focus restore,
-unmount/date stale guard, no-log persistence, autosave-safe merge và native atomic write.
+Implementation/compatibility nằm trong `50e2eef` (`feat: add day theme picker`), `e9a5b30`
+(`feat: persist day theme selections`) và `9cbf474` (`test: verify day theme picker compatibility`).
+Follow-up `039038b` (`fix: apply day theme in strict mode`) giữ date completion guard hợp lệ dưới
+React StrictMode. Automated/source tests bao phủ registry order, preview/cancel/apply/default,
+failure/Retry, duplicate Apply, locale switch, focus restore, unmount/date stale guard, no-log
+persistence, autosave-safe merge và native atomic write. Evidence cuối đạt 373 frontend tests,
+67 Rust tests, i18n lint, typecheck, lint và production build.
 
-Native Windows acceptance vẫn phải kiểm tra bằng profile cô lập cho `vi`/`en`, App Theme
-light/dark/custom, cửa sổ 900×600/default/maximize, mouse/keyboard/focus, persistence qua reopen,
-preview/cancel, editor/autosave và phân biệt App Theme/Day Theme. Failure/Retry dùng automated test
-làm bằng chứng; không yêu cầu phá database để tạo lỗi. Chưa tuyên bố đã kiểm tra screen reader,
-Accessibility tree, forced-colors manual hoặc native visual acceptance.
+Người dùng xác nhận native Windows acceptance ngày 2026-07-29 cho `vi`/`en`, App Theme
+light/dark/custom, cửa sổ 900×600/default/maximize, mouse/keyboard opening, thumbnail/text/selected
+state, per-day persistence qua chuyển ngày và reopen, Default không xóa nội dung, rollback qua
+Cancel/Escape/outside close/date change, Arrow keys/Tab/Shift+Tab/Enter/Space/Escape, focus restore,
+editor/autosave và regression của Categories/status/statistics/reorder. Failure/Retry dùng automated
+test làm bằng chứng; không yêu cầu phá database để tạo lỗi. Accessibility evidence gồm
+automated/source audit và native keyboard/focus/visual review; không tuyên bố screen-reader hoặc
+Accessibility tree testing.
 
 Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3:
-**Implementation complete; native Windows acceptance pending**. Checkpoint 4 và các phase sau:
-**Not started**. Toàn bộ Day Theme & Personalization: **In progress**.
+**Completed — native Windows acceptance passed**. Checkpoint 4 và các phase sau: **Not started**.
+Toàn bộ Day Theme & Personalization: **In progress — checkpoint complete**.
