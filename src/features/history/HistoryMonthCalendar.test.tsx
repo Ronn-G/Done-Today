@@ -28,18 +28,21 @@ const julySummaries: CalendarDaySummary[] = [
     hasLog: true,
     themeId: 'sakura',
     themeVersion: 1,
+    daySymbol: 'growth',
   },
   {
     date: '2026-07-07',
     hasLog: true,
     themeId: 'coffee',
     themeVersion: 1,
+    daySymbol: 'none',
   },
   {
     date: '2026-07-08',
     hasLog: true,
     themeId: 'rainy',
     themeVersion: 1,
+    daySymbol: 'future-symbol',
   },
   {
     date: '2026-07-09',
@@ -113,6 +116,20 @@ describe('HistoryMonthCalendar', () => {
     });
     expect(empty.dataset.hasLog).toBe('false');
     expect(empty.querySelector('.history-calendar-marker')).toBeNull();
+    const growth = screen.getByRole('button', {
+      name: /Open Monday, July 6, 2026.*Sakura, Growth/,
+    });
+    expect(growth.querySelector('.history-calendar-marker svg')).toBeTruthy();
+    const none = screen.getByRole('button', {
+      name: /Open Tuesday, July 7, 2026.*Coffee, None/,
+    });
+    expect(none.querySelector('.history-calendar-marker svg')).toBeNull();
+    const unknownSymbol = screen.getByRole('button', {
+      name: /Open Wednesday, July 8, 2026.*Rainy/,
+    });
+    expect(
+      unknownSymbol.querySelector('.history-calendar-marker')?.textContent,
+    ).toContain('⋮');
   });
 
   it('reacts to vi/en locale changes without reloading month data', async () => {

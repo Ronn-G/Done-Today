@@ -26,6 +26,7 @@ const themedLogs: Record<string, DailyLog> = {
     updatedAt: 'now',
     themeId: 'sakura',
     themeVersion: 1,
+    daySymbol: 'sparkle',
     items: [],
   },
   '2026-07-11': {
@@ -35,6 +36,7 @@ const themedLogs: Record<string, DailyLog> = {
     updatedAt: 'now',
     themeId: 'coffee',
     themeVersion: 1,
+    daySymbol: 'none',
     items: [],
   },
   '2026-07-12': {
@@ -44,6 +46,7 @@ const themedLogs: Record<string, DailyLog> = {
     updatedAt: 'now',
     themeId: 'rainy',
     themeVersion: 1,
+    daySymbol: 'future-symbol',
     items: [],
   },
 };
@@ -54,6 +57,7 @@ const calendarSummaries: CalendarDaySummary[] = Object.values(themedLogs).map(
     hasLog: true,
     themeId: log.themeId,
     themeVersion: log.themeVersion,
+    daySymbol: log.daySymbol ?? null,
   }),
 );
 
@@ -68,6 +72,7 @@ const historySummaries: DailyLogSummary[] = Object.values(themedLogs).map(
     updatedAt: log.updatedAt,
     themeId: log.themeId,
     themeVersion: log.themeVersion,
+    daySymbol: log.daySymbol ?? null,
   }),
 );
 
@@ -197,6 +202,34 @@ describe('Day Theme Calendar and History compatibility', () => {
       themeId: 'future-theme',
       themeVersion: 9,
     });
+  });
+
+  it('uses the stored symbol before the theme symbol in both Calendar and History', async () => {
+    const calendar = render(<CalendarRestoreHarness />);
+    expect(
+      await screen.findByRole('button', {
+        name: /Open Friday, July 10, 2026.*Sakura, Sparkle/,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: /Open Saturday, July 11, 2026.*Coffee, None/,
+      }),
+    ).toBeTruthy();
+    calendar.unmount();
+
+    render(<HistoryRestoreHarness />);
+    expect(
+      screen.getByRole('button', {
+        name: /Open Friday, July 10, 2026.*Sakura, Sparkle/,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: /Open Saturday, July 11, 2026.*Coffee, None/,
+      }),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toContain('future-symbol');
   });
 
   it('rejects a late completion from the previous date', () => {

@@ -243,4 +243,19 @@ describe('I18N-3 History checkpoint', () => {
     expect(unknown.themeId).toBe('future-theme');
     expect(unknown.themeVersion).toBe(99);
   });
+
+  it('renders a stored symbol override and falls unknown symbol IDs back to the theme symbol', async () => {
+    await initializeI18n('en');
+    const celebrate = { ...summaries[0], daySymbol: 'celebrate' };
+    const future = { ...summaries[1], daySymbol: 'future-symbol' };
+    const { html } = renderHistory({
+      items: [celebrate, future],
+      hasMore: false,
+    });
+    expect(html).toContain('Day theme: Sakura, Celebrate');
+    expect(html).toContain('lucide-party-popper');
+    expect(html).toContain('Day theme: Done Today Default');
+    expect(html).toContain('◇');
+    expect(future.daySymbol).toBe('future-symbol');
+  });
 });

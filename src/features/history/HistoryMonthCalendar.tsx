@@ -16,6 +16,11 @@ import {
   normalizeLocale,
 } from '../../domain/localization/locale';
 import { dayThemeRegistry } from '../../domain/day-theme/registry';
+import {
+  daySymbolOptions,
+  resolveStoredDaySymbol,
+} from '../../domain/day-theme/personalization';
+import { DaySymbolIcon } from '../daily-log/DaySymbolIcon';
 import { formatDate } from '../../i18n/formatters';
 import {
   addLocalDays,
@@ -267,12 +272,22 @@ export function HistoryMonthCalendar({
           const themeName = resolved
             ? themeI18n.t(resolved.definition.nameKey)
             : null;
+          const daySymbol = resolveStoredDaySymbol(summary?.daySymbol);
+          const symbolName =
+            daySymbol === null
+              ? null
+              : themeI18n.t(
+                  `theme:${
+                    daySymbolOptions.find((option) => option.id === daySymbol)
+                      ?.labelKey ?? 'personalization.symbol.default'
+                  }`,
+                );
           const fullDate = formatLongLocalDate(date, locale);
           const accessibleName =
             summary && themeName
               ? t('calendar.accessibility.openLoggedDay', {
                   date: fullDate,
-                  theme: themeName,
+                  theme: symbolName ? `${themeName}, ${symbolName}` : themeName,
                 })
               : t('calendar.accessibility.openEmptyDay', { date: fullDate });
           const selected = activeDate === date;
@@ -316,7 +331,13 @@ export function HistoryMonthCalendar({
                   aria-hidden="true"
                 >
                   <i />
-                  <span>{resolved.definition.calendar.symbol}</span>
+                  <span>
+                    <DaySymbolIcon
+                      symbol={daySymbol}
+                      themeSymbol={resolved.definition.calendar.symbol}
+                      size={11}
+                    />
+                  </span>
                 </span>
               )}
             </button>
