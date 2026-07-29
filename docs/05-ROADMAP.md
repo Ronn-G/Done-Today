@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.11
-**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
+**Document version:** 2.12
+**Last verified against implementation commit:** `d7cf6ca291ec52da01150fb79545f1b2e830412c` (2026-07-29)
 
 ## 1. Cách đọc trạng thái
 
@@ -28,7 +28,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
-| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1–3 Completed; Checkpoint 4 implementation complete, native Windows acceptance pending; Checkpoint 5+ Not started |
+| Day Theme & Personalization | In progress — checkpoint complete | Checkpoint 1–4 Completed; Checkpoint 5+ Not started |
 | I18N-1 | Completed | Commit `eca9f76d`; 43 file, review cuối không có blocking finding, working tree sạch |
 | I18N-2 | Completed | App shell + Today đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; stable domain values và dữ liệu người dùng không đổi |
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
@@ -221,12 +221,12 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   light/dark/custom, 900×600/default/maximize, keyboard/focus, editor/autosave và regression của
   Categories/status/statistics/reorder. Accessibility evidence gồm automated/source audit và native
   keyboard/focus/visual review; không tuyên bố screen-reader hoặc Accessibility tree testing.
-- Checkpoint 4 — Calendar & History: **Implementation complete — native Windows acceptance
-  pending**. Personalization, theme pack và release packaging chưa bắt đầu.
+- Checkpoint 4 — Calendar & History: **Completed — native Windows acceptance passed**
+  (2026-07-29). Personalization, theme pack và release packaging chưa bắt đầu.
 
 ### Day Theme Checkpoint 4 — Calendar & History
 
-- Trạng thái: **Implementation complete — native Windows acceptance pending**.
+- Trạng thái: **Completed — native Windows acceptance passed** (2026-07-29).
 - Commit triển khai: `10bac7c` (data/query contract), `d9cc0db` (Calendar + History UI) và
   `24b821b` (compatibility/regression).
 - Calendar dùng range summary query nhẹ, index-backed, không full-log fetch và không N+1.
@@ -236,8 +236,15 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   card giữ nguyên pagination và mở đúng ngày.
 - Automated evidence: 47 frontend test files / 420 tests và 70 Rust tests; format, i18n, typecheck,
   lint, clippy và production build đều đạt.
-- Native Windows visual/keyboard/accessibility acceptance vẫn **pending**; không tuyên bố pass trước
-  khi người dùng chạy checklist.
+- Người dùng xác nhận native Calendar, History và old-day restoration đạt ở `vi`/`en`; click,
+  Enter/Space, Arrow/Home/End và điều hướng qua biên tháng hoạt động. App Theme
+  light/dark/custom vẫn độc lập, cửa sổ 900×600/default/maximize sử dụng được, và các luồng
+  Today/editor/autosave, History pagination/navigation, Categories, status/statistics/reorder không
+  regression trong phạm vi kiểm tra thông thường.
+- Native keyboard review và native focus/visual review trong phạm vi người dùng kiểm tra đã đạt.
+  Fallback `NULL`/unknown, stale request, forced-colors, reduced-motion và failure/Retry paths được
+  bao phủ bằng automated/source evidence. Không tuyên bố screen-reader, Accessibility Tree,
+  deliberate corrupt-metadata test hoặc native failure injection.
 
 ### Engineering Hardening Checkpoint 1
 
@@ -258,8 +265,8 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   (Tauri response contracts), `a1a13b5` (localized journal validation), `9243c5b` (CI) và
   `a07e9d2` (canonical LF).
 - Checkpoint này không đổi database schema/migration, Backup v1 checksum/Merge/Replace/receipt,
-  locale device-local, App Theme hoặc Day Theme behavior. Day Theme Checkpoint 4 vẫn
-  **Not started**.
+  locale device-local, App Theme hoặc Day Theme behavior. Tại thời điểm checkpoint hardening này,
+  Day Theme Checkpoint 4 chưa bắt đầu; trạng thái hiện hành được ghi tại mục Day Theme bên trên.
 
 ## 4. I18N-1 đã hoàn thành
 
@@ -287,9 +294,9 @@ Feature tiếp theo chỉ được bắt đầu khi:
 - feature được chia thành checkpoint có thể kiểm thử và commit độc lập;
 - acceptance criteria và manual/visual checks đã rõ.
 
-Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1–3 đã
-**Completed**; Checkpoint 4 **Implementation complete — native Windows acceptance pending**;
-Checkpoint 5+ **Not started**.
+Day Theme & Personalization vẫn là **In progress — checkpoint complete**. Checkpoint 1–4 đã
+**Completed**; Checkpoint 4 có native Windows acceptance passed ngày 2026-07-29; Checkpoint 5+
+**Not started**.
 
 ## 6. Release packaging
 

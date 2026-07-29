@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.6
-**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
+**Document version:** 1.7
+**Last verified against implementation commit:** `d7cf6ca291ec52da01150fb79545f1b2e830412c` (2026-07-29)
 
 ## 1. Mục đích
 
@@ -33,17 +33,17 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.6 | `24b821b` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.7 | `d7cf6ca` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
 | `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.4 | `24b821b` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.3 | `81b3276` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.11 | `24b821b` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.12 | `d7cf6ca` |
 | `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.1 | `eca9f76d` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.2 | `81b3276` |
 | `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.0 | `eca9f76d` |
-| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.4 | `24b821b` |
+| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.5 | `d7cf6ca` |
 | `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.2 | `9243c5b` |
 | `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md` | Quy trình triển khai, review, test và release | 1.1 | `eca9f76d` |
 
@@ -51,7 +51,7 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu | Vai trò | Last verified against implementation commit |
 | --- | --- | --- |
-| `audits/I18N-STRING-INVENTORY.md` | Audit/reference inventory; không ghi đè I18N architecture spec | `9243c5b` |
+| `audits/I18N-STRING-INVENTORY.md` | Audit/reference inventory; không ghi đè I18N architecture spec | `d7cf6ca` |
 
 Nội dung lịch sử còn hữu ích của `04-UI-DESIGN.md` được giữ lại trong chính file đã bị thay thế,
 nhưng không có quyền quyết định normative.

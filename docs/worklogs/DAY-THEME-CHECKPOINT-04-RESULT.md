@@ -6,7 +6,7 @@ Repository: `C:\dev\done-today`
 
 Branch: `master`
 
-Trạng thái: **Implementation complete — native Windows acceptance pending**
+Trạng thái: **Completed — native Windows acceptance passed**
 
 ## A. Preflight
 
@@ -163,7 +163,8 @@ Coffee/Rainy/Sakura motif chunks giữ nguyên `0.61/0.61/0.77 kB` raw và
 - `docs/audits/I18N-STRING-INVENTORY.md`;
 - worklog này.
 
-Các tài liệu ghi rõ Checkpoint 4 mới hoàn tất implementation, chưa đạt native Windows acceptance.
+Các tài liệu implementation ban đầu ghi Checkpoint 4 hoàn tất implementation và chờ native
+acceptance. Closeout ngày 2026-07-29 cập nhật trạng thái sau khi người dùng xác nhận đã test ổn.
 
 ## L. Git/commit discipline
 
@@ -173,17 +174,19 @@ Các commit checkpoint:
 2. `10bac7c9a49897cdee2d2e1c4915da0605ecf5fc` — data/query contract.
 3. `d9cc0db049fe3f4bd3af7f9fa33d2c1517e02fa2` — Calendar và History UI.
 4. `24b821bf7dfb6f1b21ee133e1050f36573875028` — compatibility/regression.
-5. Documentation commit dùng message `docs: record day theme checkpoint 4 implementation`; hash
-   đầy đủ được báo trong handoff cuối. Không thể nhúng hash của chính commit vào nội dung commit đó
+5. `d7cf6ca291ec52da01150fb79545f1b2e830412c` — documentation và worklog implementation.
+6. `10533b56a22bf51673bd8e17292047dc60b52d8b` — preserve closeout prompt.
+7. Closeout documentation dùng message `docs: complete day theme calendar and history`; hash đầy
+   đủ được báo trong closeout handoff. Không thể nhúng hash của chính commit vào nội dung commit đó
    mà không tạo self-reference.
 
 Không push, không tạo release/installer, không commit generated build artifact.
 
 ## M. Deferred/out of scope
 
-- Native Windows visual/keyboard/accessibility acceptance.
 - Checkpoint 5+ personalization, theme packs và release packaging.
 - Screen-reader/Accessibility tree testing.
+- Deliberate native corrupt/unknown database metadata và native loading failure/Retry injection.
 - Installer/portable artifact và artifact smoke test.
 
 ## N. Exact status
@@ -196,10 +199,10 @@ Day Theme Checkpoint 2 — First Themes:
 Completed
 
 Day Theme Checkpoint 3 — Theme Picker:
-Completed
+Completed — native Windows acceptance passed
 
 Day Theme Checkpoint 4 — Calendar & History:
-Implementation complete — native Windows acceptance pending
+Completed — native Windows acceptance passed
 
 Day Theme & Personalization:
 In progress — checkpoint complete
@@ -208,42 +211,31 @@ Checkpoint 5+:
 Not started
 ```
 
-## O. Native Windows handoff
+## O. Native Windows acceptance
 
-Chạy:
+Người dùng xác nhận “Đã test ổn” ngày 2026-07-29. Native acceptance ghi nhận:
 
-```powershell
-Set-Location "C:\dev\done-today"
-$env:CARGO_TARGET_DIR = "C:\dev\done-today-target"
-$configPath = Join-Path $env:TEMP "done-today-day-theme-cp4.json"
-[System.IO.File]::WriteAllText(
-  $configPath,
-  '{"build":{"beforeDevCommand":"npm.cmd run dev -- --host 127.0.0.1","devUrl":"http://127.0.0.1:1420"}}',
-  [System.Text.UTF8Encoding]::new($false)
-)
-npm.cmd run tauri -- dev --config $configPath
-```
+1. Compact Calendar trong History, previous/next month, `vi`/`en`, today/selected state, ngày có
+   log và indicator Default/Sakura/Coffee/Rainy hiển thị đúng, không che số ngày và không chỉ dựa
+   vào màu.
+2. Click, Enter/Space, Arrow keys, Home/End và điều hướng qua biên tháng hoạt động; đổi tháng không
+   để stale result ghi đè trong luồng sử dụng thông thường.
+3. History card giữ bố cục nhẹ, symbol/accent/localized name đúng; pagination, loading, empty state,
+   navigation và mở đúng ngày không regression trong luồng sử dụng thông thường.
+4. Mở ngày cũ từ Calendar/History và reload khôi phục đúng per-day Day Theme/Day Cover; app shell
+   không bị Day Theme scope ghi đè.
+5. App Theme light/dark/custom, Theme Picker, Today editor/autosave, Categories,
+   status/statistics/reorder, History và date navigation tiếp tục hoạt động.
+6. Không có raw translation key ở `vi`/`en`; cửa sổ 900×600, kích thước mặc định và maximize sử
+   dụng được.
+7. Native keyboard review và native focus/visual review trong phạm vi người dùng kiểm tra đã đạt.
 
-Checklist cần xác nhận thủ công trên Windows:
+Các vùng không được tuyên bố là đã thử native trực tiếp:
 
-1. History hiển thị Calendar đúng ở `vi` và `en`, tại 900×600, default và maximize.
-2. Previous/next month, weekday/month labels, today và selected states đúng, không overflow.
-3. Click/Enter/Space và Arrow/Home/End mở/focus đúng ngày, kể cả biên tháng và future date.
-4. Sakura/Coffee/Rainy/Default/unknown hiển thị indicator dễ phân biệt, không chỉ dựa vào màu.
-5. Từ Calendar và History card, ngày đích mở đúng cover/theme; app shell không bị Day Theme scope.
-6. Loading/error/Retry không làm mất History list; đổi tháng nhanh không để kết quả cũ ghi đè.
-7. Light/dark/custom App Theme, forced/high contrast và reduced motion vẫn đọc/điều khiển được.
-8. History pagination/load-more, Today editor/autosave, status/statistics, Categories và reorder không
-   regression.
-9. Không có raw translation key hoặc layout vỡ với copy dài ở cả hai locale.
+- unknown/corrupt database theme metadata;
+- native failure injection cho loading/error/Retry;
+- forced-colors và reduced-motion ngoài automated/source evidence.
 
-Sau khi dừng app:
-
-```powershell
-Remove-Item -LiteralPath $configPath -ErrorAction SilentlyContinue
-Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath "C:\dev\done-today-target" -Recurse -Force
-```
-
-Chỉ sau khi người dùng xác nhận checklist mới được đổi trạng thái Checkpoint 4 thành native
-acceptance passed.
+Các vùng trên là **Covered by automated/source evidence**. Không tuyên bố screen-reader thật hoặc
+Accessibility Tree testing. Closeout không ghi nhận thêm profile-cleanup assertion vì người dùng
+không cung cấp bằng chứng riêng và cleanup không cần để xác nhận các hành vi đã nêu.

@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.4
+**Phiên bản:** 1.5
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
+**Last verified against implementation commit:** `d7cf6ca291ec52da01150fb79545f1b2e830412c` (2026-07-29)
 
 ---
 
@@ -1307,13 +1307,13 @@ Accessibility tree testing.
 
 Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3:
 **Completed — native Windows acceptance passed**. Checkpoint 4:
-**Implementation complete — native Windows acceptance pending**. Checkpoint 5+:
+**Completed — native Windows acceptance passed**. Checkpoint 5+:
 **Not started**.
 Toàn bộ Day Theme & Personalization: **In progress — checkpoint complete**.
 
 ---
 
-## 35. Implementation record — Checkpoint 4 Calendar & History
+## 35. Implementation and acceptance record — Checkpoint 4 Calendar & History
 
 Checkpoint 4 triển khai Calendar theo tháng trong History và hiển thị Day Theme metadata nhất quán
 trên calendar cell lẫn history card:
@@ -1331,6 +1331,31 @@ trên calendar cell lẫn history card:
   async completion.
 
 Automated evidence tại implementation commit: 47 frontend test files / 420 tests, 70 Rust tests,
-i18n lint, typecheck, lint, format, clippy và production build đều đạt. Native Windows visual,
-keyboard và accessibility acceptance vẫn **pending**; checkpoint không được ghi là native pass cho
-đến khi người dùng hoàn tất checklist.
+i18n lint, typecheck, lint, format, clippy và production build đều đạt. Query vẫn là indexed
+half-open range, History preview vẫn nằm trong một SQL statement, và Calendar/History không import
+full cover/motif; Backup v1, schema, migration, App Theme, Theme Picker và journal business rules
+không đổi.
+
+Người dùng xác nhận native Windows acceptance đạt ngày 2026-07-29:
+
+- compact Calendar, previous/next month, today/selected state, ngày có log và theme identity của
+  Default/Sakura/Coffee/Rainy hiển thị đúng ở `vi`/`en`;
+- click, Enter/Space, Arrow keys, Home/End và điều hướng qua biên tháng hoạt động; chuyển tháng
+  nhanh không để kết quả cũ ghi đè trong luồng sử dụng thông thường;
+- History card giữ identity nhẹ, localized name và đúng navigation/pagination; mở từ Calendar hoặc
+  History khôi phục đúng Day Cover/Day Theme của ngày cũ sau cả reload;
+- App shell không nằm trong Day Theme scope; App Theme light/dark/custom và Theme Picker vẫn độc
+  lập; Today editor/autosave, Categories, status/statistics/reorder và date navigation không
+  regression;
+- cửa sổ 900×600, kích thước mặc định và maximize sử dụng được; native keyboard review và native
+  focus/visual review trong phạm vi người dùng kiểm tra đã đạt.
+
+Fallback `NULL`/unknown, stale-result guard, forced-colors, reduced-motion và loading/error/Retry
+paths là **Covered by automated/source evidence**. Không tuyên bố đã phá thủ công corrupt database
+metadata, chạy native failure injection, kiểm tra bằng screen reader thật hoặc kiểm tra
+Accessibility Tree.
+
+Checkpoint 4 — Calendar & History:
+**Completed — native Windows acceptance passed**. Checkpoint 5+:
+**Not started**. Toàn bộ Day Theme & Personalization vẫn:
+**In progress — checkpoint complete**.
