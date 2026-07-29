@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.9
-**Last verified against implementation commit:** `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
+**Document version:** 2.10
+**Last verified against implementation commit:** `a07e9d2511c8cc852b4f9ad96d85a8d6bba3cbfb` (2026-07-29)
 
 ## 1. Cách đọc trạng thái
 
@@ -34,7 +34,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
 | I18N-5 | Completed | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã hoàn tất automated gate và native Windows acceptance ngày 2026-07-28 |
-| Engineering Hardening Checkpoint 1 | Completed | TypeScript strict, repository formatting, runtime Tauri response validation và localized JournalService validation đã hoàn tất. GitHub Actions: Initial remote run failed at frontend formatting due to line-ending mismatch. Fix committed; verification of the next remote run pending push |
+| Engineering Hardening Checkpoint 1 | Completed — local and remote CI verification passed | TypeScript strict, runtime Tauri response validation, localized JournalService validation và canonical LF đã hoàn tất. GitHub Actions workflow active; initial corrected master run passed |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -235,10 +235,13 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - JournalService dùng structured `history.pagination_invalid` và cùng resource `vi`/`en`; không
   thêm error code hay translation key.
 - CI Windows chạy locked install và toàn bộ frontend/Rust gates, không build installer, portable
-  hay release artifact. GitHub Actions: Initial remote run failed at frontend formatting due to
-  line-ending mismatch. Fix committed; verification of the next remote run pending push.
+  hay release artifact. Initial run thất bại ở frontend formatting do LF/CRLF; commit
+  `a07e9d2511c8cc852b4f9ad96d85a8d6bba3cbfb` enforce canonical LF qua `.gitattributes` và
+  Prettier. Corrected master run ngày 2026-07-29 đã pass Frontend quality gates và Rust quality
+  gates; workflow hiện active.
 - Implementation commits: `de23d04` (formatting), `507788a` (strict TypeScript), `6963d66`
-  (Tauri response contracts), `a1a13b5` (localized journal validation) và `9243c5b` (CI).
+  (Tauri response contracts), `a1a13b5` (localized journal validation), `9243c5b` (CI) và
+  `a07e9d2` (canonical LF).
 - Checkpoint này không đổi database schema/migration, Backup v1 checksum/Merge/Replace/receipt,
   locale device-local, App Theme hoặc Day Theme behavior. Day Theme Checkpoint 4 vẫn
   **Not started**.

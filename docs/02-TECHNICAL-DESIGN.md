@@ -1,8 +1,8 @@
 # Technical Design
 
 **Document status:** Authoritative
-**Document version:** 1.2
-**Last verified against implementation commit:** `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
+**Document version:** 1.3
+**Last verified against implementation commit:** `a07e9d2511c8cc852b4f9ad96d85a8d6bba3cbfb` (2026-07-29)
 
 ## 1. Công nghệ
 
@@ -114,9 +114,8 @@ Development completion không mặc định yêu cầu tạo installer hoặc po
   backup fixture, generated output và motif asset được loại trừ để tránh thay đổi contract hoặc
   dữ liệu kiểm thử ngoài ý muốn. Text files dùng canonical LF, được enforce nhất quán qua
   `.gitattributes` và Prettier `endOfLine`.
-- `.github/workflows/ci.yml` chạy cùng các gate trên Windows. Initial remote run thất bại ở frontend
-  formatting do checkout CRLF khi repository chưa có line-ending policy; fix đã được kiểm tra ở
-  local và clean checkout, còn next remote run pending push.
+- `.github/workflows/ci.yml` chạy các frontend/Rust gate canonical trên push và pull request vào
+  `master`. Corrected master run đầu tiên sau LF policy đã pass cả hai job ngày 2026-07-29.
 
 ## 8. Release packaging
 
