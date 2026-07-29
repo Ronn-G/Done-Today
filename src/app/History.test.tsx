@@ -95,6 +95,8 @@ describe('I18N-3 History checkpoint', () => {
     expect(html).toContain('Thứ Sáu');
     expect(html).toContain('1 việc · 1 hoàn thành · 100%');
     expect(html).toContain('2 việc · 1 hoàn thành · 50%');
+    expect(html).toContain('Chủ đề ngày: Sakura');
+    expect(html).toContain('Chủ đề ngày: Done Today Mặc định');
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('aria-valuenow="100"');
     expect(html).toContain('Chuẩn bị bản demo cho Khách hàng ACME');
@@ -145,7 +147,7 @@ describe('I18N-3 History checkpoint', () => {
     expect(english).toContain('1 task · 1 completed · 100%');
     expect(english).toContain('2 tasks · 1 completed · 50%');
     expect(english).toContain(
-      'Open Friday, January 2, 2026: 1 task · 1 completed · 100%',
+      'Open Friday, January 2, 2026: 1 task · 1 completed · 100%. Day theme: Sakura.',
     );
     for (const task of summaries.flatMap((summary) => summary.previewTasks)) {
       expect(vietnamese).toContain(task);
@@ -224,5 +226,21 @@ describe('I18N-3 History checkpoint', () => {
     expect(mergeHistorySummaries(summaries, [replacement], false)).toEqual([
       replacement,
     ]);
+  });
+
+  it('uses the registry fallback for unknown History theme metadata without changing the card structure', async () => {
+    await initializeI18n('en');
+    const unknown = {
+      ...summaries[0],
+      themeId: 'future-theme',
+      themeVersion: 99,
+    };
+    const { html } = renderHistory({ items: [unknown], hasMore: false });
+    expect(html).toContain('Day theme: Done Today Default');
+    expect(html).toContain('history-theme-identity');
+    expect(html).toContain('history-progress');
+    expect(html).not.toContain('motif');
+    expect(unknown.themeId).toBe('future-theme');
+    expect(unknown.themeVersion).toBe(99);
   });
 });

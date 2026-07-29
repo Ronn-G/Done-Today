@@ -32,6 +32,7 @@ export const doneTodayDefaultDayTheme: DayThemeDefinition = defineDayTheme({
   },
   calendar: {
     indicatorColor: 'var(--app-day-accent)',
+    symbol: '◇',
   },
   typography: {
     journalFontRole: 'journal',

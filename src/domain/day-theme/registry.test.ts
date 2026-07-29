@@ -35,6 +35,10 @@ describe('DayThemeRegistry', () => {
       mode: 'adaptive',
       metadata: { builtIn: true },
     });
+    for (const theme of dayThemeRegistry.list()) {
+      expect(theme.calendar.indicatorColor).toBeTruthy();
+      expect(theme.calendar.symbol).toBeTruthy();
+    }
   });
 
   it.each([

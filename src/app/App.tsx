@@ -95,6 +95,7 @@ import { dayThemeRegistry } from '../domain/day-theme/registry';
 import { DayThemeScope } from '../features/daily-log/DayThemeScope';
 import type { ResolvedDayTheme } from '../domain/day-theme/models';
 import { DayCover } from '../features/daily-log/DayCover';
+import { HistoryMonthCalendar } from '../features/history/HistoryMonthCalendar';
 
 type Route =
   { page: 'day'; date: string } | { page: 'history' } | { page: 'settings' };
@@ -1542,6 +1543,11 @@ function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<NormalizedAppError | null>(null);
+  const loadCalendar = useCallback(
+    (startDate: string, endDateExclusive: string) =>
+      service.listCalendar(startDate, endDateExclusive),
+    [],
+  );
   const load = useCallback(async (targetPage: number, append: boolean) => {
     if (append) setLoadingMore(true);
     else setLoading(true);
@@ -1574,6 +1580,12 @@ function HistoryPage() {
       onLoadMore={() => void load(page + 1, true)}
       onOpenDay={(date) => navigate({ page: 'day', date })}
       onGoToday={() => navigate({ page: 'day', date: today() })}
+      calendar={
+        <HistoryMonthCalendar
+          loadMonth={loadCalendar}
+          onOpenDay={(date) => navigate({ page: 'day', date })}
+        />
+      }
     />
   );
 }
@@ -1588,6 +1600,7 @@ export function HistoryView({
   onLoadMore,
   onOpenDay,
   onGoToday,
+  calendar,
 }: {
   items: DailyLogSummary[];
   loading: boolean;
@@ -1598,6 +1611,7 @@ export function HistoryView({
   onLoadMore: () => void;
   onOpenDay: (date: string) => void;
   onGoToday: () => void;
+  calendar?: React.ReactNode;
 }) {
   const { t, i18n } = useTranslation('history');
   const { t: tErrors } = useTranslation('errors');
@@ -1611,6 +1625,7 @@ export function HistoryView({
         <h1>{t('heading.title')}</h1>
         <p className="subtitle">{t('heading.subtitle')}</p>
       </header>
+      {calendar}
       {loading ? (
         <div
           className="history-loading"
@@ -1648,13 +1663,24 @@ export function HistoryView({
               completed: summary.completedItems,
               percentage,
             });
+            const resolvedTheme = dayThemeRegistry.resolve(
+              summary.themeId,
+              summary.themeVersion,
+            );
+            const themeName = i18n.t(resolvedTheme.definition.nameKey);
             const accessibleName = t('accessibility.openDay', {
               date,
               summary: dailySummary,
+              theme: themeName,
             });
+            const historyThemeStyle = {
+              '--history-theme-color':
+                resolvedTheme.definition.calendar.indicatorColor,
+            } as React.CSSProperties;
             return (
               <button
                 className="history-card"
+                style={historyThemeStyle}
                 key={summary.id}
                 type="button"
                 aria-label={accessibleName}
@@ -1669,6 +1695,13 @@ export function HistoryView({
                 </div>
                 <div className="history-summary">
                   <strong>{dailySummary}</strong>
+                  <span className="history-theme-identity">
+                    <i aria-hidden="true" />
+                    <span aria-hidden="true">
+                      {resolvedTheme.definition.calendar.symbol}
+                    </span>
+                    {t('themeIdentity', { theme: themeName })}
+                  </span>
                   {summary.previewTasks.length > 0 && (
                     <ul>
                       {summary.previewTasks.map((task, index) => (

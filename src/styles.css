@@ -1315,6 +1315,125 @@ tbody tr:hover {
   justify-content: center;
   gap: 10px;
 }
+.history-calendar {
+  margin-top: 24px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.history-calendar-toolbar {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
+}
+.history-calendar-toolbar h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 17px;
+  text-align: center;
+}
+.history-calendar-toolbar button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.history-calendar-weekdays,
+.history-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.history-calendar-weekdays {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.history-calendar-weekdays span {
+  padding: 4px 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-calendar-days {
+  gap: 4px;
+  margin-top: 3px;
+}
+.history-calendar-day {
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 4px 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.history-calendar-day:hover {
+  border-color: var(--border);
+  background: var(--bg-row-hover);
+}
+.history-calendar-day[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--bg-interactive-hover);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.history-calendar-day[data-today='true'] .history-calendar-number {
+  border-bottom: 2px solid var(--text-primary);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+.history-calendar-number {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  line-height: 18px;
+}
+.history-calendar-marker {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 10px;
+  color: var(--calendar-theme-color);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+.history-calendar-marker i {
+  width: 10px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--calendar-theme-color);
+}
+.history-calendar-status,
+.history-calendar-error {
+  min-height: 30px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.history-calendar-error {
+  color: var(--error-text);
+}
+.history-calendar-error button {
+  min-height: 30px;
+  padding: 4px 9px;
+}
 .history-list {
   display: grid;
   gap: 12px;
@@ -1335,6 +1454,16 @@ tbody tr:hover {
   color: var(--text-secondary);
   cursor: pointer;
   box-shadow: var(--shadow-card);
+}
+.history-card::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 7px;
+  width: 3px;
+  border-radius: 99px;
+  background: var(--history-theme-color);
 }
 .history-card:hover {
   border-color: var(--accent);
@@ -1357,6 +1486,25 @@ tbody tr:hover {
 }
 .history-summary > strong {
   font-size: 15px;
+}
+.history-theme-identity {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-theme-identity i {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--history-theme-color);
 }
 .history-summary ul {
   display: flex;
@@ -1533,6 +1681,26 @@ textarea:focus-visible,
   }
   .day-theme-picker-thumbnail {
     forced-color-adjust: none;
+  }
+  .history-calendar-day {
+    border-color: ButtonText;
+  }
+  .history-calendar-day[data-selected='true'] {
+    outline: 3px solid Highlight;
+    background: Canvas;
+    color: CanvasText;
+  }
+  .history-calendar-day[data-today='true'] {
+    box-shadow: inset 0 0 0 2px CanvasText;
+  }
+  .history-calendar-marker,
+  .history-theme-identity {
+    color: CanvasText;
+  }
+  .history-calendar-marker i,
+  .history-theme-identity i,
+  .history-card::before {
+    background: CanvasText;
   }
 }
 
