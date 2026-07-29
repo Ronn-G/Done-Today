@@ -1,9 +1,10 @@
 # I18N string inventory
 
 Audit date: 2026-07-29
-Last verified against implementation commit: `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1`
+Last verified against implementation commit: `24b821bf7dfb6f1b21ee133e1050f36573875028`
 Scope: completed I18N-4 and I18N-5, plus completed Day Theme Checkpoint 1, Checkpoint 2 and
-Checkpoint 3.
+Checkpoint 3; Day Theme Checkpoint 4 implementation complete with native Windows acceptance
+pending.
 Engineering Hardening Checkpoint 1 reuses the existing `history.pagination_invalid` code and
 `history.backendErrors.paginationInvalid` resources for JournalService validation. Runtime Tauri
 response failures use the existing localized unknown fallback. The inventory remains 42 stable
@@ -25,6 +26,9 @@ both locales. The Day Cover reuses existing Today date, subtitle, navigation and
 copy; decorative motifs expose no accessible text.
 Day Theme Checkpoint 3 adds the picker and explicit App Theme/Day Theme labels in the `theme`
 namespace. Stable theme IDs, database metadata and Backup v1 remain locale-independent.
+Day Theme Checkpoint 4 adds localized Calendar navigation, weekday/date labels, loading/error/Retry
+copy and History theme metadata. Month, weekday and full-date formatting use `Intl` with the active
+locale; theme names continue to resolve through registry `nameKey` values.
 
 ## Method and exclusions
 
@@ -67,6 +71,7 @@ exhaustively to translation keys and never passes a raw backend code to `t(...)`
 | `src/app/App.tsx:217-218` | Untitled fallback; work-item action label; move-to-category heading; Other; delete task | accessibility / ui | Yes | `today.item.untitled`, `today.item.actions`, `today.categories.moveTo`, `today.categories.other`, `today.item.delete` | P0 | Interpolated user text must be escaped normally by React. Copy review required for action and accessibility text. |
 | `src/app/App.tsx:222-224` | Saving, saved, save failed, retry | ui | Yes | `today.autosave.saving`, `today.autosave.saved`, `today.autosave.failed`, `common.actions.retry` | P0 | Do not translate internal `SaveState` values. |
 | `src/app/App.tsx:243-252` | History eyebrow/title/subtitle/loading/error/empty state; “x việc · y hoàn thành · z%”; load more | ui | Yes | `history.heading.eyebrow`, `history.heading.title`, `history.heading.subtitle`, `history.status.loading`, `history.errors.load`, `history.emptyState.*`, `history.summary.daily`, `history.actions.loadMore`, `history.status.loadingMore` | P0 | Summary requires plural and percentage formatters. Copy review required for the button label; native visual review required. |
+| `src/features/history/HistoryMonthCalendar.tsx` | Month navigation, localized weekday/full-date labels, loading/error/Retry, selected/today semantics and Day Theme accessible name | ui | Completed — native pending | `history.calendar.*`, `common.actions.retry`, registry `theme.dayTheme.*.name` | P1 | Uses active locale `Intl`; stable theme IDs remain untranslated; unknown metadata falls back safely. |
 | `src/app/App.tsx:256` | Settings eyebrow/title | ui | Yes | `settings.heading.eyebrow`, `settings.heading.title` | P0 | — |
 
 ## Frontend: categories, themes and floating customizer
@@ -212,9 +217,9 @@ never renders compatibility `message` or warning text from Rust.
 - Accessibility evidence is automated/source audit and native keyboard/focus/visual review;
   decorative motif/overlay did not obstruct the tested interactions. No Accessibility tree or
   screen-reader testing is claimed.
-- Checkpoint 2 is **Completed**. Checkpoint 3 completion is documented below; later phases are
-  **Not started**. Overall Day Theme & Personalization remains **In progress — checkpoint
-  complete**.
+- Checkpoint 2 and Checkpoint 3 are **Completed**. Checkpoint 4 implementation is complete with
+  native Windows acceptance pending; Checkpoint 5+ is **Not started**. Overall Day Theme &
+  Personalization remains **In progress — checkpoint complete**.
 
 ## Day Theme Checkpoint 3 localization result
 
@@ -237,6 +242,19 @@ never renders compatibility `message` or warning text from Rust.
   mouse/keyboard/focus and picker behavior without raw translation keys. Automated/source
   accessibility evidence and native keyboard/focus/visual review passed; no screen-reader or
   Accessibility tree result is claimed.
-- Checkpoint 3 is **Completed — native Windows acceptance passed**. Checkpoint 4 and later phases
-  are **Not started**; overall Day Theme & Personalization remains **In progress — checkpoint
-  complete**.
+- Checkpoint 3 is **Completed — native Windows acceptance passed**. Checkpoint 4 is
+  **Implementation complete — native Windows acceptance pending**; Checkpoint 5+ is **Not
+  started**. Overall Day Theme & Personalization remains **In progress — checkpoint complete**.
+
+## Day Theme Checkpoint 4 localization result
+
+- Both locales contain the new `history.calendar.*` resources with parity; i18n lint validates
+  interpolation, raw-key and production call sites.
+- Month/year, weekday and full-date accessible labels use `Intl.DateTimeFormat` with the active
+  `vi`/`en` locale instead of hard-coded calendar copy.
+- Calendar indicators and History cards resolve localized theme names through registry `nameKey`;
+  stable ID/version and user-entered data remain locale-independent.
+- Automated tests cover `vi`/`en`, known themes, `NULL` and unknown fallback, month navigation,
+  keyboard interaction, loading failure/Retry and stale completion.
+- Native Windows visual/keyboard/accessibility acceptance remains **pending**; no screen-reader or
+  Accessibility tree result is claimed.

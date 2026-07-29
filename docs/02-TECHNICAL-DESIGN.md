@@ -1,8 +1,8 @@
 # Technical Design
 
 **Document status:** Authoritative
-**Document version:** 1.3
-**Last verified against implementation commit:** `a07e9d2511c8cc852b4f9ad96d85a8d6bba3cbfb` (2026-07-29)
+**Document version:** 1.4
+**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
 
 ## 1. Công nghệ
 
@@ -129,3 +129,13 @@ Release packaging là gate riêng, chỉ chạy khi chuẩn bị phát hành ho�
 
 Chi tiết quy trình và mức gate xem
 `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md`.
+
+## 9. Calendar và History summary boundary
+
+- Calendar đọc dữ liệu qua command typed theo khoảng nửa mở `[startDate, endDateExclusive)`.
+- Calendar summary chỉ trả `logDate`, `dayThemeId`, `dayThemeVersion`; truy vấn dựa trên index
+  `daily_logs.log_date`, không tải full daily log và không thực hiện N+1 query.
+- History giữ nguyên pagination contract, bổ sung metadata Day Theme và tạo entry preview trong cùng
+  một SQL statement.
+- Frontend kiểm tra IPC payload bằng Zod. `NULL`, theme ID/version lạ hoặc registry lookup thất bại
+  đều hiển thị fallback an toàn, không giả lập ngày có dữ liệu.

@@ -2,11 +2,11 @@
 
 # Done Today — Day Theme & Personalization Specification
 
-**Phiên bản:** 1.3
+**Phiên bản:** 1.4
 **Trạng thái:** Tài liệu đặc tả sản phẩm và kỹ thuật bắt buộc  
 **Phạm vi:** Theme theo từng ngày, cover, theme picker, calendar indicator, lịch sử, backup, migration và khả năng mở rộng theme pack  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against implementation commit:** `039038b30d1a4b6a9243dca02f7c84b283e56316` (2026-07-29)
+**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
 
 ---
 
@@ -1306,5 +1306,31 @@ automated/source audit và native keyboard/focus/visual review; không tuyên b�
 Accessibility tree testing.
 
 Checkpoint 1: **Completed**. Checkpoint 2: **Completed**. Checkpoint 3:
-**Completed — native Windows acceptance passed**. Checkpoint 4 và các phase sau: **Not started**.
+**Completed — native Windows acceptance passed**. Checkpoint 4:
+**Implementation complete — native Windows acceptance pending**. Checkpoint 5+:
+**Not started**.
 Toàn bộ Day Theme & Personalization: **In progress — checkpoint complete**.
+
+---
+
+## 35. Implementation record — Checkpoint 4 Calendar & History
+
+Checkpoint 4 triển khai Calendar theo tháng trong History và hiển thị Day Theme metadata nhất quán
+trên calendar cell lẫn history card:
+
+- `10bac7c9a49897cdee2d2e1c4915da0605ecf5fc` thêm typed range summary contract từ Rust/Tauri
+  đến repository/application/frontend; khoảng ngày là `[startDate, endDateExclusive)`, truy vấn dùng
+  `daily_logs.log_date`, không tải full log và không N+1. History preview cũng được gom vào một SQL
+  statement.
+- `d9cc0db049fe3f4bd3af7f9fa33d2c1517e02fa2` thêm month navigation, locale-aware labels,
+  keyboard model Arrow/Home/End/Enter/Space, current/selected states, loading/error/Retry và stale
+  request guard. Indicator dùng symbol/accent/name từ Day Theme registry, không render cover/motif
+  toàn phần trong calendar.
+- `24b821bf7dfb6f1b21ee133e1050f36573875028` đóng compatibility regression cho Sakura,
+  Coffee, Rainy, `NULL`/unknown fallback, deep-link đúng ngày, DayThemeScope containment và stale
+  async completion.
+
+Automated evidence tại implementation commit: 47 frontend test files / 420 tests, 70 Rust tests,
+i18n lint, typecheck, lint, format, clippy và production build đều đạt. Native Windows visual,
+keyboard và accessibility acceptance vẫn **pending**; checkpoint không được ghi là native pass cho
+đến khi người dùng hoàn tất checklist.

@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.5
-**Last verified against implementation commit:** `a07e9d2511c8cc852b4f9ad96d85a8d6bba3cbfb` (2026-07-29)
+**Document version:** 1.6
+**Last verified against implementation commit:** `24b821bf7dfb6f1b21ee133e1050f36573875028` (2026-07-29)
 
 ## 1. Mục đích
 
@@ -33,17 +33,17 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.5 | `a07e9d2` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.6 | `24b821b` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
-| `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.3 | `a07e9d2` |
+| `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.4 | `24b821b` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.3 | `81b3276` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.10 | `a07e9d2` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.11 | `24b821b` |
 | `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.1 | `eca9f76d` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.2 | `81b3276` |
 | `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.0 | `eca9f76d` |
-| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.1 | `81b3276` |
+| `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.4 | `24b821b` |
 | `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.2 | `9243c5b` |
 | `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md` | Quy trình triển khai, review, test và release | 1.1 | `eca9f76d` |
 
