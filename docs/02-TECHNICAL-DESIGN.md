@@ -1,8 +1,8 @@
 # Technical Design
 
 **Document status:** Authoritative
-**Document version:** 1.1
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Document version:** 1.2
+**Last verified against implementation commit:** `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
 
 ## 1. Công nghệ
 
@@ -95,7 +95,28 @@ typecheck, lint, development build và kiểm tra thủ công/visual khi có tha
 
 Development completion không mặc định yêu cầu tạo installer hoặc portable ZIP.
 
-## 7. Release packaging
+## 7. Engineering quality boundary
+
+- `tsconfig.app.json` và `tsconfig.node.json` phải bật TypeScript `strict`; không dùng suppression
+  để làm gate đi qua.
+- Mọi phản hồi từ Tauri `invoke` phải được kiểm tra runtime bằng schema tại infrastructure
+  boundary. Generic type argument hoặc type assertion không phải runtime validation.
+- Schema phản hồi phải mô tả rõ record, array, nullable và void. Phản hồi sai contract được chuẩn
+  hóa thành lỗi `unknown` an toàn; diagnostics development chỉ được ghi command và issue
+  code/path, không ghi args, payload, SQL hay đường dẫn nhạy cảm.
+- Application/domain phát sinh lỗi có khả năng tới UI bằng structured error code và scalar params.
+  Presentation boundary chịu trách nhiệm dịch; không ném raw Vietnamese user-facing error.
+- Gate canonical cho frontend là `format:check`, `i18n:lint`, `typecheck`, `lint`, `test:run` và
+  `build`. Gate Rust là `cargo fmt --all -- --check`,
+  `cargo clippy --all-targets --all-features -- -D warnings` và
+  `cargo test --all-targets --all-features`.
+- Prettier quản lý source/config/workflow được liệt kê trong `package.json`; lockfile, migration,
+  backup fixture, generated output và motif asset được loại trừ để tránh thay đổi contract hoặc
+  dữ liệu kiểm thử ngoài ý muốn.
+- `.github/workflows/ci.yml` chạy cùng các gate trên Windows. Workflow đã được kiểm tra tương đương
+  ở local; trạng thái chạy trên GitHub chỉ có sau khi commit được push.
+
+## 8. Release packaging
 
 Release packaging là gate riêng, chỉ chạy khi chuẩn bị phát hành hoặc prompt yêu cầu rõ:
 

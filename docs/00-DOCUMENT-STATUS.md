@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.3
-**Last verified against commit:** `81b3276ac4026a852516ae27c81053a38e5caa5f` (2026-07-28)
+**Document version:** 1.4
+**Last verified against implementation commit:** `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
 
 ## 1. Mục đích
 
@@ -33,24 +33,28 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.3 | `81b3276` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.4 | `9243c5b` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
-| `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.1 | `eca9f76d` |
+| `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.2 | `9243c5b` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.3 | `81b3276` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.6 | `81b3276` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.9 | `9243c5b` |
 | `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.1 | `eca9f76d` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.2 | `81b3276` |
 | `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.0 | `eca9f76d` |
 | `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.1 | `81b3276` |
+| `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.2 | `9243c5b` |
 | `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md` | Quy trình triển khai, review, test và release | 1.1 | `eca9f76d` |
 
 ## 4. Tài liệu tham khảo
 
-Hiện không có tài liệu reference độc lập trong bộ Phase 1. Nội dung lịch sử còn hữu ích của
-`04-UI-DESIGN.md` được giữ lại trong chính file đã bị thay thế, nhưng không có quyền quyết định
-normative.
+| Tài liệu | Vai trò | Last verified against implementation commit |
+| --- | --- | --- |
+| `audits/I18N-STRING-INVENTORY.md` | Audit/reference inventory; không ghi đè I18N architecture spec | `9243c5b` |
+
+Nội dung lịch sử còn hữu ích của `04-UI-DESIGN.md` được giữ lại trong chính file đã bị thay thế,
+nhưng không có quyền quyết định normative.
 
 ## 5. Tài liệu và tên đã bị thay thế
 
@@ -85,19 +89,16 @@ rõ `App Theme` hay `Day Theme`.
 Release packaging chỉ chạy khi chuẩn bị phát hành hoặc có yêu cầu rõ. Nó không phải đầu ra mặc định
 của feature, bug fix, review finding hoặc checkpoint.
 
-## 8. Tài liệu I18N ngoài bộ 13 file này
+## 8. Tài liệu I18N
 
-`18-INTERNATIONALIZATION-AND-LOCALIZATION.md` và `I18N-STRING-INVENTORY.md` đã được nhắc trong
-quy trình I18N nhưng không có trong tập file được cung cấp cho lượt làm sạch này. I18N-1 đã được
-commit tại `eca9f76d2e6445a353e0adf90abb7bcd65dcab46`; điều này không tự xác minh toàn văn hai tài
-liệu I18N. Không chỉnh sửa hoặc suy diễn nội dung của chúng trong bộ 13 file này. Khi đưa chúng
-vào registry:
+`18-INTERNATIONALIZATION-AND-LOCALIZATION.md` đã được đọc toàn văn, đối chiếu implementation và
+đăng ký là domain architecture specification authoritative. `audits/I18N-STRING-INVENTORY.md` là
+bằng chứng audit/reference: dùng để truy vết string, code và trạng thái migration nhưng không ghi
+đè architecture spec, Roadmap hoặc domain docs.
 
-1. đọc toàn văn;
-2. phân loại authoritative/reference;
-3. ghi version và `Last verified against commit`;
-4. kiểm tra mâu thuẫn với Roadmap và các domain docs;
-5. cập nhật bảng authoritative ở trên trong cùng thay đổi.
+Engineering Hardening Checkpoint 1 không thay đổi resource count, locale policy, stable error-code
+matrix hoặc Backup v1. JournalService tái sử dụng `history.pagination_invalid`; malformed Tauri
+response dùng safe fallback hiện hữu.
 
 ## 9. Quy tắc bảo trì
 

@@ -1,8 +1,8 @@
 # Internationalization and localization
 
 Status: architecture specification for Sprint I18N-0  
-Document version: 1.1
-Last verified against baseline commit: `abdfdf447377a39a5ae5be3dbb3e4acb556a2f54` (2026-07-27)
+Document version: 1.2
+Last verified against implementation commit: `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
 Initial locales: Vietnamese (`vi`) and English (`en`)
 
 ## 1. Goals and scope
@@ -875,7 +875,21 @@ raw-key/flash/clipping checks and keyboard/focus. Accessibility evidence is limi
 automated/source audit and native keyboard/focus/Accessibility tree; no screen-reader testing is
 claimed. I18N-5 is **Completed**. Day Theme and release packaging remain outside this work.
 
-## 26. Open questions and provisional decisions
+## 26. Runtime response and application-error boundary
+
+All frontend calls to current Tauri commands validate successful responses at runtime before data
+enters repositories or application services. Schemas cover records, arrays, nullable responses and
+void commands. A malformed successful response is normalized to the existing localized unknown
+error fallback; raw Zod issues, backend payloads, SQL, paths and command arguments are never
+presented to users. Development diagnostics are restricted to the command name and validation
+issue code/path.
+
+Application validation that can reach presentation uses the same locale-independent structured
+error contract. Journal pagination now emits `history.pagination_invalid` with scalar range params
+and reuses the existing exhaustive `vi`/`en` mapping. This checkpoint adds no error code,
+translation key, locale, database migration or Backup v1 field.
+
+## 27. Open questions and provisional decisions
 
 | Question | Evidence | Provisional decision |
 |---|---|---|

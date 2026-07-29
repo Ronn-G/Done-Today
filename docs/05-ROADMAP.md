@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.8
-**Last verified against implementation commit:** `039038b30d1a4b6a9243dca02f7c84b283e56316` (2026-07-29)
+**Document version:** 2.9
+**Last verified against implementation commit:** `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1` (2026-07-29)
 
 ## 1. Cách đọc trạng thái
 
@@ -34,6 +34,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | I18N-3 | Completed | History, Settings shell + Categories và toàn bộ App Theme customization đã hoàn tất workflow `vi`/`en` qua bốn checkpoint; checkpoint 4 khép lại Custom colors + Floating Theme Customizer |
 | I18N-4 | Completed | Backup/Restore presentation, structured Rust errors/warnings, typed exhaustive frontend mapping và native Windows visual/keyboard/accessibility acceptance đã hoàn tất cho `vi`/`en` |
 | I18N-5 | Completed | Fresh-install detection, atomic locale bootstrap và Backup v1 preference exclusion đã hoàn tất automated gate và native Windows acceptance ngày 2026-07-28 |
+| Engineering Hardening Checkpoint 1 | Completed | TypeScript strict, repository formatting, runtime Tauri response validation và localized JournalService validation đã hoàn tất. Workflow committed; remote GitHub Actions execution pending push |
 | Release packaging | Release gate | Chưa phải đầu ra của development task hiện tại |
 
 ## 3. Các checkpoint đã hoàn thành
@@ -221,6 +222,24 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   Categories/status/statistics/reorder. Accessibility evidence gồm automated/source audit và native
   keyboard/focus/visual review; không tuyên bố screen-reader hoặc Accessibility tree testing.
 - Checkpoint 4, Calendar/History indicator, personalization, theme pack và release packaging:
+  **Not started**.
+
+### Engineering Hardening Checkpoint 1
+
+- TypeScript strict được bật cho cả app và Node config; không thêm suppression.
+- Prettier normalization được commit riêng, có `format:check` và exclusions bảo vệ lockfile,
+  migrations, Backup fixtures và motif assets.
+- Toàn bộ Tauri IPC response đang được frontend sử dụng có runtime schema cho record, array,
+  nullable và void; malformed response trở thành localized safe fallback thay vì raw Zod/backend
+  payload.
+- JournalService dùng structured `history.pagination_invalid` và cùng resource `vi`/`en`; không
+  thêm error code hay translation key.
+- CI Windows chạy locked install và toàn bộ frontend/Rust gates, không build installer, portable
+  hay release artifact. Workflow committed; remote GitHub Actions execution pending push.
+- Implementation commits: `de23d04` (formatting), `507788a` (strict TypeScript), `6963d66`
+  (Tauri response contracts), `a1a13b5` (localized journal validation) và `9243c5b` (CI).
+- Checkpoint này không đổi database schema/migration, Backup v1 checksum/Merge/Replace/receipt,
+  locale device-local, App Theme hoặc Day Theme behavior. Day Theme Checkpoint 4 vẫn
   **Not started**.
 
 ## 4. I18N-1 đã hoàn thành

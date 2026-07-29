@@ -28,14 +28,14 @@ trong transaction. Xem `docs/08-BACKUP-RESTORE.md` để biết định dạng v
 
 ## Yêu cầu môi trường
 
-- Node.js 20 trở lên và npm.
-- Rust stable với Cargo.
+- Node.js 24 và npm.
+- Rust 1.97.1 với Cargo.
 - Windows: Microsoft C++ Build Tools và WebView2.
 
 ## Cài đặt
 
 ```powershell
-npm install
+npm ci
 ```
 
 ## Phát triển
@@ -59,11 +59,22 @@ ngày đó chưa có dữ liệu.
 ## Kiểm tra
 
 ```powershell
+npm run format:check
+npm run i18n:lint
 npm run typecheck
 npm run lint
 npm run test:run
-cargo test --manifest-path ./src-tauri/Cargo.toml
+npm run build
+
+Push-Location ./src-tauri
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets --all-features
+Pop-Location
 ```
+
+GitHub Actions chạy cùng các gate này trên Windows sau khi workflow được push. Kiểm tra
+`git diff --check` trước khi commit để phát hiện lỗi whitespace trong thay đổi hiện tại.
 
 ## Build
 

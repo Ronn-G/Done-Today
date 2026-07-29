@@ -1,8 +1,14 @@
 # I18N string inventory
 
 Audit date: 2026-07-29
+Last verified against implementation commit: `9243c5b36f2093e52fdf7ca63cf06084d75ca0e1`
 Scope: completed I18N-4 and I18N-5, plus completed Day Theme Checkpoint 1, Checkpoint 2 and
 Checkpoint 3.
+Engineering Hardening Checkpoint 1 reuses the existing `history.pagination_invalid` code and
+`history.backendErrors.paginationInvalid` resources for JournalService validation. Runtime Tauri
+response failures use the existing localized unknown fallback. The inventory remains 42 stable
+error codes and 2 warning codes; no translation key, locale, schema, Backup v1 field or user data
+changed.
 Checkpoint update: checkpoint 1 (`c0f56fd`) localized Backup/Restore; checkpoint 2 (`0155154`)
 localized all current Tauri error families, converted Backup preview warnings to structured
 payloads and added exhaustive `vi`/`en` mapping. The final checkpoint completed hardening and native
