@@ -1,7 +1,6 @@
 import {
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -17,6 +16,12 @@ import {
   type DayPersonalization,
 } from '../../domain/day-theme/personalization';
 import { DaySymbolIcon } from './DaySymbolIcon';
+
+type PersonalizationLabelKey =
+  | (typeof coverVariantOptions)[number]['labelKey']
+  | (typeof daySymbolOptions)[number]['labelKey']
+  | (typeof journalFontRoleOptions)[number]['labelKey'];
+type PersonalizationSectionKey = 'cover' | 'symbol' | 'font';
 
 export type DayPersonalizationDialogProps = {
   persisted: DayPersonalization;
@@ -133,7 +138,7 @@ export function DayPersonalizationDialog({
     event: KeyboardEvent<HTMLButtonElement>,
     group: readonly { id: string | null }[],
     current: string | null,
-    select: (id: string | null) => void,
+    section: PersonalizationSectionKey,
   ) => {
     if (
       !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
@@ -143,7 +148,7 @@ export function DayPersonalizationDialog({
     const index = group.findIndex((option) => option.id === current);
     const delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
     const next = group[(index + delta + group.length) % group.length];
-    select(next.id);
+    selectOption(section, next.id);
     const groupNode = event.currentTarget.closest('[role="radiogroup"]');
     groupNode
       ?.querySelector<HTMLButtonElement>(
@@ -154,44 +159,74 @@ export function DayPersonalizationDialog({
   const backdrop = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) cancel();
   };
-  const sections = useMemo(
-    () => [
-      {
-        key: 'cover',
-        label: t('personalization.cover.heading'),
-        options: coverVariantOptions,
-        current: draft.coverVariant,
-        select: (id: string | null) =>
-          preview({
-            ...draft,
-            coverVariant: id as DayPersonalization['coverVariant'],
-          }),
-      },
-      {
-        key: 'symbol',
-        label: t('personalization.symbol.heading'),
-        options: daySymbolOptions,
-        current: draft.daySymbol,
-        select: (id: string | null) =>
-          preview({
-            ...draft,
-            daySymbol: id as DayPersonalization['daySymbol'],
-          }),
-      },
-      {
-        key: 'font',
-        label: t('personalization.font.heading'),
-        options: journalFontRoleOptions,
-        current: draft.journalFontRole,
-        select: (id: string | null) =>
-          preview({
-            ...draft,
-            journalFontRole: id as DayPersonalization['journalFontRole'],
-          }),
-      },
-    ],
-    [draft, t],
-  );
+  const optionLabel = (key: PersonalizationLabelKey) => {
+    switch (key) {
+      case 'personalization.cover.minimal':
+        return t('personalization.cover.minimal');
+      case 'personalization.symbol.default':
+        return t('personalization.symbol.default');
+      case 'personalization.symbol.none':
+        return t('personalization.symbol.none');
+      case 'personalization.symbol.sparkle':
+        return t('personalization.symbol.sparkle');
+      case 'personalization.symbol.focus':
+        return t('personalization.symbol.focus');
+      case 'personalization.symbol.growth':
+        return t('personalization.symbol.growth');
+      case 'personalization.symbol.calm':
+        return t('personalization.symbol.calm');
+      case 'personalization.symbol.celebrate':
+        return t('personalization.symbol.celebrate');
+      case 'personalization.font.default':
+        return t('personalization.font.default');
+      case 'personalization.font.ui':
+        return t('personalization.font.ui');
+      case 'personalization.font.journal':
+        return t('personalization.font.journal');
+      default:
+        return t('personalization.cover.default');
+    }
+  };
+  const selectOption = (
+    section: PersonalizationSectionKey,
+    id: string | null,
+  ) => {
+    if (section === 'cover')
+      preview({
+        ...draft,
+        coverVariant: id as DayPersonalization['coverVariant'],
+      });
+    else if (section === 'symbol')
+      preview({
+        ...draft,
+        daySymbol: id as DayPersonalization['daySymbol'],
+      });
+    else
+      preview({
+        ...draft,
+        journalFontRole: id as DayPersonalization['journalFontRole'],
+      });
+  };
+  const sections = [
+    {
+      key: 'cover' as const,
+      label: t('personalization.cover.heading'),
+      options: coverVariantOptions,
+      current: draft.coverVariant,
+    },
+    {
+      key: 'symbol' as const,
+      label: t('personalization.symbol.heading'),
+      options: daySymbolOptions,
+      current: draft.daySymbol,
+    },
+    {
+      key: 'font' as const,
+      label: t('personalization.font.heading'),
+      options: journalFontRoleOptions,
+      current: draft.journalFontRole,
+    },
+  ];
 
   return (
     <div
@@ -247,13 +282,13 @@ export function DayPersonalizationDialog({
                       aria-checked={selected}
                       className={selected ? 'selected' : ''}
                       data-option-id={option.id ?? 'default'}
-                      onClick={() => section.select(option.id)}
+                      onClick={() => selectOption(section.key, option.id)}
                       onKeyDown={(event) =>
                         handleRadioKeyDown(
                           event,
                           section.options,
                           section.current,
-                          section.select,
+                          section.key,
                         )
                       }
                     >
@@ -267,7 +302,7 @@ export function DayPersonalizationDialog({
                           />
                         </span>
                       )}
-                      <span>{t(option.labelKey)}</span>
+                      <span>{optionLabel(option.labelKey)}</span>
                     </button>
                   );
                 })}

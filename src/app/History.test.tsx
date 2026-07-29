@@ -253,7 +253,7 @@ describe('I18N-3 History checkpoint', () => {
       hasMore: false,
     });
     expect(html).toContain('Day theme: Sakura, Celebrate');
-    expect(html).toContain('lucide-party-popper');
+    expect(html).toContain('data-day-symbol-icon="celebrate"');
     expect(html).toContain('Day theme: Done Today Default');
     expect(html).toContain('◇');
     expect(future.daySymbol).toBe('future-symbol');

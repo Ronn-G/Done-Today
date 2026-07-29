@@ -67,6 +67,46 @@ describe('backup v1', () => {
     );
     expect(canonicalPayload(payload)).not.toContain('themeId');
   });
+  it('omits null personalization fields and preserves the legacy v1 checksum', async () => {
+    const explicitNull = {
+      ...payload,
+      dailyLogs: payload.dailyLogs.map((log) => ({
+        ...log,
+        coverVariant: null,
+        daySymbol: null,
+        journalFontRole: null,
+      })),
+    };
+    expect(canonicalPayload(explicitNull)).toBe(canonicalPayload(payload));
+    expect(await checksumPayload(explicitNull)).toBe(
+      await checksumPayload(payload),
+    );
+    for (const field of ['coverVariant', 'daySymbol', 'journalFontRole']) {
+      expect(canonicalPayload(explicitNull)).not.toContain(field);
+    }
+  });
+  it('round trips structurally valid future personalization IDs in Backup v1', () => {
+    const personalized = {
+      ...payload,
+      dailyLogs: [
+        {
+          ...payload.dailyLogs[0],
+          coverVariant: 'future-cover',
+          daySymbol: 'future-symbol',
+          journalFontRole: 'future-font',
+        },
+      ],
+    };
+    const parsed = backupPayloadSchema.parse(personalized);
+    expect(parsed.dailyLogs[0]).toMatchObject({
+      coverVariant: 'future-cover',
+      daySymbol: 'future-symbol',
+      journalFontRole: 'future-font',
+    });
+    expect(canonicalPayload(parsed)).toContain(
+      '"journalFontRole":"future-font"',
+    );
+  });
   it('round trips explicit and unknown structurally valid Day Theme metadata', () => {
     const themed = {
       ...payload,
