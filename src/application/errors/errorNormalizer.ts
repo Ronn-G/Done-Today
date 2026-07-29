@@ -14,7 +14,7 @@ const warningCodes = new Set<string>(appWarningCodes);
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : null;
 }
 
@@ -39,10 +39,11 @@ function params(value: unknown): AppErrorParams | null {
   const parsed: Record<string, AppErrorParam> = {};
   for (const [key, entry] of Object.entries(source)) {
     if (
-      typeof entry !== 'string'
-      && typeof entry !== 'number'
-      && typeof entry !== 'boolean'
-    ) return null;
+      typeof entry !== 'string' &&
+      typeof entry !== 'number' &&
+      typeof entry !== 'boolean'
+    )
+      return null;
     parsed[key] = entry;
   }
   return parsed;
@@ -51,29 +52,53 @@ function params(value: unknown): AppErrorParams | null {
 export function normalizeAppError(value: unknown): NormalizedAppError {
   if (isNormalizedAppError(value)) return value;
   const candidate = payload(value);
-  if (!candidate || typeof candidate.code !== 'string' || !errorCodes.has(candidate.code)) {
-    return {kind: 'unknown'};
+  if (
+    !candidate ||
+    typeof candidate.code !== 'string' ||
+    !errorCodes.has(candidate.code)
+  ) {
+    return { kind: 'unknown' };
   }
   const parsedParams = params(candidate.params);
-  if (!parsedParams) return {kind: 'unknown'};
-  return {kind: 'known', code: candidate.code as AppErrorCode, params: parsedParams};
+  if (!parsedParams) return { kind: 'unknown' };
+  return {
+    kind: 'known',
+    code: candidate.code as AppErrorCode,
+    params: parsedParams,
+  };
 }
 
 export function normalizeAppWarning(value: unknown): NormalizedAppWarning {
   const candidate = payload(value);
-  if (!candidate || typeof candidate.code !== 'string' || !warningCodes.has(candidate.code)) {
-    return {kind: 'unknown'};
+  if (
+    !candidate ||
+    typeof candidate.code !== 'string' ||
+    !warningCodes.has(candidate.code)
+  ) {
+    return { kind: 'unknown' };
   }
   const parsedParams = params(candidate.params);
-  if (!parsedParams) return {kind: 'unknown'};
-  return {kind: 'known', code: candidate.code as AppWarningCode, params: parsedParams};
+  if (!parsedParams) return { kind: 'unknown' };
+  return {
+    kind: 'known',
+    code: candidate.code as AppWarningCode,
+    params: parsedParams,
+  };
 }
 
-export function isNormalizedAppError(value: unknown): value is NormalizedAppError {
+export function isNormalizedAppError(
+  value: unknown,
+): value is NormalizedAppError {
   const candidate = record(value);
-  if (!candidate || (candidate.kind !== 'known' && candidate.kind !== 'unknown')) return false;
+  if (
+    !candidate ||
+    (candidate.kind !== 'known' && candidate.kind !== 'unknown')
+  )
+    return false;
   if (candidate.kind === 'unknown') return true;
-  return typeof candidate.code === 'string'
-    && errorCodes.has(candidate.code)
-    && params(candidate.params) !== null;
+  return (
+    typeof candidate.code === 'string' &&
+    errorCodes.has(candidate.code) &&
+    params(candidate.params) !== null
+  );
 }

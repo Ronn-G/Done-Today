@@ -1,6 +1,6 @@
-import type {DayThemeDefinition} from './models';
-import {defineDayTheme} from './defineDayTheme';
-import {firstDayThemes} from './firstThemes';
+import type { DayThemeDefinition } from './models';
+import { defineDayTheme } from './defineDayTheme';
+import { firstDayThemes } from './firstThemes';
 
 export const DEFAULT_DAY_THEME_ID = 'done-today-default';
 export const DEFAULT_DAY_THEME_VERSION = 1;
@@ -24,8 +24,10 @@ export const doneTodayDefaultDayTheme: DayThemeDefinition = defineDayTheme({
     focusRing: 'var(--app-day-focus-ring)',
   },
   cover: {
-    fallbackGradient: 'linear-gradient(135deg, var(--app-day-surface) 0%, var(--app-page-background) 100%)',
-    overlay: 'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--app-day-surface) 18%, transparent) 100%)',
+    fallbackGradient:
+      'linear-gradient(135deg, var(--app-day-surface) 0%, var(--app-page-background) 100%)',
+    overlay:
+      'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--app-day-surface) 18%, transparent) 100%)',
     textTone: 'dark',
   },
   calendar: {

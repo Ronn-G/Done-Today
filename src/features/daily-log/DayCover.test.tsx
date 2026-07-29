@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import {cleanup, render, screen, waitFor} from '@testing-library/react';
-import {readFileSync} from 'node:fs';
-import {afterEach, describe, expect, it, vi} from 'vitest';
-import type {DayThemeAssetLoader} from '../../domain/day-theme/assets';
-import {dayThemeRegistry} from '../../domain/day-theme/registry';
-import {DayCover} from './DayCover';
-import {DayThemeScope} from './DayThemeScope';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { DayThemeAssetLoader } from '../../domain/day-theme/assets';
+import { dayThemeRegistry } from '../../domain/day-theme/registry';
+import { DayCover } from './DayCover';
+import { DayThemeScope } from './DayThemeScope';
 
 afterEach(cleanup);
 
@@ -26,18 +26,24 @@ function renderCover(
       />
     </DayThemeScope>,
   );
-  return {assetLoader, resolvedTheme};
+  return { assetLoader, resolvedTheme };
 }
 
 describe('DayCover', () => {
   it.each(['done-today-default', 'sakura', 'coffee', 'rainy'])(
     'renders %s from registry semantics without an extra accessible theme label',
-    async themeId => {
-      const {assetLoader, resolvedTheme} = renderCover(themeId);
-      expect(screen.getByRole('heading', {level: 1}).textContent).toContain('Friday, January 2, 2026');
-      expect(screen.getByRole('button', {name: 'Previous day'})).toBeTruthy();
+    async (themeId) => {
+      const { assetLoader, resolvedTheme } = renderCover(themeId);
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
+        'Friday, January 2, 2026',
+      );
+      expect(screen.getByRole('button', { name: 'Previous day' })).toBeTruthy();
       expect(screen.queryByRole('img')).toBeNull();
-      expect(document.querySelector('.day-theme-scope')?.getAttribute('data-day-theme-id')).toBe(themeId);
+      expect(
+        document
+          .querySelector('.day-theme-scope')
+          ?.getAttribute('data-day-theme-id'),
+      ).toBe(themeId);
       const assetId = resolvedTheme.definition.cover.motifAssetId;
       if (assetId) {
         await waitFor(() => expect(assetLoader).toHaveBeenCalledWith(assetId));
@@ -51,7 +57,11 @@ describe('DayCover', () => {
     const assetLoader = vi.fn(async () => null);
     renderCover('coffee', assetLoader);
     await waitFor(() => expect(assetLoader).toHaveBeenCalledOnce());
-    expect(document.querySelector('.day-cover')?.getAttribute('data-day-cover-asset-state')).toBe('fallback');
+    expect(
+      document
+        .querySelector('.day-cover')
+        ?.getAttribute('data-day-cover-asset-state'),
+    ).toBe('fallback');
     expect(screen.getByRole('heading')).toBeTruthy();
     expect(screen.getByRole('button').hasAttribute('disabled')).toBe(false);
   });
@@ -59,12 +69,20 @@ describe('DayCover', () => {
   it('loads only the currently rendered motif and keeps decoration hidden', async () => {
     const assetLoader = vi.fn(async () => '/rainy-motif.svg');
     renderCover('rainy', assetLoader);
-    await waitFor(() => expect(
-      document.querySelector('.day-cover')?.getAttribute('data-day-cover-asset-state'),
-    ).toBe('loaded'));
+    await waitFor(() =>
+      expect(
+        document
+          .querySelector('.day-cover')
+          ?.getAttribute('data-day-cover-asset-state'),
+      ).toBe('loaded'),
+    );
     expect(assetLoader).toHaveBeenCalledTimes(1);
-    expect(document.querySelector('.day-cover-motif')?.getAttribute('aria-hidden')).toBe('true');
-    expect(document.querySelector('.day-cover-overlay')?.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      document.querySelector('.day-cover-motif')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+    expect(
+      document.querySelector('.day-cover-overlay')?.getAttribute('aria-hidden'),
+    ).toBe('true');
   });
 
   it('defines compact responsive heights, reduced motion and forced-colors fallback', () => {

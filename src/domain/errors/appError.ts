@@ -54,9 +54,9 @@ export type AppErrorParam = string | number | boolean;
 export type AppErrorParams = Readonly<Record<string, AppErrorParam>>;
 
 export type NormalizedAppError =
-  | {kind: 'known'; code: AppErrorCode; params: AppErrorParams}
-  | {kind: 'unknown'};
+  | { kind: 'known'; code: AppErrorCode; params: AppErrorParams }
+  | { kind: 'unknown' };
 
 export type NormalizedAppWarning =
-  | {kind: 'known'; code: AppWarningCode; params: AppErrorParams}
-  | {kind: 'unknown'};
+  | { kind: 'known'; code: AppWarningCode; params: AppErrorParams }
+  | { kind: 'unknown' };

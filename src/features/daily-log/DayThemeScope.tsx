@@ -1,5 +1,9 @@
-import type {CSSProperties, ReactNode} from 'react';
-import type {DayThemeCoverStyle, DayThemeTokens, ResolvedDayTheme} from '../../domain/day-theme/models';
+import type { CSSProperties, ReactNode } from 'react';
+import type {
+  DayThemeCoverStyle,
+  DayThemeTokens,
+  ResolvedDayTheme,
+} from '../../domain/day-theme/models';
 
 type DayThemeStyle = CSSProperties & Record<`--day-${string}`, string | number>;
 
@@ -35,20 +39,30 @@ export function DayThemeScope({
   resolvedTheme: ResolvedDayTheme;
   children: ReactNode;
 }) {
-  const {definition} = resolvedTheme;
-  const light = definition.variants?.light ?? {tokens: definition.tokens, cover: definition.cover};
-  const dark = definition.variants?.dark ?? {tokens: definition.tokens, cover: definition.cover};
+  const { definition } = resolvedTheme;
+  const light = definition.variants?.light ?? {
+    tokens: definition.tokens,
+    cover: definition.cover,
+  };
+  const dark = definition.variants?.dark ?? {
+    tokens: definition.tokens,
+    cover: definition.cover,
+  };
   const style: DayThemeStyle = {
     '--day-calendar-indicator': definition.calendar.indicatorColor,
     '--day-heading-weight': definition.typography?.headingWeight ?? 700,
   };
   applyVariant(style, 'light', light.tokens, light.cover);
   applyVariant(style, 'dark', dark.tokens, dark.cover);
-  return <div
-    className="day-theme-scope"
-    data-day-theme-id={definition.id}
-    data-day-theme-resolution={resolvedTheme.source}
-    data-day-theme-mode={definition.mode}
-    style={style}
-  >{children}</div>;
+  return (
+    <div
+      className="day-theme-scope"
+      data-day-theme-id={definition.id}
+      data-day-theme-resolution={resolvedTheme.source}
+      data-day-theme-mode={definition.mode}
+      style={style}
+    >
+      {children}
+    </div>
+  );
 }

@@ -1,5 +1,9 @@
-import {defineDayTheme} from './defineDayTheme';
-import type {DayThemeCoverStyle, DayThemeDefinition, DayThemeTokens} from './models';
+import { defineDayTheme } from './defineDayTheme';
+import type {
+  DayThemeCoverStyle,
+  DayThemeDefinition,
+  DayThemeTokens,
+} from './models';
 
 const sakuraLight: DayThemeTokens = {
   pageBackground: '#fffafc',
@@ -29,13 +33,15 @@ const sakuraDark: DayThemeTokens = {
 
 const sakuraLightCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #fff7fa 0%, #f3d9e2 100%)',
-  overlay: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.32) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.32) 100%)',
   textTone: 'dark',
 };
 
 const sakuraDarkCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #4b2c39 0%, #2c2027 100%)',
-  overlay: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(16,8,12,0.18) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(16,8,12,0.18) 100%)',
   textTone: 'light',
 };
 
@@ -67,13 +73,15 @@ const coffeeDark: DayThemeTokens = {
 
 const coffeeLightCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #fbf0dd 0%, #dcc3a0 100%)',
-  overlay: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,250,240,0.26) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,250,240,0.26) 100%)',
   textTone: 'dark',
 };
 
 const coffeeDarkCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #4a3425 0%, #282018 100%)',
-  overlay: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(16,10,6,0.18) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(16,10,6,0.18) 100%)',
   textTone: 'light',
 };
 
@@ -105,13 +113,15 @@ const rainyDark: DayThemeTokens = {
 
 const rainyLightCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #35566b 0%, #536f80 100%)',
-  overlay: 'linear-gradient(180deg, rgba(12,31,42,0.04) 0%, rgba(12,31,42,0.22) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(12,31,42,0.04) 0%, rgba(12,31,42,0.22) 100%)',
   textTone: 'light',
 };
 
 const rainyDarkCover: DayThemeCoverStyle = {
   fallbackGradient: 'linear-gradient(135deg, #223843 0%, #15252d 100%)',
-  overlay: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(5,16,22,0.20) 100%)',
+  overlay:
+    'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(5,16,22,0.20) 100%)',
   textTone: 'light',
 };
 
@@ -122,14 +132,14 @@ export const sakuraDayTheme: DayThemeDefinition = defineDayTheme({
   descriptionKey: 'theme:dayTheme.sakura.description',
   mode: 'adaptive',
   tokens: sakuraLight,
-  cover: {...sakuraLightCover, motifAssetId: 'theme.sakura.cover.motif'},
+  cover: { ...sakuraLightCover, motifAssetId: 'theme.sakura.cover.motif' },
   variants: {
-    light: {tokens: sakuraLight, cover: sakuraLightCover},
-    dark: {tokens: sakuraDark, cover: sakuraDarkCover},
+    light: { tokens: sakuraLight, cover: sakuraLightCover },
+    dark: { tokens: sakuraDark, cover: sakuraDarkCover },
   },
-  calendar: {indicatorColor: '#b85d7d', symbol: '✿'},
-  typography: {journalFontRole: 'journal', headingWeight: 700},
-  metadata: {category: 'seasonal', builtIn: true},
+  calendar: { indicatorColor: '#b85d7d', symbol: '✿' },
+  typography: { journalFontRole: 'journal', headingWeight: 700 },
+  metadata: { category: 'seasonal', builtIn: true },
 });
 
 export const coffeeDayTheme: DayThemeDefinition = defineDayTheme({
@@ -139,14 +149,14 @@ export const coffeeDayTheme: DayThemeDefinition = defineDayTheme({
   descriptionKey: 'theme:dayTheme.coffee.description',
   mode: 'adaptive',
   tokens: coffeeLight,
-  cover: {...coffeeLightCover, motifAssetId: 'theme.coffee.cover.motif'},
+  cover: { ...coffeeLightCover, motifAssetId: 'theme.coffee.cover.motif' },
   variants: {
-    light: {tokens: coffeeLight, cover: coffeeLightCover},
-    dark: {tokens: coffeeDark, cover: coffeeDarkCover},
+    light: { tokens: coffeeLight, cover: coffeeLightCover },
+    dark: { tokens: coffeeDark, cover: coffeeDarkCover },
   },
-  calendar: {indicatorColor: '#98623f', symbol: '◌'},
-  typography: {journalFontRole: 'journal', headingWeight: 700},
-  metadata: {category: 'warm', builtIn: true},
+  calendar: { indicatorColor: '#98623f', symbol: '◌' },
+  typography: { journalFontRole: 'journal', headingWeight: 700 },
+  metadata: { category: 'warm', builtIn: true },
 });
 
 export const rainyDayTheme: DayThemeDefinition = defineDayTheme({
@@ -156,14 +166,14 @@ export const rainyDayTheme: DayThemeDefinition = defineDayTheme({
   descriptionKey: 'theme:dayTheme.rainy.description',
   mode: 'adaptive',
   tokens: rainyLight,
-  cover: {...rainyLightCover, motifAssetId: 'theme.rainy.cover.motif'},
+  cover: { ...rainyLightCover, motifAssetId: 'theme.rainy.cover.motif' },
   variants: {
-    light: {tokens: rainyLight, cover: rainyLightCover},
-    dark: {tokens: rainyDark, cover: rainyDarkCover},
+    light: { tokens: rainyLight, cover: rainyLightCover },
+    dark: { tokens: rainyDark, cover: rainyDarkCover },
   },
-  calendar: {indicatorColor: '#527f96', symbol: '⋮'},
-  typography: {journalFontRole: 'journal', headingWeight: 700},
-  metadata: {category: 'calm', builtIn: true},
+  calendar: { indicatorColor: '#527f96', symbol: '⋮' },
+  typography: { journalFontRole: 'journal', headingWeight: 700 },
+  metadata: { category: 'calm', builtIn: true },
 });
 
 export const firstDayThemes: readonly DayThemeDefinition[] = Object.freeze([

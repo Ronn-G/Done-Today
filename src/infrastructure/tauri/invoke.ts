@@ -1,5 +1,5 @@
-import {invoke} from '@tauri-apps/api/core';
-import {normalizeAppError} from '../../application/errors/errorNormalizer';
+import { invoke } from '@tauri-apps/api/core';
+import { normalizeAppError } from '../../application/errors/errorNormalizer';
 
 export type InvokeCommand = (
   command: string,
@@ -12,17 +12,16 @@ export async function invokeWithAppError<T>(
   args?: Record<string, unknown>,
 ): Promise<T> {
   try {
-    return await (args === undefined
+    return (await (args === undefined
       ? invokeCommand(command)
-      : invokeCommand(command, args)) as T;
+      : invokeCommand(command, args))) as T;
   } catch (reason) {
     throw normalizeAppError(reason);
   }
 }
 
-const coreInvoke: InvokeCommand = (command, args) => args === undefined
-  ? invoke(command)
-  : invoke(command, args);
+const coreInvoke: InvokeCommand = (command, args) =>
+  args === undefined ? invoke(command) : invoke(command, args);
 
 export const invokeTauriCommand = <T>(
   command: string,

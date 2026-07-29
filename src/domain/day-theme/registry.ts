@@ -1,11 +1,24 @@
-import {builtInDayThemes, doneTodayDefaultDayTheme, DEFAULT_DAY_THEME_ID} from './definitions';
-import type {DayThemeDefinition, DayThemeReference, ResolvedDayTheme} from './models';
-import {assertValidDayThemeDefinition, isValidDayThemeId, isValidDayThemeVersion} from './validation';
+import {
+  builtInDayThemes,
+  doneTodayDefaultDayTheme,
+  DEFAULT_DAY_THEME_ID,
+} from './definitions';
+import type {
+  DayThemeDefinition,
+  DayThemeReference,
+  ResolvedDayTheme,
+} from './models';
+import {
+  assertValidDayThemeDefinition,
+  isValidDayThemeId,
+  isValidDayThemeVersion,
+} from './validation';
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value);
-    for (const entry of Object.values(value as Record<string, unknown>)) deepFreeze(entry);
+    for (const entry of Object.values(value as Record<string, unknown>))
+      deepFreeze(entry);
   }
   return value;
 }
@@ -19,7 +32,7 @@ const emergencyDayTheme = immutableCopy({
   id: 'done-today-emergency',
   nameKey: 'theme:dayTheme.doneTodayDefault.name',
   descriptionKey: 'theme:dayTheme.doneTodayDefault.description',
-  metadata: {...doneTodayDefaultDayTheme.metadata, builtIn: false},
+  metadata: { ...doneTodayDefaultDayTheme.metadata, builtIn: false },
 });
 
 export class DayThemeRegistry {
@@ -37,11 +50,16 @@ export class DayThemeRegistry {
   register(definition: DayThemeDefinition): DayThemeDefinition {
     assertValidDayThemeDefinition(definition);
     const versions = this.#themes.get(definition.id) ?? [];
-    if (versions.some(value => value.version === definition.version)) {
-      throw new Error(`Day Theme ${definition.id}@${definition.version} is already registered`);
+    if (versions.some((value) => value.version === definition.version)) {
+      throw new Error(
+        `Day Theme ${definition.id}@${definition.version} is already registered`,
+      );
     }
     const stored = immutableCopy(definition);
-    this.#themes.set(definition.id, [...versions, stored].sort((a, b) => a.version - b.version));
+    this.#themes.set(
+      definition.id,
+      [...versions, stored].sort((a, b) => a.version - b.version),
+    );
     return stored;
   }
 
@@ -49,22 +67,44 @@ export class DayThemeRegistry {
     return Object.freeze([...this.#themes.values()].flat());
   }
 
-  resolve(themeId: string | null, themeVersion: number | null): ResolvedDayTheme {
-    const requested: DayThemeReference | null = typeof themeId === 'string'
-      && typeof themeVersion === 'number'
-      ? Object.freeze({id: themeId, version: themeVersion})
-      : null;
-    if (themeId !== null && themeVersion !== null
-      && isValidDayThemeId(themeId) && isValidDayThemeVersion(themeVersion)) {
+  resolve(
+    themeId: string | null,
+    themeVersion: number | null,
+  ): ResolvedDayTheme {
+    const requested: DayThemeReference | null =
+      typeof themeId === 'string' && typeof themeVersion === 'number'
+        ? Object.freeze({ id: themeId, version: themeVersion })
+        : null;
+    if (
+      themeId !== null &&
+      themeVersion !== null &&
+      isValidDayThemeId(themeId) &&
+      isValidDayThemeVersion(themeVersion)
+    ) {
       const versions = this.#themes.get(themeId) ?? [];
-      const exact = versions.find(value => value.version === themeVersion);
-      if (exact) return Object.freeze({definition: exact, source: 'exact', requested});
+      const exact = versions.find((value) => value.version === themeVersion);
+      if (exact)
+        return Object.freeze({ definition: exact, source: 'exact', requested });
       const compatible = versions.at(-1);
-      if (compatible) return Object.freeze({definition: compatible, source: 'compatible', requested});
+      if (compatible)
+        return Object.freeze({
+          definition: compatible,
+          source: 'compatible',
+          requested,
+        });
     }
     const defaultTheme = this.#themes.get(this.#defaultId)?.at(-1);
-    if (defaultTheme) return Object.freeze({definition: defaultTheme, source: 'default', requested});
-    return Object.freeze({definition: emergencyDayTheme, source: 'emergency', requested});
+    if (defaultTheme)
+      return Object.freeze({
+        definition: defaultTheme,
+        source: 'default',
+        requested,
+      });
+    return Object.freeze({
+      definition: emergencyDayTheme,
+      source: 'emergency',
+      requested,
+    });
   }
 }
 

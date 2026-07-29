@@ -10,14 +10,16 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{
-      "title": "Done Today",
-      "width": 1180,
-      "height": 760,
-      "minWidth": 900,
-      "minHeight": 600,
-      "resizable": true
-    }],
+    "windows": [
+      {
+        "title": "Done Today",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
     "security": { "csp": null }
   },
   "bundle": {

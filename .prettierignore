@@ -1,0 +1,12 @@
+# Dependency, build, and generated outputs
+node_modules/
+dist/
+src-tauri/target/
+
+# Dependency lockfiles and byte-stable backup fixtures are outside formatter scope
+package-lock.json
+src-tauri/tests/fixtures/
+
+# Persistence contracts and curated motif assets are maintained verbatim
+src-tauri/migrations/
+src/domain/day-theme/motifs/

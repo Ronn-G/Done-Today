@@ -1,1 +1,5 @@
-export default {today:'Today',history:'History',settings:'Settings'} as const;
+export default {
+  today: 'Today',
+  history: 'History',
+  settings: 'Settings',
+} as const;

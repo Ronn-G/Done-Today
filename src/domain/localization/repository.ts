@@ -1,12 +1,12 @@
-import type {AppLocale} from './locale';
+import type { AppLocale } from './locale';
 
-export type LocaleBootstrapSource='persisted'|'fresh'|'compatibility';
-export type LocaleBootstrapResult={
-  locale:AppLocale;
-  source:LocaleBootstrapSource;
+export type LocaleBootstrapSource = 'persisted' | 'fresh' | 'compatibility';
+export type LocaleBootstrapResult = {
+  locale: AppLocale;
+  source: LocaleBootstrapSource;
 };
 
-export interface LocaleRepository{
-  initialize():Promise<LocaleBootstrapResult>;
-  save(locale:AppLocale):Promise<void>;
+export interface LocaleRepository {
+  initialize(): Promise<LocaleBootstrapResult>;
+  save(locale: AppLocale): Promise<void>;
 }

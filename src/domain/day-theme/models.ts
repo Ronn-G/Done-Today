@@ -1,6 +1,7 @@
 export type DayThemeMode = 'light' | 'dark' | 'adaptive';
 export type DayThemeTextTone = 'light' | 'dark';
-export type DayThemeCategory = 'calm' | 'warm' | 'nature' | 'night' | 'seasonal' | 'minimal';
+export type DayThemeCategory =
+  'calm' | 'warm' | 'nature' | 'night' | 'seasonal' | 'minimal';
 export type DayThemeTypographyRole = 'ui' | 'journal' | 'display';
 
 export interface DayThemeTokens {
@@ -62,7 +63,8 @@ export interface DayThemeReference {
   readonly version: number;
 }
 
-export type DayThemeResolutionSource = 'exact' | 'compatible' | 'default' | 'emergency';
+export type DayThemeResolutionSource =
+  'exact' | 'compatible' | 'default' | 'emergency';
 
 export interface ResolvedDayTheme {
   readonly definition: DayThemeDefinition;

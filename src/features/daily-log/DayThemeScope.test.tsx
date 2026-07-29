@@ -1,8 +1,8 @@
-import {describe, expect, it} from 'vitest';
-import {readFileSync} from 'node:fs';
-import {renderToStaticMarkup} from 'react-dom/server';
-import {dayThemeRegistry} from '../../domain/day-theme/registry';
-import {DayThemeScope} from './DayThemeScope';
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { dayThemeRegistry } from '../../domain/day-theme/registry';
+import { DayThemeScope } from './DayThemeScope';
 
 describe('DayThemeScope', () => {
   it('applies semantic variables only on the day content boundary', () => {
@@ -43,8 +43,12 @@ describe('DayThemeScope', () => {
     expect(markup).toContain('--day-dark-accent:#d69a6d');
     expect(markup).not.toContain('--accent:');
     expect(markup).not.toContain('--bg-app:');
-    expect(styles).toMatch(/\.day-theme-scope\s*\{[\s\S]*?--day-accent:\s*var\(--day-light-accent\)/);
-    expect(styles).toMatch(/\.dark \.day-theme-scope\s*\{[\s\S]*?--day-accent:\s*var\(--day-dark-accent\)/);
+    expect(styles).toMatch(
+      /\.day-theme-scope\s*\{[\s\S]*?--day-accent:\s*var\(--day-light-accent\)/,
+    );
+    expect(styles).toMatch(
+      /\.dark \.day-theme-scope\s*\{[\s\S]*?--day-accent:\s*var\(--day-dark-accent\)/,
+    );
     expect(styles).toContain('--app-day-accent: var(--accent)');
   });
 });

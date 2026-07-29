@@ -1,105 +1,116 @@
 export default {
-  settings:{
-    title:'Sao lưu và khôi phục',
-    description:'Dữ liệu được lưu cục bộ. Tệp JSON có thể dùng để chuyển hoặc khôi phục nhật ký.',
-    privacyWarning:'Tệp sao lưu có thể chứa nội dung nhật ký và dữ liệu cá nhân. Hãy lưu ở nơi an toàn.',
+  settings: {
+    title: 'Sao lưu và khôi phục',
+    description:
+      'Dữ liệu được lưu cục bộ. Tệp JSON có thể dùng để chuyển hoặc khôi phục nhật ký.',
+    privacyWarning:
+      'Tệp sao lưu có thể chứa nội dung nhật ký và dữ liệu cá nhân. Hãy lưu ở nơi an toàn.',
   },
-  export:{
-    action:'Xuất bản sao lưu',
-    success:'Đã lưu {{fileName}}: {{summary}}.',
-    summary:{
-      dailyLogs_other:'{{count, integer}} ngày nhật ký',
-      workItems_other:'{{count, integer}} công việc',
-      workCategories_other:'{{count, integer}} nhóm',
-      themeIncluded:'có cài đặt giao diện',
-      themeExcluded:'không có cài đặt giao diện',
+  export: {
+    action: 'Xuất bản sao lưu',
+    success: 'Đã lưu {{fileName}}: {{summary}}.',
+    summary: {
+      dailyLogs_other: '{{count, integer}} ngày nhật ký',
+      workItems_other: '{{count, integer}} công việc',
+      workCategories_other: '{{count, integer}} nhóm',
+      themeIncluded: 'có cài đặt giao diện',
+      themeExcluded: 'không có cài đặt giao diện',
     },
   },
-  import:{
-    action:'Khôi phục từ bản sao lưu',
-    submit:'Nhập bản sao lưu',
-    submitting:'Đang nhập…',
-    success:'Đã khôi phục {{summary}}.',
-    summary:{
-      dailyLogs_other:'{{count, integer}} ngày nhật ký',
-      workItems_other:'{{count, integer}} công việc',
-      remapped_other:'ánh xạ lại {{count, integer}} ID',
+  import: {
+    action: 'Khôi phục từ bản sao lưu',
+    submit: 'Nhập bản sao lưu',
+    submitting: 'Đang nhập…',
+    success: 'Đã khôi phục {{summary}}.',
+    summary: {
+      dailyLogs_other: '{{count, integer}} ngày nhật ký',
+      workItems_other: '{{count, integer}} công việc',
+      remapped_other: 'ánh xạ lại {{count, integer}} ID',
     },
   },
-  preview:{
-    title:'Xem trước bản sao lưu',
-    metadata:{
-      format:'Định dạng',
-      exportedAt:'Ngày xuất',
-      appVersion:'Phiên bản ứng dụng',
-      checksum:'Checksum',
-      data:'Dữ liệu',
-      dryRun:'Xem trước thay đổi',
+  preview: {
+    title: 'Xem trước bản sao lưu',
+    metadata: {
+      format: 'Định dạng',
+      exportedAt: 'Ngày xuất',
+      appVersion: 'Phiên bản ứng dụng',
+      checksum: 'Checksum',
+      data: 'Dữ liệu',
+      dryRun: 'Xem trước thay đổi',
     },
-    checksum:{valid:'Hợp lệ',invalid:'Không hợp lệ'},
-    data:{
-      dailyLogs_other:'{{count, integer}} ngày nhật ký',
-      workItems_other:'{{count, integer}} công việc',
-      workCategories_other:'{{count, integer}} nhóm',
-      themeIncluded:'có cài đặt giao diện',
-      themeExcluded:'không có cài đặt giao diện',
+    checksum: { valid: 'Hợp lệ', invalid: 'Không hợp lệ' },
+    data: {
+      dailyLogs_other: '{{count, integer}} ngày nhật ký',
+      workItems_other: '{{count, integer}} công việc',
+      workCategories_other: '{{count, integer}} nhóm',
+      themeIncluded: 'có cài đặt giao diện',
+      themeExcluded: 'không có cài đặt giao diện',
     },
-    dryRun:{
-      newRecords_other:'{{count, integer}} bản ghi mới',
-      existingIds_other:'{{count, integer}} ID đã có',
-      conflicts_other:'{{count, integer}} xung đột',
-      unchanged_other:'{{count, integer}} bản ghi giữ nguyên',
-    },
-  },
-  mode:{
-    legend:'Chế độ khôi phục',
-    merge:{
-      label:'Hợp nhất (Merge)',
-      description:'Giữ dữ liệu hiện tại và thêm dữ liệu không trùng từ bản sao lưu.',
-    },
-    replace:{
-      label:'Thay thế toàn bộ (Replace all)',
-      description:'Thay toàn bộ nhật ký, nhóm công việc và cài đặt giao diện hiện tại.',
+    dryRun: {
+      newRecords_other: '{{count, integer}} bản ghi mới',
+      existingIds_other: '{{count, integer}} ID đã có',
+      conflicts_other: '{{count, integer}} xung đột',
+      unchanged_other: '{{count, integer}} bản ghi giữ nguyên',
     },
   },
-  confirm:{
-    reimport:'Tôi hiểu tệp này đã được nhập vào {{dateTime}} và muốn nhập lại.',
-    replace:{
-      title:'Xác nhận thay thế toàn bộ dữ liệu',
-      body:'Tôi hiểu toàn bộ nhật ký, nhóm công việc và cài đặt giao diện hiện tại sẽ bị thay thế. Nếu có lỗi, không thay đổi nào được áp dụng.',
+  mode: {
+    legend: 'Chế độ khôi phục',
+    merge: {
+      label: 'Hợp nhất (Merge)',
+      description:
+        'Giữ dữ liệu hiện tại và thêm dữ liệu không trùng từ bản sao lưu.',
+    },
+    replace: {
+      label: 'Thay thế toàn bộ (Replace all)',
+      description:
+        'Thay toàn bộ nhật ký, nhóm công việc và cài đặt giao diện hiện tại.',
     },
   },
-  options:{applyTheme:'Áp dụng cài đặt giao diện từ bản sao lưu'},
-  status:{preparing:'Đang chuẩn bị…',restoring:'Đang khôi phục…'},
-  dialog:{
-    exportTitle:'Xuất bản sao lưu Done Today',
-    importTitle:'Khôi phục từ bản sao lưu',
-    filterName:'Bản sao lưu Done Today',
+  confirm: {
+    reimport:
+      'Tôi hiểu tệp này đã được nhập vào {{dateTime}} và muốn nhập lại.',
+    replace: {
+      title: 'Xác nhận thay thế toàn bộ dữ liệu',
+      body: 'Tôi hiểu toàn bộ nhật ký, nhóm công việc và cài đặt giao diện hiện tại sẽ bị thay thế. Nếu có lỗi, không thay đổi nào được áp dụng.',
+    },
   },
-  backendErrors:{
-    createFailed:'Không thể tạo bản sao lưu.',
-    fileReadFailed:'Không thể đọc tệp sao lưu.',
-    fileTooLarge:'Tệp sao lưu không được lớn hơn {{maxMiB}} MiB.',
-    jsonInvalid:'Tệp đã chọn không phải JSON hợp lệ.',
-    versionMissing:'Bản sao lưu đang thiếu phiên bản.',
-    versionNewer:'Bản sao lưu phiên bản {{version}} mới hơn phiên bản được hỗ trợ {{supportedVersion}}.',
-    versionUnsupported:'Bản sao lưu phiên bản {{version}} chưa được hỗ trợ. Phiên bản hỗ trợ: {{supportedVersion}}.',
-    structureInvalid:'Cấu trúc bản sao lưu không hợp lệ.',
-    formatInvalid:'Đây không phải bản sao lưu của Done Today.',
-    timestampInvalid:'Bản sao lưu chứa thời gian không hợp lệ.',
-    checksumMismatch:'Checksum của bản sao lưu không khớp. Tệp có thể đã bị thay đổi.',
-    referenceInvalid:'Bản sao lưu chứa liên kết dữ liệu bị hỏng.',
-    duplicateId:'Bản sao lưu chứa mã định danh trùng lặp.',
-    themeInvalid:'Giao diện trong bản sao lưu không hợp lệ.',
-    destinationInvalid:'Vị trí lưu bản sao đã chọn không hợp lệ.',
-    fileWriteFailed:'Không thể ghi tệp sao lưu. Hãy chọn vị trí khác.',
-    mergeUnsafe:'Không thể hợp nhất bản sao lưu này một cách an toàn.',
-    mappingMissing:'Không thể ánh xạ dữ liệu sao lưu để nhập.',
-    reimportConfirmationRequired:'Hãy xác nhận rằng bạn muốn nhập lại bản sao lưu này.',
-    receiptWriteFailed:'Dữ liệu đã được nhập nhưng không thể chuẩn bị biên nhận.',
+  options: { applyTheme: 'Áp dụng cài đặt giao diện từ bản sao lưu' },
+  status: { preparing: 'Đang chuẩn bị…', restoring: 'Đang khôi phục…' },
+  dialog: {
+    exportTitle: 'Xuất bản sao lưu Done Today',
+    importTitle: 'Khôi phục từ bản sao lưu',
+    filterName: 'Bản sao lưu Done Today',
   },
-  backendWarnings:{
-    appVersion:'Bản sao lưu được tạo bởi Done Today {{backupVersion}}; bạn đang dùng {{currentVersion}}.',
-    previouslyImported:'Bản sao lưu này đã từng được nhập.',
+  backendErrors: {
+    createFailed: 'Không thể tạo bản sao lưu.',
+    fileReadFailed: 'Không thể đọc tệp sao lưu.',
+    fileTooLarge: 'Tệp sao lưu không được lớn hơn {{maxMiB}} MiB.',
+    jsonInvalid: 'Tệp đã chọn không phải JSON hợp lệ.',
+    versionMissing: 'Bản sao lưu đang thiếu phiên bản.',
+    versionNewer:
+      'Bản sao lưu phiên bản {{version}} mới hơn phiên bản được hỗ trợ {{supportedVersion}}.',
+    versionUnsupported:
+      'Bản sao lưu phiên bản {{version}} chưa được hỗ trợ. Phiên bản hỗ trợ: {{supportedVersion}}.',
+    structureInvalid: 'Cấu trúc bản sao lưu không hợp lệ.',
+    formatInvalid: 'Đây không phải bản sao lưu của Done Today.',
+    timestampInvalid: 'Bản sao lưu chứa thời gian không hợp lệ.',
+    checksumMismatch:
+      'Checksum của bản sao lưu không khớp. Tệp có thể đã bị thay đổi.',
+    referenceInvalid: 'Bản sao lưu chứa liên kết dữ liệu bị hỏng.',
+    duplicateId: 'Bản sao lưu chứa mã định danh trùng lặp.',
+    themeInvalid: 'Giao diện trong bản sao lưu không hợp lệ.',
+    destinationInvalid: 'Vị trí lưu bản sao đã chọn không hợp lệ.',
+    fileWriteFailed: 'Không thể ghi tệp sao lưu. Hãy chọn vị trí khác.',
+    mergeUnsafe: 'Không thể hợp nhất bản sao lưu này một cách an toàn.',
+    mappingMissing: 'Không thể ánh xạ dữ liệu sao lưu để nhập.',
+    reimportConfirmationRequired:
+      'Hãy xác nhận rằng bạn muốn nhập lại bản sao lưu này.',
+    receiptWriteFailed:
+      'Dữ liệu đã được nhập nhưng không thể chuẩn bị biên nhận.',
+  },
+  backendWarnings: {
+    appVersion:
+      'Bản sao lưu được tạo bởi Done Today {{backupVersion}}; bạn đang dùng {{currentVersion}}.',
+    previouslyImported: 'Bản sao lưu này đã từng được nhập.',
   },
 } as const;

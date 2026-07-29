@@ -1,20 +1,39 @@
-import type { DailyLog,DayThemeMetadata,HistoryPage,LocalDateKey,UpdateWorkItem,WorkItem } from './models';
-import type{CategoryInput,CategoryUpdate,WorkCategory}from'./categories';
+import type {
+  DailyLog,
+  DayThemeMetadata,
+  HistoryPage,
+  LocalDateKey,
+  UpdateWorkItem,
+  WorkItem,
+} from './models';
+import type { CategoryInput, CategoryUpdate, WorkCategory } from './categories';
 export interface JournalRepository {
   initialize(): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
-  updateDayThemeMetadata(dailyLogId:string,metadata:DayThemeMetadata):Promise<DayThemeMetadata>;
-  setDayThemeForDate(date:string,metadata:DayThemeMetadata):Promise<DailyLog>;
-  createWorkItem(date:string,categoryId?:string|null):Promise<WorkItem>;
-  updateWorkItem(item:UpdateWorkItem):Promise<WorkItem>;
-  deleteWorkItem(itemId:string):Promise<void>;
-  reorderWorkItems(dailyLogId:string,orderedIds:string[]):Promise<WorkItem[]>;
-  listCategories(includeInactive?:boolean):Promise<WorkCategory[]>;
-  createCategory(input:CategoryInput):Promise<WorkCategory>;
-  updateCategory(id:string,input:CategoryUpdate):Promise<WorkCategory>;
-  archiveCategory(id:string,isActive:boolean):Promise<WorkCategory>;
-  reorderCategories(orderedIds:string[]):Promise<WorkCategory[]>;
-  assignWorkItemCategory(itemId:string,categoryId:string|null):Promise<WorkItem>;
-  listDailyLogSummaries(page:number,pageSize:number):Promise<HistoryPage>;
-  listJournalActivityDates():Promise<LocalDateKey[]>;
+  updateDayThemeMetadata(
+    dailyLogId: string,
+    metadata: DayThemeMetadata,
+  ): Promise<DayThemeMetadata>;
+  setDayThemeForDate(
+    date: string,
+    metadata: DayThemeMetadata,
+  ): Promise<DailyLog>;
+  createWorkItem(date: string, categoryId?: string | null): Promise<WorkItem>;
+  updateWorkItem(item: UpdateWorkItem): Promise<WorkItem>;
+  deleteWorkItem(itemId: string): Promise<void>;
+  reorderWorkItems(
+    dailyLogId: string,
+    orderedIds: string[],
+  ): Promise<WorkItem[]>;
+  listCategories(includeInactive?: boolean): Promise<WorkCategory[]>;
+  createCategory(input: CategoryInput): Promise<WorkCategory>;
+  updateCategory(id: string, input: CategoryUpdate): Promise<WorkCategory>;
+  archiveCategory(id: string, isActive: boolean): Promise<WorkCategory>;
+  reorderCategories(orderedIds: string[]): Promise<WorkCategory[]>;
+  assignWorkItemCategory(
+    itemId: string,
+    categoryId: string | null,
+  ): Promise<WorkItem>;
+  listDailyLogSummaries(page: number, pageSize: number): Promise<HistoryPage>;
+  listJournalActivityDates(): Promise<LocalDateKey[]>;
 }
