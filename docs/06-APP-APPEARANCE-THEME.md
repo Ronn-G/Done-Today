@@ -1,8 +1,8 @@
 # App Appearance Theme
 
 **Document status:** Authoritative
-**Document version:** 1.1
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Document version:** 1.2
+**Last verified against commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
 
 ## Phạm vi và quan hệ với Day Theme
 
@@ -55,3 +55,35 @@ primary/secondary text, progress track và accent cũ. Các màu tùy chỉnh c�
 
 Stats panel có background, border, primary/secondary text, progress track và progress fill
 riêng. Sidebar mặc định dùng surface xanh xám sáng/dịu hơn để main content giữ vai trò trọng tâm.
+
+## Semantic ownership và CSS variables
+
+Mỗi persisted color key map một-một qua whitelist typed sang một semantic CSS variable. Component
+chỉ consume variable, không đọc `ThemePreferences` hoặc preset ID trực tiếp.
+
+Các token dễ nhầm có mapping và ownership bắt buộc:
+
+| App Theme token | CSS variable | Surface owner |
+| --- | --- | --- |
+| `accent` | `--accent` | focus/accent indicators, active/selected emphasis và các bề mặt general accent |
+| `tableHeaderBackground` | `--bg-table-header` | nền `thead th`; độc lập với Accent |
+| `statsPanelBackground` | `--stats-bg` | nền Today statistics |
+| `statsPanelBorder` | `--stats-border` | viền panel và divider Today statistics |
+| `statsPanelPrimaryText` | `--stats-text-primary` | số/giá trị chính |
+| `statsPanelSecondaryText` | `--stats-text-secondary` | label/supporting text |
+| `statsPanelProgressTrack` | `--stats-progress-track` | progress track trong Today statistics |
+| `statsPanelProgressFill` | `--stats-progress-fill` | progress fill trong Today statistics |
+
+Specialized token luôn thắng generic token: Table header không alias sang Accent; sáu Stats token
+không alias runtime sang Card, Border, generic text, generic progress track hoặc Accent. Alias từ
+generic token chỉ được dùng một lần trong chính sách nâng schema v1 lên v2 để tạo giá trị persisted
+ban đầu.
+
+Day Theme có thể đổi page, journal surface/text/border/accent và editor interaction trong
+`.day-theme-scope`, nhưng không được redefine `--bg-table-header` hoặc sáu `--stats-*` variables.
+Các specialized App Theme variables phải được inherit vào Today để giữ ownership toàn cục.
+
+Khi chỉnh màu, draft typed cập nhật React state và active light/dark palette được apply ngay để
+preview. Cùng payload v2 đầy đủ được autosave vào `appearance.themePreferences`; bootstrap/reload
+validate rồi apply lại. Chọn preset/reset tạo palette mới từ immutable constants; chỉnh một token
+tạo `custom` và không mutate preset hoặc token còn lại.

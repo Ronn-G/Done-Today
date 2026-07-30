@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.14
-**Last verified against implementation commit:** `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e` (2026-07-29)
+**Document version:** 2.15
+**Last verified against implementation commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
 
 ## 1. Cách đọc trạng thái
 
@@ -25,6 +25,7 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Navigation and History | Completed | Điều hướng theo ngày, route ngày và lịch sử có phân trang |
 | Motivation UI | Completed | Thống kê, progress, current journal streak, câu gợi ý, light/dark và empty states; streak được hoàn tất qua regression closure ngày 2026-07-24 |
 | App Appearance Theme | Completed | App Theme toàn cục; xem tài liệu 06 |
+| Corrective Checkpoint — App Theme Token Wiring | Implementation complete — native Windows acceptance pending | Table header và sáu Today statistics tokens đã được tách khỏi Day Theme cascade; automated gates đạt |
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
@@ -67,6 +68,21 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 - Persistence trong `app_settings`.
 - Light/dark palette và fallback an toàn.
 - App Theme không được nhầm với Day Theme.
+
+### Corrective Checkpoint — App Theme Token Wiring
+
+- Implementation commit `b219761` loại bỏ Day Theme shadowing đối với Table header và sáu Today
+  statistics variables.
+- Typed mapping có đúng 33 key/33 unique CSS variables; Settings controls, Zod, Rust validation,
+  presets và apply whitelist đồng bộ.
+- Targeted tests và full gates đạt: 51 frontend test files / 455 tests, 74 Rust tests; production
+  build 1.742 modules.
+- Schema `ThemePreferences` giữ version 2 và đúng 33 token; không đổi database key, migration,
+  Backup, preset ID/value hoặc business rule.
+- Trạng thái: **Implementation complete — native Windows acceptance pending**. Không tự đóng
+  checkpoint cho tới khi người dùng xác nhận diagnostic matrix trên native Windows.
+- Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish vẫn chưa bắt đầu và tạm dừng
+  tới khi corrective checkpoint đạt native acceptance.
 
 ### Work Categories
 

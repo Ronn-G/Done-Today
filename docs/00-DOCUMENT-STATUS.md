@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.9
-**Last verified against implementation commit:** `cb8d3e87e7d7bb0b222c1e8d56b4bc22402c180e` (2026-07-29)
+**Document version:** 1.10
+**Last verified against implementation commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
 
 ## 1. Mục đích
 
@@ -33,16 +33,16 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.9 | `cb8d3e8` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.10 | `b219761` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
 | `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.5 | `bcbd6b9` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.4 | `bcbd6b9` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.14 | `cb8d3e8` |
-| `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.1 | `eca9f76d` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.15 | `b219761` |
+| `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.2 | `b219761` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.3 | `bcbd6b9` |
-| `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.0 | `eca9f76d` |
+| `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.1 | `b219761` |
 | `17-DAY-THEME-AND-PERSONALIZATION.md` | Day Theme/Day Style theo từng ngày | 1.7 | `cb8d3e8` |
 | `18-INTERNATIONALIZATION-AND-LOCALIZATION.md` | Kiến trúc locale, resource và presentation boundary | 1.4 | `cb8d3e8` |
 | `QUY-TRINH-PHAT-TRIEN-TOI-UU-DONE-TODAY.md` | Quy trình triển khai, review, test và release | 1.1 | `eca9f76d` |
@@ -118,7 +118,19 @@ stale guards, forced-colors, reduced-motion và failure/Retry paths tiếp tục
 automated/source evidence khi không được thử native trực tiếp; không tuyên bố screen reader thật,
 Accessibility Tree hoặc mọi tổ hợp theme × cover × symbol × font đã được kiểm tra.
 
-## 10. Quy tắc bảo trì
+## 10. Corrective Checkpoint — App Theme Token Wiring
+
+Implementation `b219761` sửa cascade khiến Table header bỏ qua token riêng, bị Accent tác động
+gián tiếp, và sáu Today statistics tokens không tới được consumer. Mapping/schema/persistence ban
+đầu đúng; root cause là `.day-theme-scope` redefine bảy specialized App Theme variables.
+
+Automated gates đạt 51 frontend files/455 tests và 74 Rust tests; production build đạt. Schema
+`ThemePreferences` vẫn version 2/33 token, key `appearance.themePreferences` và database/migration/
+Backup/business rules không đổi. Trạng thái chuẩn:
+**Implementation complete — native Windows acceptance pending**. Visual Fidelity/UI Polish chưa
+bắt đầu và bị pause cho tới khi người dùng nghiệm thu corrective checkpoint.
+
+## 11. Quy tắc bảo trì
 
 Mỗi lần tài liệu thay đổi:
 

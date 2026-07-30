@@ -2,11 +2,11 @@
 
 # Done Today Design System
 
-**Phiên bản:** 1.0  
+**Phiên bản:** 1.1
 **Trạng thái:** Tài liệu chuẩn bắt buộc  
 **Phạm vi:** Toàn bộ giao diện desktop của Done Today  
 **Đối tượng sử dụng:** Product owner, designer, Codex/AI triển khai, reviewer và người bảo trì mã nguồn
-**Last verified against commit:** `eca9f76d2e6445a353e0adf90abb7bcd65dcab46` (2026-07-23)
+**Last verified against commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
 
 ---
 
@@ -348,6 +348,21 @@ if (themeId === "sakura") {
 ```ts
 return tokens.color.accent;
 ```
+
+## 8.5. Specialized semantic ownership
+
+Khi một bề mặt có token chuyên biệt, token đó bắt buộc thắng token general-purpose. Accent, Card,
+Border hoặc generic Text không được ghi đè/alias runtime cho bề mặt đã có owner riêng.
+
+Ví dụ hiện hành:
+
+- Table header dùng `tableHeaderBackground` / `--bg-table-header`, không dùng Accent.
+- Today statistics dùng sáu token riêng cho background, border, primary text, secondary text,
+  progress track và progress fill.
+- Day Theme scope không được redefine các specialized App Theme variables này.
+
+Hai token có thể tình cờ cùng mã màu trong một preset; equality của physical value không biến chúng
+thành cùng semantic owner. Test mapping phải so sánh key/variable, không dựa vào màu preset.
 
 ---
 
