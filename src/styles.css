@@ -260,7 +260,6 @@ main {
   --accent: var(--day-accent);
   --focus-ring: var(--day-focus-ring);
   --bg-interactive-hover: var(--day-accent-soft);
-  --bg-table-header: var(--day-surface-raised);
   --bg-row-hover: color-mix(
     in srgb,
     var(--day-accent-soft) 72%,
@@ -268,12 +267,6 @@ main {
   );
   --bg-row-focus: var(--day-accent-soft);
   --bg-editor-hover: var(--day-accent-soft);
-  --stats-bg: var(--day-surface-raised);
-  --stats-border: var(--day-border);
-  --stats-text-primary: var(--day-text);
-  --stats-text-secondary: var(--day-text-muted);
-  --stats-progress-track: var(--day-border);
-  --stats-progress-fill: var(--day-accent);
 }
 .dark .day-theme-scope {
   --day-page-background: var(--day-dark-page-background);

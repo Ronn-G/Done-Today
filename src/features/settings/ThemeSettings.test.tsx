@@ -17,6 +17,7 @@ import { FloatingThemeCustomizer } from './FloatingThemeCustomizer';
 import type { FloatingThemePanelState } from './floatingThemePanelState';
 import {
   resolveColorControlInput,
+  themeColorGroups,
   ThemeCustomizerContent,
   ThemeModeSettings,
   ThemePresetSettings,
@@ -140,8 +141,23 @@ describe('I18N-3 Theme modes and presets', () => {
 describe('I18N-3 Custom colors and floating customizer', () => {
   it('maps exactly all 33 ThemeColorKey values to resolvable semantic translation keys', async () => {
     const schemaKeys = Object.keys(themeColorsSchema.shape).sort();
+    const controlKeys = themeColorGroups
+      .flatMap((group) => group.fields)
+      .sort();
     expect(schemaKeys).toHaveLength(33);
     expect(Object.keys(themeColorTranslationKeys).sort()).toEqual(schemaKeys);
+    expect(controlKeys).toEqual(schemaKeys);
+    expect(new Set(controlKeys).size).toBe(33);
+    expect(
+      themeColorGroups.find((group) => group.id === 'todayStats')?.fields,
+    ).toEqual([
+      'statsPanelBackground',
+      'statsPanelBorder',
+      'statsPanelPrimaryText',
+      'statsPanelSecondaryText',
+      'statsPanelProgressTrack',
+      'statsPanelProgressFill',
+    ]);
     for (const locale of ['vi', 'en'] as const) {
       await initializeI18n(locale);
       const catalog = flattenResource(resources[locale].theme);

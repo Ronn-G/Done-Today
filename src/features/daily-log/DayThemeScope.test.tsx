@@ -52,6 +52,26 @@ describe('DayThemeScope', () => {
     expect(styles).toContain('--app-day-accent: var(--accent)');
   });
 
+  it('never overrides specialized App Theme table-header or statistics variables', () => {
+    const styles = readFileSync('src/styles.css', 'utf8');
+    const scopeRule =
+      /\.day-theme-scope\s*\{([\s\S]*?)\n\}/.exec(styles)?.[1] ?? '';
+    for (const variable of [
+      '--bg-table-header',
+      '--stats-bg',
+      '--stats-border',
+      '--stats-text-primary',
+      '--stats-text-secondary',
+      '--stats-progress-track',
+      '--stats-progress-fill',
+    ])
+      expect(scopeRule).not.toMatch(
+        new RegExp(`^\\s*${variable.replaceAll('-', '\\-')}\\s*:`, 'm'),
+      );
+    expect(scopeRule).toContain('--accent: var(--day-accent)');
+    expect(scopeRule).toContain('--bg-editor-hover: var(--day-accent-soft)');
+  });
+
   it('scopes the selected journal font role to journal copy variables', () => {
     const markup = renderToStaticMarkup(
       <DayThemeScope

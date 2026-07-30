@@ -183,6 +183,32 @@ describe('I18N-2 Today table and add-row flow', () => {
     expect(categoryHeaderRule).not.toContain('var(--bg-table-header)');
   });
 
+  it('uses every specialized statistics variable on its owned sub-surface', () => {
+    const styles = readFileSync(
+      new URL('../styles.css', import.meta.url),
+      'utf8',
+    );
+    const rule = (selector: string) =>
+      styles.match(new RegExp(`${selector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+    expect(rule('\\.stats')).toContain('background: var(--stats-bg)');
+    expect(rule('\\.stats')).toContain('border: 1px solid var(--stats-border)');
+    expect(rule('\\.stat \\+ \\.stat')).toContain(
+      'border-left: 1px solid var(--stats-border)',
+    );
+    expect(rule('\\.stat span')).toContain(
+      'color: var(--stats-text-secondary)',
+    );
+    expect(rule('\\.stat strong')).toContain(
+      'color: var(--stats-text-primary)',
+    );
+    expect(rule('\\.progress')).toContain(
+      'background: var(--stats-progress-track)',
+    );
+    expect(rule('\\.progress i')).toContain(
+      'background: var(--stats-progress-fill)',
+    );
+  });
+
   it('keeps add-row behavior and category IDs stable while mapping only the virtual option to null', () => {
     const onAddItem = vi.fn();
     expect(submitAddRowCategorySelection('', onAddItem)).toBe(false);

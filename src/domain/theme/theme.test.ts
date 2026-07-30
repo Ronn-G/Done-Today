@@ -3,6 +3,7 @@ import {
   applyThemeVariables,
   lowContrastPairs,
   resolvePalette,
+  themeColorVariables,
 } from './applyTheme';
 import {
   calculateContrastRatio,
@@ -19,6 +20,7 @@ import {
 } from './presets';
 import {
   parseThemePreferences,
+  themeColorsSchema,
   themePreferencesSchema,
   type ThemeColors,
 } from './models';
@@ -54,12 +56,40 @@ describe('theme colors', () => {
         setProperty: (key: string, value: string) => values.set(key, value),
       },
     } as unknown as HTMLElement;
-    applyThemeVariables(defaultThemePreferences().lightColors, root);
-    expect(values.get('--bg-page')).toBe('#FAFAF7');
-    expect(values.get('--bg-table-header')).toBe('#F2F3EF');
-    expect(values.get('--stats-bg')).toBe('#F0F6F2');
-    expect(values.get('--stats-progress-fill')).toBe('#0F6E56');
+    const colors = defaultThemePreferences().lightColors;
+    applyThemeVariables(colors, root);
+    const schemaKeys = Object.keys(themeColorsSchema.shape).sort();
+    expect(schemaKeys).toHaveLength(33);
+    expect(Object.keys(themeColorVariables).sort()).toEqual(schemaKeys);
+    expect(new Set(Object.values(themeColorVariables)).size).toBe(33);
+    for (const key of Object.keys(themeColorVariables) as Array<
+      keyof ThemeColors
+    >)
+      expect(values.get(themeColorVariables[key])).toBe(colors[key]);
     expect(values.has('--evil')).toBe(false);
+  });
+  it('maps specialized table and statistics tokens independently from generic tokens', () => {
+    expect(themeColorVariables.tableHeaderBackground).not.toBe(
+      themeColorVariables.accent,
+    );
+    expect(themeColorVariables.statsPanelBackground).not.toBe(
+      themeColorVariables.cardBackground,
+    );
+    expect(themeColorVariables.statsPanelBorder).not.toBe(
+      themeColorVariables.border,
+    );
+    expect(themeColorVariables.statsPanelPrimaryText).not.toBe(
+      themeColorVariables.primaryText,
+    );
+    expect(themeColorVariables.statsPanelSecondaryText).not.toBe(
+      themeColorVariables.secondaryText,
+    );
+    expect(themeColorVariables.statsPanelProgressTrack).not.toBe(
+      themeColorVariables.progressTrack,
+    );
+    expect(themeColorVariables.statsPanelProgressFill).not.toBe(
+      themeColorVariables.accent,
+    );
   });
   it('selects every immutable preset with complete stats tokens', () => {
     for (const preset of themePresets) {
@@ -111,6 +141,35 @@ describe('theme colors', () => {
     expect(parsed.lightColors.tableHeaderBackground).toBe('#123456');
     expect(parsed.darkColors.tableHeaderBackground).toBe('#654321');
     expect(initial.lightColors.tableHeaderBackground).toBe('#F2F3EF');
+  });
+  it('round-trips the diagnostic Accent, Table header and six Stats colors independently', () => {
+    const diagnostic = {
+      accent: '#00FF00',
+      tableHeaderBackground: '#FF00FF',
+      statsPanelBackground: '#111111',
+      statsPanelBorder: '#FF0000',
+      statsPanelPrimaryText: '#FFFFFF',
+      statsPanelSecondaryText: '#FFFF00',
+      statsPanelProgressTrack: '#444444',
+      statsPanelProgressFill: '#00FFFF',
+    } as const satisfies Partial<ThemeColors>;
+    let preferences = defaultThemePreferences();
+    for (const [key, value] of Object.entries(diagnostic) as Array<
+      [keyof typeof diagnostic, string]
+    >) {
+      preferences = updateThemeColor(preferences, 'light', key, value);
+      preferences = updateThemeColor(preferences, 'dark', key, value);
+    }
+    const parsed = parseThemePreferences(
+      JSON.parse(JSON.stringify(preferences)),
+    );
+    for (const [key, value] of Object.entries(diagnostic) as Array<
+      [keyof typeof diagnostic, string]
+    >) {
+      expect(parsed.lightColors[key]).toBe(value);
+      expect(parsed.darkColors[key]).toBe(value);
+    }
+    expect(parsed.selectedPresetId).toBe('custom');
   });
   it('resets to default', () =>
     expect(defaultThemePreferences().selectedPresetId).toBe('done-today'));

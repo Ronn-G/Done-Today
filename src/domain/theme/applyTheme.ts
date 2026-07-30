@@ -2,11 +2,12 @@ import { isValidHexColor, calculateContrastRatio } from './colors';
 import {
   radiusValues,
   type PaletteMode,
+  type ThemeColorKey,
   type ThemeColors,
   type ThemeMode,
   type ThemePreferences,
 } from './models';
-const variables: Readonly<Record<keyof ThemeColors, string>> = {
+export const themeColorVariables = {
   pageBackground: '--bg-page',
   sidebarBackground: '--bg-sidebar',
   sidebarActiveBackground: '--bg-sidebar-active',
@@ -40,14 +41,14 @@ const variables: Readonly<Record<keyof ThemeColors, string>> = {
   cancelledBackground: '--badge-cancelled-bg',
   cancelledText: '--badge-cancelled-text',
   cancelledBorder: '--badge-cancelled-border',
-};
+} as const satisfies Readonly<Record<ThemeColorKey, `--${string}`>>;
 export function applyThemeVariables(
   colors: ThemeColors,
   root: HTMLElement = document.documentElement,
 ) {
-  (Object.keys(variables) as Array<keyof ThemeColors>).forEach((key) => {
+  (Object.keys(themeColorVariables) as ThemeColorKey[]).forEach((key) => {
     if (isValidHexColor(colors[key]))
-      root.style.setProperty(variables[key], colors[key]);
+      root.style.setProperty(themeColorVariables[key], colors[key]);
   });
 }
 export function applyThemePreferences(

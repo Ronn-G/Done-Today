@@ -2428,6 +2428,57 @@ mod tests {
         );
     }
     #[test]
+    fn theme_v2_has_exactly_33_unique_colors_in_each_palette() {
+        assert_eq!(THEME_COLOR_KEYS.len(), 33);
+        assert_eq!(
+            THEME_COLOR_KEYS
+                .iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len(),
+            33
+        );
+        let value = theme_value();
+        validate_theme_preferences(&value).unwrap();
+        for palette_name in ["lightColors", "darkColors"] {
+            let palette = value[palette_name].as_object().unwrap();
+            assert_eq!(palette.len(), 33);
+            assert!(THEME_COLOR_KEYS
+                .iter()
+                .all(|key| palette.contains_key(*key)));
+        }
+    }
+    #[test]
+    fn specialized_theme_surface_colors_round_trip_independently() {
+        let db = memory();
+        let mut value = theme_value();
+        for palette_name in ["lightColors", "darkColors"] {
+            for (key, color) in [
+                ("accent", "#00FF00"),
+                ("tableHeaderBackground", "#FF00FF"),
+                ("statsPanelBackground", "#111111"),
+                ("statsPanelBorder", "#FF0000"),
+                ("statsPanelPrimaryText", "#FFFFFF"),
+                ("statsPanelSecondaryText", "#FFFF00"),
+                ("statsPanelProgressTrack", "#444444"),
+                ("statsPanelProgressFill", "#00FFFF"),
+            ] {
+                value[palette_name][key] = serde_json::json!(color);
+            }
+        }
+        value["selectedPresetId"] = serde_json::json!("custom");
+        save_theme(&db, &value).unwrap();
+        let loaded = load_theme(&db).unwrap().unwrap();
+        assert_eq!(loaded, value);
+        assert_ne!(
+            loaded["lightColors"]["accent"],
+            loaded["lightColors"]["tableHeaderBackground"]
+        );
+        assert_ne!(
+            loaded["lightColors"]["statsPanelBackground"],
+            loaded["lightColors"]["statsPanelProgressFill"]
+        );
+    }
+    #[test]
     fn legacy_theme_is_upgraded_and_persisted_without_losing_existing_colors() {
         let db = memory();
         let legacy = legacy_theme_value();

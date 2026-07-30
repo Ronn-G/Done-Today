@@ -22,7 +22,7 @@ import {
   toErrorTranslator,
 } from '../../i18n/errorPresentation';
 
-const groups: readonly {
+export const themeColorGroups: readonly {
   id: 'surfaces' | 'text' | 'controls' | 'todayStats' | 'statuses';
   open?: boolean;
   fields: readonly ThemeColorKey[];
@@ -290,7 +290,7 @@ export function ThemeCustomizerContent({
     controls: t('groups.controls'),
     todayStats: t('groups.todayStats'),
     statuses: t('groups.statuses'),
-  } satisfies Record<(typeof groups)[number]['id'], string>;
+  } satisfies Record<(typeof themeColorGroups)[number]['id'], string>;
   const radiusLabels = {
     square: t('radius.square'),
     subtle: t('radius.subtle'),
@@ -340,7 +340,7 @@ export function ThemeCustomizerContent({
           </div>
         )}
         <div className="color-groups">
-          {groups.map((group) => (
+          {themeColorGroups.map((group) => (
             <details key={group.id} open={group.open}>
               <summary>{groupLabels[group.id]}</summary>
               <div className="color-grid">
