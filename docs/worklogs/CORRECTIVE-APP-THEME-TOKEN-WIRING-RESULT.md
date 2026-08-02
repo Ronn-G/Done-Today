@@ -1,8 +1,9 @@
 # Corrective App Theme Token Wiring — Result
 
-**Date:** 2026-07-30
+**Implementation date:** 2026-07-30
+**Native acceptance date:** 2026-08-02
 **Authoritative task:** Corrective Checkpoint — App Theme Token Wiring
-**Implementation status:** Complete; native Windows acceptance pending
+**Final status:** Completed — native Windows acceptance passed
 
 ## A. Workspace/preflight
 
@@ -240,7 +241,7 @@ did not change.
 
 ## K. Git
 
-Commits before this documentation commit:
+Corrective implementation history:
 
 1. `57b9b99c19ee0e680f6987a16a904e6a9e308a8d docs: record app theme token wiring fix`
    — 1 file, 1,417 insertions.
@@ -248,36 +249,28 @@ Commits before this documentation commit:
    — 1 file, 197 insertions.
 3. `b219761dacf4de687c6615780c9a9d86594f43df fix: wire app theme surface tokens`
    — 9 files, 255 insertions, 19 deletions.
+4. `e87267accd7e2bdb9c910ee2bc452c8f090d1f33 docs: record app theme token wiring correction`
+   — implementation/result documentation pointer audited for this closeout.
 
-The final documentation commit uses message
-`docs: record app theme token wiring correction`. Its own hash cannot be embedded in the file it
-hashes; the final chat report and `git log` provide that hash and final HEAD.
+Closeout prompt preservation:
+
+- `07bb1c400de3a4d5ecb35d45609edbaf2e975b7f docs: record app theme token wiring closeout task`.
+
+The final closeout documentation commit uses message
+`docs: complete app theme token wiring correction`. Its own hash cannot be embedded in the file it
+hashes; the final report and `git log` provide that hash and final HEAD. The implementation pointer
+remains `e87267accd7e2bdb9c910ee2bc452c8f090d1f33`, not either closeout documentation commit.
 
 No push, tag, release, merge, rebase or prohibited destructive Git command was run. Final local
-origin relation is expected to be four valid task commits ahead of `origin/master`, with no push.
+origin relation is expected to be six valid task commits ahead of `origin/master`, with no push.
 
-## L. Native Windows acceptance handoff
+## L. Native Windows acceptance
 
-Run with an isolated target/profile:
-
-```powershell
-Set-Location C:\dev\done-today
-
-$env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'done-today-theme-token-fix-target'
-$configPath = Join-Path $env:TEMP 'done-today-theme-token-fix.json'
-
-[System.IO.File]::WriteAllText(
-  $configPath,
-  '{"identifier":"com.donetoday.desktop.themetokenfix"}',
-  [System.Text.UTF8Encoding]::new($false)
-)
-
-npm.cmd run tauri -- dev --config $configPath
-```
+The user confirmed native Windows acceptance passed on **2026-08-02**.
 
 Diagnostic matrix:
 
-| Token | Value | Expected |
+| Token | Value | Accepted observation |
 | --- | --- | --- |
 | Accent | `#00FF00` | green accent surfaces only |
 | Table header | `#FF00FF` | magenta table header only |
@@ -288,39 +281,28 @@ Diagnostic matrix:
 | Stats progress track | `#444444` | dark-gray track |
 | Stats progress fill | `#00FFFF` | cyan fill |
 
-Checklist:
-
-1. Change one token at a time and verify instant preview.
-2. Verify Table header save/reload in light and dark; changing Accent must not change it.
-3. Verify Accent surfaces change while Table header and six specialized Stats surfaces remain.
-4. Verify each Stats token changes only its owned sub-surface.
-5. Save/reload; reset preset; switch preset then return to custom.
-6. Check Done Today, Forest, Ocean, Lavender, Warm Sand, Monochrome and custom.
-7. Check Day Theme Default, Sakura, Coffee and Rainy.
-8. Check Today, History, Settings, Calendar, editor/autosave, Categories, status, reorder, streak,
-   Backup smoke, `vi`/`en`, and 900×600/default/maximize.
-9. Do not mark this checkpoint Completed until the user confirms native results.
-
-Cleanup only the isolated profile/config:
-
-```powershell
-$profilePath = Join-Path $env:APPDATA 'com.donetoday.desktop.themetokenfix'
-
-if (Test-Path -LiteralPath $profilePath) {
-  Remove-Item -LiteralPath $profilePath -Recurse -Force
-}
-
-Remove-Item -LiteralPath $configPath -Force -ErrorAction SilentlyContinue
-```
-
-Do not delete the main application profile.
+- Table header changed when edited directly and remained unchanged when only Accent changed.
+  Preview, save/apply, reload and reset preset all behaved correctly in light/dark/custom.
+- Accent affected only its semantically owned accent surfaces. Table header and specialized Today
+  statistics surfaces did not follow Accent.
+- Stats background, border, primary text, secondary text, progress track and progress fill each
+  changed independently.
+- Preset reset and switching did not mutate preset constants.
+- Day Theme Default, Sakura, Coffee and Rainy no longer shadowed Table header or the six Stats
+  tokens; App Theme and Day Theme boundaries remained correct.
+- No clear regression was observed in Today, History, Settings, Theme Picker, Personalization,
+  editor/autosave, Categories, status/statistics/reorder, Calendar/History, `vi`/`en`, or at
+  900×600/default/maximize.
+- Acceptance evidence is limited to the user-confirmed native visual/behavioral checks above plus
+  the existing automated/source evidence. No screen-reader or Accessibility Tree pass is claimed.
 
 ## M. Deferred
 
-- Native visual/token acceptance is pending user confirmation.
 - Screen reader and Accessibility Tree acceptance are not claimed.
 - Visual Fidelity/UI Polish, reference images, layout changes, Day Cover polish, Theme Packs,
   new presets/tokens, installer/portable/release and version bump remain outside this task.
+- Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish is not started; only its
+  corrective token wiring blocker is cleared.
 
 ## Final status
 
@@ -340,7 +322,7 @@ Day Theme Checkpoint 5:
 Completed — native Windows acceptance passed
 
 Corrective Checkpoint — App Theme Token Wiring:
-Implementation complete — native Windows acceptance pending
+Completed — native Windows acceptance passed
 
 Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish:
-Not started / paused until corrective checkpoint passes native acceptance
+Not started — corrective token wiring blocker cleared

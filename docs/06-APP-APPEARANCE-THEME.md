@@ -1,8 +1,8 @@
 # App Appearance Theme
 
 **Document status:** Authoritative
-**Document version:** 1.2
-**Last verified against commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
+**Document version:** 1.3
+**Last verified against commit:** `e87267accd7e2bdb9c910ee2bc452c8f090d1f33` (2026-08-02)
 
 ## Phạm vi và quan hệ với Day Theme
 
@@ -87,3 +87,17 @@ Khi chỉnh màu, draft typed cập nhật React state và active light/dark pal
 preview. Cùng payload v2 đầy đủ được autosave vào `appearance.themePreferences`; bootstrap/reload
 validate rồi apply lại. Chọn preset/reset tạo palette mới từ immutable constants; chỉnh một token
 tạo `custom` và không mutate preset hoặc token còn lại.
+
+## App Theme Token Wiring — native acceptance
+
+Trạng thái: **Completed — native Windows acceptance passed** (2026-08-02).
+
+- Table header dùng token riêng và không đổi theo Accent; specialized token thắng generic
+  Accent/Card token.
+- Sáu Today statistics tokens điều khiển độc lập background, border, primary text, secondary text,
+  progress track và progress fill.
+- Preview, persist/apply, reload và reset preset đạt trong light/dark/custom; preset constants giữ
+  immutable.
+- Default/Sakura/Coffee/Rainy không redefine Table header hoặc sáu Stats variables. Contract vẫn là
+  `ThemePreferences` schema v2, đúng 33 token và key `appearance.themePreferences`.
+- Acceptance không tuyên bố screen reader hoặc Accessibility Tree pass.

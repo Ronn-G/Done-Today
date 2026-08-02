@@ -1,8 +1,8 @@
 # Roadmap
 
 **Document status:** Authoritative for delivery status
-**Document version:** 2.15
-**Last verified against implementation commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
+**Document version:** 2.16
+**Last verified against implementation commit:** `e87267accd7e2bdb9c910ee2bc452c8f090d1f33` (2026-08-02)
 
 ## 1. Cách đọc trạng thái
 
@@ -25,7 +25,8 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
 | Navigation and History | Completed | Điều hướng theo ngày, route ngày và lịch sử có phân trang |
 | Motivation UI | Completed | Thống kê, progress, current journal streak, câu gợi ý, light/dark và empty states; streak được hoàn tất qua regression closure ngày 2026-07-24 |
 | App Appearance Theme | Completed | App Theme toàn cục; xem tài liệu 06 |
-| Corrective Checkpoint — App Theme Token Wiring | Implementation complete — native Windows acceptance pending | Table header và sáu Today statistics tokens đã được tách khỏi Day Theme cascade; automated gates đạt |
+| Corrective Checkpoint — App Theme Token Wiring | Completed — native Windows acceptance passed | Native acceptance đạt 2026-08-02; Table header và sáu Today statistics tokens độc lập với generic/Day Theme cascade |
+| Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish | Not started — corrective token wiring blocker cleared | Chưa bắt đầu implementation trong corrective closeout |
 | Work Categories | Completed | Quản lý nhóm, archive, sorting, completed bucket và reorder |
 | Backup/Restore v1 | Completed | Canonical checksum, export, dry-run preview, Merge, Replace all và receipts |
 | Design System | Specified | Tài liệu 16 là chuẩn bắt buộc cho UI mới và UI được sửa |
@@ -79,10 +80,19 @@ bộ tài liệu và báo cáo quality gate gần nhất; thay đổi chưa comm
   build 1.742 modules.
 - Schema `ThemePreferences` giữ version 2 và đúng 33 token; không đổi database key, migration,
   Backup, preset ID/value hoặc business rule.
-- Trạng thái: **Implementation complete — native Windows acceptance pending**. Không tự đóng
-  checkpoint cho tới khi người dùng xác nhận diagnostic matrix trên native Windows.
-- Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish vẫn chưa bắt đầu và tạm dừng
-  tới khi corrective checkpoint đạt native acceptance.
+- Người dùng xác nhận native Windows acceptance đạt ngày 2026-08-02. Table header chỉnh riêng có
+  hiệu lực và không đổi theo Accent; Accent chỉ tác động các accent surfaces đúng semantic
+  ownership; sáu Stats tokens điều khiển độc lập background, border, primary text, secondary text,
+  progress track và progress fill.
+- Preview, Apply, reload và reset preset đều đạt; preset không bị mutate; light/dark/custom hoạt
+  động; Default/Sakura/Coffee/Rainy không còn shadow sai Table header hoặc sáu Stats tokens.
+- Không có regression rõ ràng trong Today, History, Settings, Theme Picker, Personalization,
+  editor/autosave, Categories, status/statistics/reorder, Calendar/History, `vi`/`en` hoặc
+  900×600/default/maximize. Evidence không bao gồm screen reader hay Accessibility Tree.
+- Trạng thái: **Completed — native Windows acceptance passed**.
+- Release Readiness Checkpoint 1 — Visual Fidelity & Final UI Polish là
+  **Not started — corrective token wiring blocker cleared**. Không có implementation Visual
+  Fidelity nào bắt đầu trong closeout này.
 
 ### Work Categories
 

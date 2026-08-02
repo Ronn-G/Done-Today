@@ -1,8 +1,8 @@
 # Document Status — Done Today
 
 **Document status:** Authoritative registry
-**Document version:** 1.10
-**Last verified against implementation commit:** `b219761dacf4de687c6615780c9a9d86594f43df` (2026-07-30)
+**Document version:** 1.11
+**Last verified against implementation commit:** `e87267accd7e2bdb9c910ee2bc452c8f090d1f33` (2026-08-02)
 
 ## 1. Mục đích
 
@@ -33,13 +33,13 @@ Không dùng tài liệu reference để ghi đè tài liệu authoritative.
 
 | Tài liệu canonical | Vai trò | Version | Last verified against commit |
 | --- | --- | ---: | --- |
-| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.10 | `b219761` |
+| `00-DOCUMENT-STATUS.md` | Registry và precedence | 1.11 | `e87267a` |
 | `00-PROJECT-OVERVIEW.md` | Mục tiêu và phạm vi sản phẩm | 1.1 | `eca9f76d` |
 | `01-PRODUCT-REQUIREMENTS.md` | Yêu cầu chức năng và tiêu chí MVP | 1.2 | `eca9f76d` |
 | `02-TECHNICAL-DESIGN.md` | Kiến trúc và quy tắc kỹ thuật | 1.5 | `bcbd6b9` |
 | `03-DATABASE-DESIGN.md` | Schema và quy tắc dữ liệu | 1.4 | `bcbd6b9` |
-| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.15 | `b219761` |
-| `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.2 | `b219761` |
+| `05-ROADMAP.md` | Trạng thái triển khai và thứ tự công việc | 2.16 | `e87267a` |
+| `06-APP-APPEARANCE-THEME.md` | App Theme toàn cục | 1.3 | `e87267a` |
 | `07-WORK-CATEGORIES.md` | Domain nhóm công việc | 1.0 | `eca9f76d` |
 | `08-BACKUP-RESTORE.md` | Envelope, payload và semantics backup | 1.3 | `bcbd6b9` |
 | `16-DESIGN-SYSTEM.md` | Chuẩn UI, component, token và accessibility | 1.1 | `b219761` |
@@ -126,9 +126,18 @@ gián tiếp, và sáu Today statistics tokens không tới được consumer. M
 
 Automated gates đạt 51 frontend files/455 tests và 74 Rust tests; production build đạt. Schema
 `ThemePreferences` vẫn version 2/33 token, key `appearance.themePreferences` và database/migration/
-Backup/business rules không đổi. Trạng thái chuẩn:
-**Implementation complete — native Windows acceptance pending**. Visual Fidelity/UI Polish chưa
-bắt đầu và bị pause cho tới khi người dùng nghiệm thu corrective checkpoint.
+Backup/business rules không đổi.
+
+Người dùng xác nhận native Windows acceptance đạt ngày 2026-08-02. Table header phản ứng độc lập
+với Accent; sáu Today statistics tokens phản ứng độc lập; preview/apply/reload/reset preset,
+light/dark/custom và boundary Default/Sakura/Coffee/Rainy đều đạt. Không có regression rõ ràng
+trong Today, History, Settings, Theme Picker, Personalization, editor/autosave, Categories,
+status/statistics/reorder, Calendar/History, `vi`/`en` hoặc 900×600/default/maximize. Screen reader
+và Accessibility Tree không được tuyên bố pass vì không có bằng chứng tương ứng.
+
+Trạng thái chuẩn: **Completed — native Windows acceptance passed**. Release Readiness Checkpoint 1
+— Visual Fidelity & Final UI Polish là **Not started — corrective token wiring blocker cleared**;
+không có implementation Visual Fidelity nào bắt đầu trong closeout này.
 
 ## 11. Quy tắc bảo trì
 
